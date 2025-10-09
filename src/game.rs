@@ -7,7 +7,7 @@ mod render;
 use std::time::{Duration, Instant};
 
 use character::Character;
-use sdl3::{event::Event, render::{Canvas, Texture}, video::Window, EventPump};
+use sdl3::{event::Event, render::{Canvas, Texture, TextureCreator}, video::{Window, WindowContext}, EventPump};
 
 use crate::game::input::Inputs;
 
@@ -27,22 +27,25 @@ pub struct Game<'a> {
     // Window management
     canvas: Canvas<Window>,
     events: EventPump,
+    texture_creator: &'a TextureCreator<WindowContext>,
     should_quit: bool,
 }
 
 impl <'a> Game<'a> {
-    pub fn init(canvas: Canvas<Window>, events: EventPump) -> Self {
+    pub fn init(texture_creator: &'a TextureCreator<WindowContext>, canvas: Canvas<Window>, events: EventPump) -> Self {
+        let mut textures = Vec::new();
         Self {
-            player1: Character::new(),
-            player2: Character::new(),
+            player1: Character::from_config(&texture_creator, &mut textures, "character1.json").unwrap(),
+            player2: Character::from_config(&texture_creator, &mut textures, "character2.json").unwrap(),
             timer: 0.0,
             score: (0, 0),
 
-            textures: Vec::new(),
+            textures,
             inputs: Inputs::new(),
 
             canvas,
             events,
+            texture_creator,
             should_quit: false,
         }
     }
@@ -83,6 +86,6 @@ impl <'a> Game<'a> {
 
     fn render(&mut self) {
         //println!("Held Buttons: {:?}, Just Pressed Buttons: {:?}, Dir: {:?}", self.inputs.held_buttons(), self.inputs.just_pressed_buttons(), self.inputs.dir());
-        //println!("Move buffer: {:?}", self.inputs.move_buf());
+        println!("Move buffer: {:?}", self.inputs.move_buf());
     }
 }

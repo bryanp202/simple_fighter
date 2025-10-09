@@ -1,0 +1,361 @@
+use std::{collections::{HashMap, HashSet}, ops::Range};
+
+use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{state::States, Character}, input::{ButtonFlag, MoveInput, RelativeMotion}, render::{self, animation::Animation}};
+
+use sdl3::{render::{FRect, Texture, TextureCreator}, video::WindowContext};
+use serde::Deserialize;
+
+pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, global_textures: &mut Vec<Texture<'a>>, config: &str) -> Result<Character, String> {
+    let src = std::fs::read_to_string(config).map_err(|err| err.to_string())?;
+    let character_json: CharacterJson = serde_json::from_str(&src).map_err(|err| err.to_string())?;
+
+    let mut animation_data = Vec::new();
+    for mov in character_json.moves.iter() {
+        let texture_index = render::load_texture(
+            texture_creator,
+            global_textures,
+            &mov.animation.texture_path,
+            mov.animation.w as u32,
+            mov.animation.h as u32
+        )?;
+
+        let frames = mov.animation.frames;
+        let frame_w = mov.animation.w as f32;
+        let frame_h = mov.animation.h as f32;
+
+        animation_data.push(Animation::new(texture_index, frames, frame_w, frame_h));
+    }
+
+    let move_names_to_pos: HashMap<_, _> = character_json.moves.iter()
+        .enumerate()
+        .map(|(i, mov)| (mov.name.clone(), i))
+        .collect();
+
+    let mut hit_box_data = Vec::new();
+    let mut hurt_box_data = Vec::new();
+
+    let mut inputs = Vec::new();
+    let mut hit_boxes_start = Vec::new();
+    let mut hurt_boxes_start = Vec::new();
+    let mut collision_boxes = Vec::new();
+    let mut start_behaviors = Vec::new();
+    let mut flags = Vec::new();
+    let mut end_behaviors = Vec::new();
+    let mut cancel_options = Vec::new();
+    let mut cancel_frames = Vec::new();
+
+    let mut run_length_hit_boxes = Vec::new();
+    let mut run_length_hurt_boxes = Vec::new();
+    let mut run_length_cancel_options = Vec::new();
+    
+    let mut hit_box_offset = 0usize;
+    let mut hurt_box_offset = 0usize;
+    let mut cancel_options_offset = 0usize;
+    for (mov_num, mov) in character_json.moves.iter().enumerate() {
+        append_hit_box_data(
+            mov,
+            &mut hit_box_data,
+            &mut run_length_hit_boxes,
+            &mut hit_boxes_start,
+            &mut hit_box_offset
+        )?;
+        append_hurt_box_data(
+            mov,
+            &mut hurt_box_data,
+            &mut run_length_hurt_boxes,
+            &mut hurt_boxes_start,
+            &mut hurt_box_offset
+        )?;
+        append_cancel_options_data(
+            mov,
+            &move_names_to_pos,
+            &mut cancel_options,
+            &mut run_length_cancel_options,
+            &mut cancel_options_offset
+        )?;
+        inputs.push(mov.input.to_move_input());
+        collision_boxes.push(mov.collision_box.to_collision_box());
+    }
+
+    let states = States::init(
+        inputs,
+        cancel_frames,
+        cancel_options,
+        hit_boxes_start,
+        hurt_boxes_start,
+        flags,
+        start_behaviors,
+        end_behaviors,
+        run_length_hit_boxes,
+        run_length_hurt_boxes,
+        run_length_cancel_options,
+        collision_boxes,
+    );
+
+    Ok (
+        Character {
+            hp: character_json.hp as f32,
+            pos: FRect::new(0.0, 0.0, 0.0, 0.0),
+            current_state: 0,
+            states,
+            projectiles: Vec::new(),
+            hit_box_data,
+            hurt_box_data,
+            collision_box_data: Vec::new(),
+            animation_data,
+        }
+    )
+}
+
+fn append_hit_box_data(
+    mov: &MoveJson,
+    hit_box_data: &mut Vec<HitBox>,
+    run_length_hit_boxes: &mut Vec<(usize, Range<usize>)>,
+    hit_boxes_start: &mut Vec<usize>,
+    offset: &mut usize
+) -> Result<(), String>{
+    hit_boxes_start.push(run_length_hit_boxes.len());
+
+    for pair in mov.hit_boxes.windows(2) {
+        let first = &pair[0];
+        let second = &pair[1];
+        let duration = second.frame.checked_sub(first.frame)
+            .ok_or_else(|| "Running length encoding required for hitbox frames".to_string())?;
+        let range = *offset..first.boxes.len();
+        *offset += first.boxes.len();
+
+        run_length_hit_boxes.push((duration, range));
+        hit_box_data.extend(first.boxes.iter().map(|hit_box| hit_box.to_hit_box()));
+    }
+    if let Some(last) = mov.hit_boxes.last() {
+        let range = *offset..last.boxes.len();
+        run_length_hit_boxes.push((usize::MAX, range));
+        hit_box_data.extend(last.boxes.iter().map(|hit_box| hit_box.to_hit_box()));
+    }
+
+    Ok(())
+}
+
+fn append_hurt_box_data(
+    mov: &MoveJson,
+    hurt_box_data: &mut Vec<HurtBox>,
+    run_length_hurt_boxes: &mut Vec<(usize, Range<usize>)>,
+    hurt_boxes_start: &mut Vec<usize>,
+    offset: &mut usize
+) -> Result<(), String>{
+    hurt_boxes_start.push(run_length_hurt_boxes.len());
+
+    for pair in mov.hurt_boxes.windows(2) {
+        let first = &pair[0];
+        let second = &pair[1];
+        let duration = second.frame.checked_sub(first.frame)
+            .ok_or_else(|| "Running length encoding required for hitbox frames".to_string())?;
+        let range = *offset..first.boxes.len();
+        *offset += first.boxes.len();
+
+        run_length_hurt_boxes.push((duration, range));
+        hurt_box_data.extend(first.boxes.iter().map(|hit_box| hit_box.to_hurt_box()));
+    }
+    if let Some(last) = mov.hurt_boxes.last() {
+        let range = *offset..last.boxes.len();
+        run_length_hurt_boxes.push((usize::MAX, range));
+        hurt_box_data.extend(last.boxes.iter().map(|hit_box| hit_box.to_hurt_box()));
+    }
+
+    Ok(())
+}
+
+fn append_cancel_options_data(
+    mov: &MoveJson,
+    map: &HashMap<String, usize>,
+    cancel_options: &mut Vec<Range<usize>>,
+    run_length_cancel_options: &mut Vec<usize>,
+    offset: &mut usize,
+) -> Result<(), String> {
+    let range = *offset..*offset + mov.cancel_options.len();
+    *offset += mov.cancel_options.len();
+    cancel_options.push(range);
+
+    for cancel_option in mov.cancel_options.iter() {
+        let index = map.get(cancel_option)
+            .ok_or_else(|| format!("Could not find a move named: {}", cancel_option))?;
+        run_length_cancel_options.push(*index);
+    }
+    Ok(())
+}
+
+#[derive(Deserialize)]
+struct CharacterJson {
+    name: String,
+    hp: usize,
+    moves: Vec<MoveJson>,
+}
+
+#[derive(Deserialize)]
+struct MoveJson {
+    name: String,
+    input: InputJson,
+    hit_boxes: Vec<RunLenJson<HitBoxJson>>,
+    hurt_boxes: Vec<RunLenJson<HurtBoxJson>>,
+    collision_box: CollisionBoxJson,
+
+    start_behavior: Vec<StartBehaviorJson>,
+    end_behavior: EndBehaviorJson,
+
+    cancel_window: CancelWindowJson,
+    cancel_options: Vec<String>,
+
+    animation: AnimationJson,
+}
+
+#[derive(Deserialize, Clone, Copy)]
+enum StartBehaviorJson {
+    SetVel {x: f32, y: f32},
+}
+
+#[derive(Deserialize)]
+enum EndBehaviorJson {
+    Endless,
+    OnFrameXToStateY {x: usize, y: String},
+    OnGroundedToStateY {y: String},
+}
+
+#[derive(Deserialize, Clone, Copy)]
+struct CancelWindowJson {
+    start: usize,
+    end: usize,
+}
+
+#[derive(Deserialize, Clone, Copy)]
+enum RelativeMotionJson {
+    Neutral,
+    Up,
+    UpForward,
+    Forward,
+    DownForward,
+    Down,
+    DownBack,
+    Back,
+    UpBack,
+    DownDown,
+    QcForward,
+    QcBack,
+    DpForward,
+    DpBack,
+}
+
+impl RelativeMotionJson {
+    fn to_relative_motion(self) -> RelativeMotion {
+        match self {
+            RelativeMotionJson::Back => RelativeMotion::Back,
+            RelativeMotionJson::Down => RelativeMotion::Down,
+            RelativeMotionJson::DownBack => RelativeMotion::DownBack,
+            RelativeMotionJson::DownDown => RelativeMotion::DownDown,
+            RelativeMotionJson::DownForward => RelativeMotion::DownForward,
+            RelativeMotionJson::DpBack => RelativeMotion::DpBack,
+            RelativeMotionJson::DpForward => RelativeMotion::DpForward,
+            RelativeMotionJson::Neutral => RelativeMotion::Neutral,
+            RelativeMotionJson::QcBack => RelativeMotion::QcBack,
+            RelativeMotionJson::QcForward => RelativeMotion::QcForward,
+            RelativeMotionJson::Up => RelativeMotion::Up,
+            RelativeMotionJson::UpBack => RelativeMotion::UpBack,
+            RelativeMotionJson::UpForward => RelativeMotion::UpForward,
+            RelativeMotionJson::Forward => RelativeMotion::Forward,
+        }
+    }
+}
+
+#[derive(Deserialize, Clone, Copy)]
+enum ButtonJson {
+    NONE,
+    L,
+    M,
+    H,
+}
+
+impl ButtonJson {
+    fn to_button_flag(self) -> ButtonFlag {
+        match self {
+            ButtonJson::H => ButtonFlag::H,
+            ButtonJson::L => ButtonFlag::L,
+            ButtonJson::NONE => ButtonFlag::NONE,
+            ButtonJson::M => ButtonFlag::M,
+        }
+    }
+}
+
+#[derive(Deserialize, Clone, Copy)]
+struct InputJson {
+    motion: RelativeMotionJson,
+    button: ButtonJson,
+}
+
+impl InputJson {
+    fn to_move_input(&self) -> MoveInput {
+        MoveInput::new(self.button.to_button_flag(), self.motion.to_relative_motion())
+    }
+}
+
+#[derive(Deserialize)]
+struct RunLenJson<T> {
+    frame: usize,
+    boxes: Vec<T>,
+}
+
+#[derive(Deserialize, Clone, Copy)]
+struct HitBoxJson {
+    rect: RectJson,
+    dmg: usize,
+    hit_stun: usize,
+    cancel_window: usize,
+}
+
+impl HitBoxJson {
+    fn to_hit_box(self) -> HitBox {
+        HitBox::new(self.rect.to_frect(), self.dmg as f32, self.hit_stun, self.cancel_window)
+    }
+}
+
+#[derive(Deserialize, Clone, Copy)]
+struct HurtBoxJson {
+    rect: RectJson,
+}
+
+impl HurtBoxJson {
+    fn to_hurt_box(self) -> HurtBox {
+        HurtBox::new(self.rect.to_frect())
+    }
+}
+
+#[derive(Deserialize, Clone, Copy)]
+struct CollisionBoxJson {
+    rect: RectJson,
+}
+
+impl CollisionBoxJson {
+    fn to_collision_box(self) -> CollisionBox {
+        CollisionBox::new(self.rect.to_frect())
+    }
+}
+
+#[derive(Deserialize, Clone, Copy)]
+struct RectJson {
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+}
+
+impl RectJson {
+    fn to_frect(self) -> FRect {
+        FRect::new(self.x, self.y, self.w, self.h)
+    }
+}
+
+#[derive(Deserialize)]
+struct AnimationJson {
+    texture_path: String,
+    frames: usize,
+    w: usize,
+    h: usize,
+}

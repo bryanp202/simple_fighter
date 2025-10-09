@@ -1,14 +1,15 @@
 mod state;
+mod deserialize;
 
-use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, projectile::Projectile, render::animation::Animation};
-use sdl3::render::FRect;
-use state::State;
+use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::deserialize::deserialize, projectile::Projectile, render::animation::Animation};
+use sdl3::{render::{FRect, Texture, TextureCreator}, video::WindowContext};
+use state::States;
 
 pub struct Character {
     hp: f32,
     pos: FRect,
     current_state: usize,
-    states: Vec<State>,
+    states: States,
     projectiles: Vec<Projectile>,
     hit_box_data: Vec<HitBox>,
     hurt_box_data: Vec<HurtBox>,
@@ -17,17 +18,7 @@ pub struct Character {
 }
 
 impl Character {
-    pub fn new() -> Self {
-        Self {
-            hp: 0.0,
-            pos: FRect::new(0.0, 0.0, 0.0, 0.0),
-            current_state: 0,
-            states: Vec::new(),
-            projectiles: Vec::new(),
-            hit_box_data: Vec::new(),
-            hurt_box_data: Vec::new(),
-            collision_box_data: Vec::new(),
-            animation_data: Vec::new(),
-        }
+    pub fn from_config<'a>(texture_creator: &'a TextureCreator<WindowContext>, global_textures: &mut Vec<Texture<'a>>, config: &str) -> Result<Self, String> {
+        deserialize(texture_creator, global_textures, config)
     }
 }

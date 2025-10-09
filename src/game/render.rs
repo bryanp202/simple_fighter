@@ -1,4 +1,4 @@
-use sdl3::{pixels::FColor, render::Canvas, video::Window};
+use sdl3::{pixels::{FColor, PixelFormat}, render::{Canvas, Texture, TextureCreator}, sys::pixels::SDL_PIXELFORMAT_ABGR8888, video::{Window, WindowContext}};
 
 use crate::game::boxes::{CollisionBox, HitBox, HurtBox};
 
@@ -26,4 +26,28 @@ pub fn draw_collisionbox_system(canvas: &mut Canvas<Window>, collisionboxes: &[C
         canvas.fill_rect(collisionbox.pos())?;
     }
     Ok(())
+}
+
+pub fn load_texture<'a>(
+    texture_creator: &'a TextureCreator<WindowContext>,
+    global_textures: &mut Vec<Texture<'a>>,
+    file_path: &str, width: u32, height: u32
+) -> Result<usize, String> {
+    let file = std::fs::File::open(file_path).map_err(|err| err.to_string())?;
+    let reader = std::io::BufReader::new(file);
+    let img = image::ImageReader::new(reader)
+        .with_guessed_format()
+        .unwrap()
+        .decode()
+        .unwrap();
+
+    let mut texture = texture_creator.create_texture_streaming(
+        unsafe {PixelFormat::from_ll(SDL_PIXELFORMAT_ABGR8888)},
+        width,
+        height
+    ).map_err(|err| err.to_string())?;
+    texture.update(None, &img.to_rgba8(), 4 * img.width() as usize)
+        .map_err(|err| err.to_string())?;
+    global_textures.push(texture);
+    Ok(global_textures.len() - 1)
 }

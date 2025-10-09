@@ -4,11 +4,12 @@ pub struct HitBox {
     pos: FRect,
     dmg: f32,
     hit_stun: usize,
+    cancel_window: usize,
 }
 
 impl HitBox {
-    pub fn new(pos: FRect, dmg: f32, hit_stun: usize) -> Self {
-        Self { pos, dmg, hit_stun }
+    pub fn new(pos: FRect, dmg: f32, hit_stun: usize, cancel_window: usize) -> Self {
+        Self { pos, dmg, hit_stun, cancel_window }
     }
 
     pub fn pos(&self) -> FRect {

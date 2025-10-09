@@ -11,9 +11,10 @@ fn main() {
         .build()
         .expect("Failed to make window");
     let canvas = window.into_canvas();
+    let texture_creator = canvas.texture_creator();
     let events = sdl.event_pump().expect("Failed to make event pump");
 
-    let game = Game::init(canvas, events);
+    let game = Game::init(&texture_creator, canvas, events);
 
     game.run();
 }
