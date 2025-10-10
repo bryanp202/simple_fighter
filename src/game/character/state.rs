@@ -93,9 +93,9 @@ impl States {
         let mut run_start = self.hit_boxes_start[current_state];
         
         loop {
-            let (frames, range) = self.run_length_hit_boxes[run_start].clone();
-            if current_frame < frames {
-                return range;
+            let (frames, range) = &self.run_length_hit_boxes[run_start];
+            if current_frame < *frames {
+                return range.clone();
             }
             current_frame -= frames;
             run_start += 1;
@@ -106,9 +106,9 @@ impl States {
         let mut run_start = self.hurt_boxes_start[current_state];
         
         loop {
-            let (frames, range) = self.run_length_hurt_boxes[run_start].clone();
-            if current_frame < frames {
-                return range;
+            let (frames, range) = &self.run_length_hurt_boxes[run_start];
+            if current_frame < *frames {
+                return range.clone();
             }
             current_frame -= frames;
             run_start += 1;

@@ -52,8 +52,8 @@ impl Character {
         let hitboxes = &self.hit_box_data[hit_box_range];
         draw_hit_boxes_system(canvas, self.pos, hitboxes)?;
 
-        let hit_box_range = self.states.hurt_box_range(current_state, current_frame);
-        let hurtboxes = &self.hurt_box_data[hit_box_range];
+        let hurt_box_range = self.states.hurt_box_range(current_state, current_frame);
+        let hurtboxes = &self.hurt_box_data[hurt_box_range];
         draw_hurt_boxes_system(canvas, self.pos, hurtboxes)?;
 
 

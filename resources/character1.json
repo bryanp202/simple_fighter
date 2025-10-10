@@ -16,7 +16,7 @@
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "back_walk", "forward_walk"],
+      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "crotching", "back_walk", "forward_walk"],
 
       "animation": {
         "texture_path": "./resources/character1_neutral.png",
@@ -31,7 +31,7 @@
       "input": {"motion": {"type" : "Down"}, "button": {"type" : "NONE"}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 50, "w": 100, "h": 50}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
 

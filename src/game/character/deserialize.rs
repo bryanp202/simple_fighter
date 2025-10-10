@@ -143,6 +143,8 @@ fn append_hit_box_data(
     }
     if let Some(last) = mov.hit_boxes.last() {
         let range = *offset .. *offset + last.boxes.len();
+        *offset += last.boxes.len();
+        
         run_length_hit_boxes.push((usize::MAX, range));
         hit_box_data.extend(last.boxes.iter().map(|hit_box| hit_box.to_hit_box()));
     } else {
@@ -175,6 +177,8 @@ fn append_hurt_box_data(
     }
     if let Some(last) = mov.hurt_boxes.last() {
         let range = *offset .. *offset + last.boxes.len();
+        *offset += last.boxes.len();
+
         run_length_hurt_boxes.push((usize::MAX, range));
         hurt_box_data.extend(last.boxes.iter().map(|hit_box| hit_box.to_hurt_box()));
     } else {
