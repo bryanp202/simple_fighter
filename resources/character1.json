@@ -5,20 +5,42 @@
     {
       "name": "neutral",
       "input": {"motion": {"type" : "Neutral"}, "button": {"type" : "NONE"}},
-      "hit_boxes": [
-        {"frame": 0, "boxes": []}
-      ],
+      "hit_boxes": [],
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
 
-      "start_behavior": [{"type" : "SetVel", "x": 0, "y": 0}],
+      "start_behavior": {"type" : "SetVel", "x": 0, "y": 0},
       "flags": [],
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["light_attack"],
+      "cancel_options": ["light_attack", "forward_walk"],
+
+      "animation": {
+        "texture_path": "./resources/character1_neutral.png",
+        "frames": 1,
+        "w": 64,
+        "h": 64
+      }
+    },
+
+    {
+      "name": "forward_walk",
+      "input": {"motion": {"type" : "Neutral"}, "button": {"type" : "NONE"}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": {"type" : "SetVel", "x": 10, "y": 0},
+      "flags": [],
+      "end_behavior": {"type": "Endless"},
+      
+      "cancel_window": {"start": 0, "end": null},
+      "cancel_options": ["neutral", "light_attack"],
 
       "animation": {
         "texture_path": "./resources/character1_neutral.png",
@@ -60,7 +82,7 @@
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
 
-      "start_behavior": [{"type" : "SetVel", "x": 0, "y": 0}],
+      "start_behavior": {"type" : "SetVel", "x": 0, "y": 0},
       "flags": [],
       "end_behavior": { "type" : "OnFrameXToStateY", "x" : 20, "y" : "neutral"},
       

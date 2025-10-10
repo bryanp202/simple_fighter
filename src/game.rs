@@ -7,7 +7,7 @@ mod render;
 use std::time::{Duration, Instant};
 
 use character::Character;
-use sdl3::{event::Event, render::{Canvas, Texture, TextureCreator}, video::{Window, WindowContext}, EventPump};
+use sdl3::{event::Event, pixels::Color, render::{Canvas, Texture, TextureCreator}, video::{Window, WindowContext}, EventPump};
 
 use crate::game::input::Inputs;
 
@@ -85,6 +85,11 @@ impl <'a> Game<'a> {
     }
 
     fn render(&mut self) {
-        self.player1.render(&mut self.canvas).unwrap();
+        self.canvas.set_draw_color(Color::BLACK);
+        self.canvas.clear();
+
+        self.player1.render(&mut self.canvas, &self.textures).unwrap();
+
+        self.canvas.present();
     }
 }

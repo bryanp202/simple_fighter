@@ -279,17 +279,6 @@ pub enum RelativeMotion {
     DpBack,
 }
 
-pub struct MoveInput {
-    button: ButtonFlag,
-    motion: RelativeMotion,
-}
-
-impl MoveInput {
-    pub fn new(button: ButtonFlag, motion: RelativeMotion) -> Self {
-        Self {button, motion}
-    }
-}
-
 type MoveBuffer = [(Motion, ButtonFlag); InputHistory::MOTION_BUF_SIZE];
 
 struct InputHistory {

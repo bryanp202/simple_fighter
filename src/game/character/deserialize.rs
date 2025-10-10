@@ -1,8 +1,8 @@
-use std::{collections::{HashMap, HashSet}, ops::Range};
+use std::{collections::{HashMap, HashSet}, ops::Range, usize};
 
-use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{state::States, Character}, input::{ButtonFlag, MoveInput, RelativeMotion}, render::{self, animation::Animation}};
+use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{state::{EndBehavior, MoveInput, StartBehavior, StateFlags, States}, Character}, input::{ButtonFlag, RelativeMotion}, render::{self, animation::Animation}};
 
-use sdl3::{render::{FRect, Texture, TextureCreator}, video::WindowContext};
+use sdl3::{render::{FPoint, FRect, Texture, TextureCreator}, video::WindowContext};
 use serde::Deserialize;
 
 pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, global_textures: &mut Vec<Texture<'a>>, config: &str) -> Result<Character, String> {
@@ -33,16 +33,16 @@ pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, globa
 
     let mut hit_box_data = Vec::new();
     let mut hurt_box_data = Vec::new();
+    let mut collision_box_data = Vec::new();
 
     let mut inputs = Vec::new();
     let mut hit_boxes_start = Vec::new();
     let mut hurt_boxes_start = Vec::new();
-    let mut collision_boxes = Vec::new();
     let mut start_behaviors = Vec::new();
     let mut flags = Vec::new();
     let mut end_behaviors = Vec::new();
     let mut cancel_options = Vec::new();
-    let mut cancel_frames = Vec::new();
+    let mut cancel_windows = Vec::new();
 
     let mut run_length_hit_boxes = Vec::new();
     let mut run_length_hurt_boxes = Vec::new();
@@ -74,12 +74,26 @@ pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, globa
             &mut cancel_options_offset
         )?;
         inputs.push(mov.input.to_move_input());
-        collision_boxes.push(mov.collision_box.to_collision_box());
+        collision_box_data.push(mov.collision_box.to_collision_box());
+        start_behaviors.push(mov.start_behavior.to_start_behavior());
+
+        let conv_end_beh = mov.end_behavior
+                .to_end_behavior(&move_names_to_pos)
+                .map_err(|missing_move| format!("Move '{}', EndBehavior: Could not found move '{}'", mov.name, missing_move))?;
+        end_behaviors.push(conv_end_beh);
+
+        let conv_flags = mov.flags
+            .iter()
+            .fold(StateFlags::NONE, |flags, next| flags.union(next.to_state_json()));
+        flags.push(conv_flags);
+
+        let conv_cancel_range = mov.cancel_window.to_range();
+        cancel_windows.push(conv_cancel_range);
     }
 
     let states = States::init(
         inputs,
-        cancel_frames,
+        cancel_windows,
         cancel_options,
         hit_boxes_start,
         hurt_boxes_start,
@@ -89,20 +103,20 @@ pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, globa
         run_length_hit_boxes,
         run_length_hurt_boxes,
         run_length_cancel_options,
-        collision_boxes,
     );
 
     Ok (
         Character {
             name: character_json.name,
             hp: character_json.hp as f32,
-            pos: FRect::new(0.0, 0.0, 0.0, 0.0),
+            pos: FPoint::new(0.0, 0.0),
             current_state: 0,
+            current_frame: 0,
             states,
             projectiles: Vec::new(),
             hit_box_data,
             hurt_box_data,
-            collision_box_data: Vec::new(),
+            collision_box_data,
             animation_data,
         }
     )
@@ -122,16 +136,19 @@ fn append_hit_box_data(
         let second = &pair[1];
         let duration = second.frame.checked_sub(first.frame)
             .ok_or_else(|| format!("'{}': {}", mov.name, "Run length encoding required for hitbox frames".to_string()))?;
-        let range = *offset..first.boxes.len();
+        let range = *offset .. *offset + first.boxes.len();
         *offset += first.boxes.len();
 
         run_length_hit_boxes.push((duration, range));
         hit_box_data.extend(first.boxes.iter().map(|hit_box| hit_box.to_hit_box()));
     }
     if let Some(last) = mov.hit_boxes.last() {
-        let range = *offset..last.boxes.len();
+        let range = *offset .. *offset + last.boxes.len();
         run_length_hit_boxes.push((usize::MAX, range));
         hit_box_data.extend(last.boxes.iter().map(|hit_box| hit_box.to_hit_box()));
+    } else {
+        let range = *offset..*offset;
+        run_length_hit_boxes.push((usize::MAX, range));
     }
 
     Ok(())
@@ -151,16 +168,19 @@ fn append_hurt_box_data(
         let second = &pair[1];
         let duration = second.frame.checked_sub(first.frame)
             .ok_or_else(|| format!("'{}': {}", mov.name, "Run length encoding required for hurtbox frames".to_string()))?;
-        let range = *offset..first.boxes.len();
+        let range = *offset .. *offset + first.boxes.len();
         *offset += first.boxes.len();
 
         run_length_hurt_boxes.push((duration, range));
         hurt_box_data.extend(first.boxes.iter().map(|hit_box| hit_box.to_hurt_box()));
     }
     if let Some(last) = mov.hurt_boxes.last() {
-        let range = *offset..last.boxes.len();
+        let range = *offset .. *offset + last.boxes.len();
         run_length_hurt_boxes.push((usize::MAX, range));
         hurt_box_data.extend(last.boxes.iter().map(|hit_box| hit_box.to_hurt_box()));
+    } else {
+        let range = *offset..*offset;
+        run_length_hurt_boxes.push((usize::MAX, range));
     }
 
     Ok(())
@@ -200,7 +220,7 @@ struct MoveJson {
     hurt_boxes: Vec<RunLenJson<HurtBoxJson>>,
     collision_box: CollisionBoxJson,
 
-    start_behavior: Vec<StartBehaviorJson>,
+    start_behavior: StartBehaviorJson,
     flags: Vec<FlagsJson>,
     end_behavior: EndBehaviorJson,
 
@@ -216,6 +236,14 @@ enum StartBehaviorJson {
     SetVel {x: f32, y: f32},
 }
 
+impl StartBehaviorJson {
+    fn to_start_behavior(&self) -> StartBehavior {
+        match self {
+            &StartBehaviorJson::SetVel { x, y } => StartBehavior::SetVel { x, y }
+        }
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(tag = "type")]
 enum EndBehaviorJson {
@@ -224,10 +252,30 @@ enum EndBehaviorJson {
     OnGroundedToStateY {y: String},
 }
 
+impl EndBehaviorJson {
+    fn to_end_behavior(&self, map: &HashMap<String, usize>) -> Result<EndBehavior, String> {
+        Ok (
+            match self {
+                EndBehaviorJson::Endless => EndBehavior::Endless,
+                EndBehaviorJson::OnFrameXToStateY { x, y }
+                    => EndBehavior::OnFrameXToStateY { x: *x, y: *map.get(y).ok_or_else(|| y.clone())? },
+                EndBehaviorJson::OnGroundedToStateY { y }
+                    => EndBehavior::OnGroundedToStateY { y: *map.get(y).ok_or_else(|| y.clone())? },
+            }
+        )
+    }
+}
+
 #[derive(Deserialize, Clone, Copy)]
 struct CancelWindowJson {
     start: Option<usize>,
     end: Option<usize>,
+}
+
+impl CancelWindowJson {
+    fn to_range(&self) -> Range<usize> {
+        self.start.unwrap_or(usize::MAX)..self.end.unwrap_or(usize::MAX)
+    }
 }
 
 #[derive(Deserialize, Clone, Copy)]
@@ -371,4 +419,13 @@ struct AnimationJson {
 enum FlagsJson {
     Airborne,
     CancelOnWhiff,
+}
+
+impl FlagsJson {
+    fn to_state_json(&self) -> StateFlags {
+        match self {
+            FlagsJson::Airborne => StateFlags::Airborne,
+            FlagsJson::CancelOnWhiff => StateFlags::CancelOnWhiff,
+        }
+    }
 }
