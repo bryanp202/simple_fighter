@@ -1,9 +1,9 @@
 use std::ops::Range;
 
 use bitflags::bitflags;
-use sdl3::render::{FPoint, FRect};
+use sdl3::render::FPoint;
 
-use crate::game::{boxes::CollisionBox, input::{ButtonFlag, Inputs, RelativeMotion}};
+use crate::game::{input::{ButtonFlag, Inputs, RelativeMotion}};
 
 type StateIndex = usize;
 

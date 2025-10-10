@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, ops::Range, usize};
+use std::{collections::HashMap, ops::Range, usize};
 
 use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States}, Character}, input::{ButtonFlag, RelativeMotion}, render::{self, animation::Animation}};
 
@@ -51,7 +51,7 @@ pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, globa
     let mut hit_box_offset = 0usize;
     let mut hurt_box_offset = 0usize;
     let mut cancel_options_offset = 0usize;
-    for (mov_num, mov) in character_json.moves.iter().enumerate() {
+    for mov in character_json.moves.iter() {
         append_hit_box_data(
             mov,
             &mut hit_box_data,
