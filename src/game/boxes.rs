@@ -1,5 +1,6 @@
 use sdl3::render::FRect;
 
+#[derive(Debug)]
 pub struct HitBox {
     pos: FRect,
     dmg: f32,

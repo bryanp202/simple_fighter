@@ -94,6 +94,7 @@ pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, globa
 
     Ok (
         Character {
+            name: character_json.name,
             hp: character_json.hp as f32,
             pos: FRect::new(0.0, 0.0, 0.0, 0.0),
             current_state: 0,
@@ -120,7 +121,7 @@ fn append_hit_box_data(
         let first = &pair[0];
         let second = &pair[1];
         let duration = second.frame.checked_sub(first.frame)
-            .ok_or_else(|| "Running length encoding required for hitbox frames".to_string())?;
+            .ok_or_else(|| format!("'{}': {}", mov.name, "Run length encoding required for hitbox frames".to_string()))?;
         let range = *offset..first.boxes.len();
         *offset += first.boxes.len();
 
@@ -149,7 +150,7 @@ fn append_hurt_box_data(
         let first = &pair[0];
         let second = &pair[1];
         let duration = second.frame.checked_sub(first.frame)
-            .ok_or_else(|| "Running length encoding required for hitbox frames".to_string())?;
+            .ok_or_else(|| format!("'{}': {}", mov.name, "Run length encoding required for hurtbox frames".to_string()))?;
         let range = *offset..first.boxes.len();
         *offset += first.boxes.len();
 
@@ -200,6 +201,7 @@ struct MoveJson {
     collision_box: CollisionBoxJson,
 
     start_behavior: Vec<StartBehaviorJson>,
+    flags: Vec<FlagsJson>,
     end_behavior: EndBehaviorJson,
 
     cancel_window: CancelWindowJson,
@@ -209,11 +211,13 @@ struct MoveJson {
 }
 
 #[derive(Deserialize, Clone, Copy)]
+#[serde(tag = "type")]
 enum StartBehaviorJson {
     SetVel {x: f32, y: f32},
 }
 
 #[derive(Deserialize)]
+#[serde(tag = "type")]
 enum EndBehaviorJson {
     Endless,
     OnFrameXToStateY {x: usize, y: String},
@@ -222,11 +226,12 @@ enum EndBehaviorJson {
 
 #[derive(Deserialize, Clone, Copy)]
 struct CancelWindowJson {
-    start: usize,
-    end: usize,
+    start: Option<usize>,
+    end: Option<usize>,
 }
 
 #[derive(Deserialize, Clone, Copy)]
+#[serde(tag = "type")]
 enum RelativeMotionJson {
     Neutral,
     Up,
@@ -266,6 +271,7 @@ impl RelativeMotionJson {
 }
 
 #[derive(Deserialize, Clone, Copy)]
+#[serde(tag = "type")]
 enum ButtonJson {
     NONE,
     L,
@@ -358,4 +364,11 @@ struct AnimationJson {
     frames: usize,
     w: usize,
     h: usize,
+}
+
+#[derive(Deserialize)]
+#[serde(tag = "type")]
+enum FlagsJson {
+    Airborne,
+    CancelOnWhiff,
 }

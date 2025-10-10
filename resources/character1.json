@@ -1,0 +1,78 @@
+{
+  "name": "Character1",
+  "hp": 100,
+  "moves": [
+    {
+      "name": "neutral",
+      "input": {"motion": {"type" : "Neutral"}, "button": {"type" : "NONE"}},
+      "hit_boxes": [
+        {"frame": 0, "boxes": []}
+      ],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": [{"type" : "SetVel", "x": 0, "y": 0}],
+      "flags": [],
+      "end_behavior": {"type": "Endless"},
+      
+      "cancel_window": {"start": 0, "end": null},
+      "cancel_options": ["light_attack"],
+
+      "animation": {
+        "texture_path": "./resources/character1_neutral.png",
+        "frames": 1,
+        "w": 64,
+        "h": 64
+      }
+    },
+
+    {
+      "name": "light_attack",
+      "input": {"motion": {"type" : "Neutral"}, "button": {"type" : "L"}},
+      "hit_boxes": [
+        {"frame": 0, "boxes": []},
+        {"frame": 10, "boxes":
+          [
+            {
+              "rect": {"x": 0, "y": 0, "w": 200, "h": 50},
+              "dmg": 30,
+              "hit_stun": 20,
+              "cancel_window": 10
+            }
+          ]
+        },
+        {"frame": 11, "boxes":
+          [
+            {
+              "rect": {"x": 0, "y": 0, "w": 250, "h": 50},
+              "dmg": 30,
+              "hit_stun": 20,
+              "cancel_window": 10
+            }
+          ]
+        },
+        {"frame": 12, "boxes": []}
+      ],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": [{"type" : "SetVel", "x": 0, "y": 0}],
+      "flags": [],
+      "end_behavior": { "type" : "OnFrameXToStateY", "x" : 20, "y" : "neutral"},
+      
+      "cancel_window": {"start": null, "end": null},
+      "cancel_options": ["light_attack"],
+
+      "animation": {
+        "texture_path": "./resources/character1_standing_light.png",
+        "frames": 1,
+        "w": 64,
+        "h": 64
+      }
+    }
+  ]
+}

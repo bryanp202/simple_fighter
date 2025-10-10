@@ -33,7 +33,7 @@ pub fn load_texture<'a>(
     global_textures: &mut Vec<Texture<'a>>,
     file_path: &str, width: u32, height: u32
 ) -> Result<usize, String> {
-    let file = std::fs::File::open(file_path).map_err(|err| err.to_string())?;
+    let file = std::fs::File::open(file_path).map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
     let reader = std::io::BufReader::new(file);
     let img = image::ImageReader::new(reader)
         .with_guessed_format()
@@ -45,9 +45,9 @@ pub fn load_texture<'a>(
         unsafe {PixelFormat::from_ll(SDL_PIXELFORMAT_ABGR8888)},
         width,
         height
-    ).map_err(|err| err.to_string())?;
+    ).map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
     texture.update(None, &img.to_rgba8(), 4 * img.width() as usize)
-        .map_err(|err| err.to_string())?;
+        .map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
     global_textures.push(texture);
     Ok(global_textures.len() - 1)
 }

@@ -16,7 +16,7 @@ const FRAME_DURATION: f32 = 1.0 / FRAME_RATE as f32;
 
 pub struct Game<'a> {
     player1: Character,
-    player2: Character,
+    //player2: Character,
     timer: f32,
     score: (usize, usize),
 
@@ -35,8 +35,8 @@ impl <'a> Game<'a> {
     pub fn init(texture_creator: &'a TextureCreator<WindowContext>, canvas: Canvas<Window>, events: EventPump) -> Self {
         let mut textures = Vec::new();
         Self {
-            player1: Character::from_config(&texture_creator, &mut textures, "character1.json").unwrap(),
-            player2: Character::from_config(&texture_creator, &mut textures, "character2.json").unwrap(),
+            player1: Character::from_config(&texture_creator, &mut textures, "./resources/character1.json").unwrap(),
+            //player2: Character::from_config(&texture_creator, &mut textures, "character2.json").unwrap(),
             timer: 0.0,
             score: (0, 0),
 
@@ -85,7 +85,6 @@ impl <'a> Game<'a> {
     }
 
     fn render(&mut self) {
-        //println!("Held Buttons: {:?}, Just Pressed Buttons: {:?}, Dir: {:?}", self.inputs.held_buttons(), self.inputs.just_pressed_buttons(), self.inputs.dir());
-        println!("Move buffer: {:?}", self.inputs.move_buf());
+        self.player1.render(&mut self.canvas).unwrap();
     }
 }
