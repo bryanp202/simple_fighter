@@ -16,7 +16,7 @@
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["medium_attack", "light_attack", "back_walk", "forward_walk"],
+      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "back_walk", "forward_walk"],
 
       "animation": {
         "texture_path": "./resources/character1_neutral.png",
@@ -40,7 +40,7 @@
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["medium_attack", "light_attack", "back_walk", "forward_walk", "neutral"],
+      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "back_walk", "forward_walk", "neutral"],
 
       "animation": {
         "texture_path": "./resources/character1_neutral.png",
@@ -64,7 +64,7 @@
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["medium_attack", "light_attack", "crotching", "back_walk", "neutral"],
+      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "crotching", "back_walk", "neutral"],
 
       "animation": {
         "texture_path": "./resources/character1_neutral.png",
@@ -88,7 +88,7 @@
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["medium_attack", "light_attack", "crotching", "forward_walk", "neutral"],
+      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "crotching", "forward_walk", "neutral"],
 
       "animation": {
         "texture_path": "./resources/character1_neutral.png",
