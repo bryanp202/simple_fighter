@@ -1,11 +1,41 @@
 use std::ops::Range;
 
 use bitflags::bitflags;
-use sdl3::render::FRect;
+use sdl3::render::{FPoint, FRect};
 
-use crate::game::{boxes::CollisionBox, input::{ButtonFlag, RelativeMotion}};
+use crate::game::{boxes::CollisionBox, input::{ButtonFlag, Inputs, RelativeMotion}};
 
 type StateIndex = usize;
+
+pub struct StateData {
+    current_state: StateIndex,
+    current_frame: usize,
+    vel: FPoint,
+}
+
+impl StateData {
+    pub fn current_state(&self) -> StateIndex {
+        self.current_state
+    }
+
+    pub fn current_frame(&self) -> usize {
+        self.current_frame
+    }
+
+    pub fn vel(&self) -> FPoint {
+        self.vel
+    }
+}
+
+impl Default for StateData {
+    fn default() -> Self {
+        Self {
+            current_state: 0,
+            current_frame: 0,
+            vel: FPoint::new(0.0, 0.0),
+        }
+    }
+}
 
 #[derive(Default, Debug)]
 pub struct States {
@@ -58,9 +88,88 @@ impl States {
 
         }
     }
+
+    pub fn hit_box_range(&self, current_state: StateIndex, mut current_frame: usize) -> Range<usize> {
+        let mut run_start = self.hit_boxes_start[current_state];
+        
+        loop {
+            let (frames, range) = self.run_length_hit_boxes[run_start].clone();
+            if current_frame < frames {
+                return range;
+            }
+            current_frame -= frames;
+            run_start += 1;
+        }
+    }
+
+    pub fn hurt_box_range(&self, current_state: StateIndex, mut current_frame: usize) -> Range<usize> {
+        let mut run_start = self.hurt_boxes_start[current_state];
+        
+        loop {
+            let (frames, range) = self.run_length_hurt_boxes[run_start].clone();
+            if current_frame < frames {
+                return range;
+            }
+            current_frame -= frames;
+            run_start += 1;
+        }
+    }
+
+    pub fn update(&mut self, state_data: &mut StateData, inputs: &Inputs) {
+        state_data.current_frame += 1;
+        self.check_state_end(state_data);
+        self.check_cancels(state_data, inputs);
+    }
+
+    fn check_state_end(&mut self, state_data: &mut StateData) {
+        match self.end_behaviors[state_data.current_state] {
+            EndBehavior::Endless => {},
+            EndBehavior::OnFrameXToStateY { x: end_frame, y: transition_state } => {
+                if state_data.current_frame >= end_frame {
+                    self.enter_state(state_data, transition_state);
+                }
+            },
+            EndBehavior::OnGroundedToStateY { y: transition_state } => {
+
+            },
+        }
+    }
+
+    fn check_cancels(&mut self, state_data: &mut StateData, inputs: &Inputs) {
+        // Check if not in cancel window
+        if !self.cancel_windows[state_data.current_state].contains(&state_data.current_frame) {
+            return;
+        }
+
+        let cancel_options_range = self.cancel_options[state_data.current_state].clone();
+        let cancel_options = &self.run_length_cancel_options[cancel_options_range];
+        for i in cancel_options.iter() {
+            let cancel_option = &self.inputs[*i];
+            let maybe_index = inputs
+                .move_buf()
+                .iter()
+                .position(|(buf_motion, buf_buttons)| {
+                    buf_motion.on_left_side().matches(&cancel_option.motion) && buf_buttons.contains(cancel_option.button)
+                });
+            if let Some(_) = maybe_index {
+                self.enter_state(state_data, *i);
+                break;
+            }
+        }
+    }
+
+    fn enter_state(&mut self, state_data: &mut StateData, new_state: StateIndex) {
+        state_data.current_state = new_state;
+        state_data.current_frame = 0;
+        match self.start_behaviors[new_state] {
+            StartBehavior::SetVel { x, y } => {
+                state_data.vel = FPoint::new(x, y);
+            }
+        }
+    }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct MoveInput {
     button: ButtonFlag,
     motion: RelativeMotion,

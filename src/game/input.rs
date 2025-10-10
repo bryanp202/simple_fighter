@@ -261,8 +261,9 @@ impl Motion {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RelativeMotion {
+    Any,
     Neutral,
     Up,
     UpForward,
@@ -277,6 +278,12 @@ pub enum RelativeMotion {
     QcBack,
     DpForward,
     DpBack,
+}
+
+impl RelativeMotion {
+    pub fn matches(&self, other: &RelativeMotion) -> bool {
+        *self == RelativeMotion::Any || *other == RelativeMotion::Any || *self == *other
+    }
 }
 
 type MoveBuffer = [(Motion, ButtonFlag); InputHistory::MOTION_BUF_SIZE];

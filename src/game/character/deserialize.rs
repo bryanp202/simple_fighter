@@ -1,6 +1,6 @@
 use std::{collections::{HashMap, HashSet}, ops::Range, usize};
 
-use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{state::{EndBehavior, MoveInput, StartBehavior, StateFlags, States}, Character}, input::{ButtonFlag, RelativeMotion}, render::{self, animation::Animation}};
+use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States}, Character}, input::{ButtonFlag, RelativeMotion}, render::{self, animation::Animation}};
 
 use sdl3::{render::{FPoint, FRect, Texture, TextureCreator}, video::WindowContext};
 use serde::Deserialize;
@@ -110,14 +110,13 @@ pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, globa
             name: character_json.name,
             hp: character_json.hp as f32,
             pos: FPoint::new(0.0, 0.0),
-            current_state: 0,
-            current_frame: 0,
             states,
             projectiles: Vec::new(),
             hit_box_data,
             hurt_box_data,
             collision_box_data,
             animation_data,
+            state_data: StateData::default(),
         }
     )
 }
@@ -281,6 +280,7 @@ impl CancelWindowJson {
 #[derive(Deserialize, Clone, Copy)]
 #[serde(tag = "type")]
 enum RelativeMotionJson {
+    Any,
     Neutral,
     Up,
     UpForward,
@@ -300,6 +300,7 @@ enum RelativeMotionJson {
 impl RelativeMotionJson {
     fn to_relative_motion(self) -> RelativeMotion {
         match self {
+            RelativeMotionJson::Any => RelativeMotion::Any,
             RelativeMotionJson::Back => RelativeMotion::Back,
             RelativeMotionJson::Down => RelativeMotion::Down,
             RelativeMotionJson::DownBack => RelativeMotion::DownBack,

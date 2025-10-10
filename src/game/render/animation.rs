@@ -29,4 +29,10 @@ impl Animation {
         let src_rect = FRect::new(0.0, frame as f32 * self.frame_h, self.frame_w, self.frame_h);
         (&textures[self.texture_index], src_rect)
     }
+
+    pub fn get_frame_cycle<'r>(&self, frame: usize, textures: &'r [Texture]) -> (&'r Texture<'r>, FRect) {
+        let frame = frame % self.frames;
+        let src_rect = FRect::new(0.0, frame as f32 * self.frame_h, self.frame_w, self.frame_h);
+        (&textures[self.texture_index], src_rect)
+    }
 }

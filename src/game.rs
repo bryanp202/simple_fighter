@@ -82,6 +82,7 @@ impl <'a> Game<'a> {
 
     fn update(&mut self, dt: f32) {
         self.inputs.update();
+        self.player1.update(&self.inputs);
     }
 
     fn render(&mut self) {

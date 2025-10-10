@@ -1,4 +1,4 @@
-use sdl3::render::FRect;
+use sdl3::render::{FPoint, FRect};
 
 #[derive(Debug)]
 pub struct HitBox {
@@ -16,6 +16,10 @@ impl HitBox {
     pub fn pos(&self) -> FRect {
         self.pos
     }
+
+    pub fn pos_with_offset(&self, offset: FPoint) -> FRect {
+        FRect { x: self.pos.x + offset.x, y: self.pos.y + offset.y, w: self.pos.w, h: self.pos.h }
+    }
 }
 
 pub struct HurtBox {
@@ -30,6 +34,10 @@ impl HurtBox {
     pub fn pos(&self) -> FRect {
         self.pos
     }
+
+    pub fn pos_with_offset(&self, offset: FPoint) -> FRect {
+        FRect { x: self.pos.x + offset.x, y: self.pos.y + offset.y, w: self.pos.w, h: self.pos.h }
+    }
 }
 
 pub struct CollisionBox {
@@ -43,5 +51,9 @@ impl CollisionBox {
 
     pub fn pos(&self) -> FRect {
         self.pos
+    }
+
+    pub fn pos_with_offset(&self, offset: FPoint) -> FRect {
+        FRect { x: self.pos.x + offset.x, y: self.pos.y + offset.y, w: self.pos.w, h: self.pos.h }
     }
 }

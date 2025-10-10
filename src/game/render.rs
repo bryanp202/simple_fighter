@@ -1,30 +1,28 @@
-use sdl3::{pixels::{FColor, PixelFormat}, render::{Canvas, Texture, TextureCreator}, sys::pixels::SDL_PIXELFORMAT_ABGR8888, video::{Window, WindowContext}};
+use sdl3::{pixels::{FColor, PixelFormat}, render::{Canvas, FPoint, Texture, TextureCreator}, sys::pixels::SDL_PIXELFORMAT_ABGR8888, video::{Window, WindowContext}};
 
 use crate::game::boxes::{CollisionBox, HitBox, HurtBox};
 
 pub mod animation;
 
-pub fn draw_hitbox_system(canvas: &mut Canvas<Window>, hitboxes: &[HitBox]) -> Result<(), sdl3::Error> {
+pub fn draw_hit_boxes_system(canvas: &mut Canvas<Window>, offset: FPoint, hitboxes: &[HitBox]) -> Result<(), sdl3::Error> {
     canvas.set_draw_color(FColor::RGBA(1.0, 0.0, 0.0, 0.5));
     for hitbox in hitboxes {
-        canvas.fill_rect(hitbox.pos())?;
+        canvas.fill_rect(hitbox.pos_with_offset(offset))?;
     }
     Ok(())
 }
 
-pub fn draw_hurtbox_system(canvas: &mut Canvas<Window>, hurtboxes: &[HurtBox]) -> Result<(), sdl3::Error> {
+pub fn draw_hurt_boxes_system(canvas: &mut Canvas<Window>, offset: FPoint, hurtboxes: &[HurtBox]) -> Result<(), sdl3::Error> {
     canvas.set_draw_color(FColor::RGBA(0.0, 1.0, 0.0, 0.5));
     for hurtbox in hurtboxes {
-        canvas.fill_rect(hurtbox.pos())?;
+        canvas.fill_rect(hurtbox.pos_with_offset(offset))?;
     }
     Ok(())
 }
 
-pub fn draw_collisionbox_system(canvas: &mut Canvas<Window>, collisionboxes: &[CollisionBox]) -> Result<(), sdl3::Error> {
+pub fn draw_collision_box_system(canvas: &mut Canvas<Window>, offset: FPoint, collision_box: &CollisionBox) -> Result<(), sdl3::Error> {
     canvas.set_draw_color(FColor::RGBA(1.0, 1.0, 1.0, 0.5));
-    for collisionbox in collisionboxes {
-        canvas.fill_rect(collisionbox.pos())?;
-    }
+    canvas.fill_rect(collision_box.pos_with_offset(offset))?;
     Ok(())
 }
 
