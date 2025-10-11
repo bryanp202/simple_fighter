@@ -137,7 +137,7 @@ impl States {
 
     fn check_cancels(&mut self, state_data: &mut StateData, inputs: &Inputs) {
         // Check if not in cancel window
-        if !self.cancel_windows[state_data.current_state].contains(&state_data.current_frame) {
+        if !self.in_cancel_window(state_data) {
             return;
         }
 
@@ -156,6 +156,10 @@ impl States {
                 break;
             }
         }
+    }
+
+    fn in_cancel_window(&self, state_data: &StateData) -> bool {
+        self.cancel_windows[state_data.current_state].contains(&state_data.current_frame)
     }
 
     fn enter_state(&mut self, state_data: &mut StateData, new_state: StateIndex) {

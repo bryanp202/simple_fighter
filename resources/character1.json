@@ -194,7 +194,7 @@
 
     {
       "name": "spin_attack",
-      "input": {"motion": {"type" : "QcForward"}, "button": {"type" : "H"}},
+      "input": {"motion": {"type" : "DpForward"}, "button": {"type" : "H"}},
       "hit_boxes": [
         {"frame": 0, "boxes": []},
         {"frame": 16, "boxes":
