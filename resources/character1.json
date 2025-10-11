@@ -19,10 +19,10 @@
       "cancel_options": ["spin_attack", "medium_attack", "light_attack", "crotching", "back_walk", "forward_walk"],
 
       "animation": {
-        "texture_path": "./resources/character1_neutral.png",
+        "texture_path": "./resources/llama.png",
         "frames": 1,
-        "w": 64,
-        "h": 64
+        "w": 128,
+        "h": 128
       }
     },
 
@@ -67,10 +67,10 @@
       "cancel_options": ["spin_attack", "medium_attack", "light_attack", "crotching", "back_walk", "neutral"],
 
       "animation": {
-        "texture_path": "./resources/character1_neutral.png",
-        "frames": 1,
-        "w": 64,
-        "h": 64
+        "texture_path": "./resources/llama.png",
+        "frames": 24,
+        "w": 128,
+        "h": 128
       }
     },
 
@@ -91,10 +91,10 @@
       "cancel_options": ["spin_attack", "medium_attack", "light_attack", "crotching", "forward_walk", "neutral"],
 
       "animation": {
-        "texture_path": "./resources/character1_neutral.png",
-        "frames": 1,
-        "w": 64,
-        "h": 64
+        "texture_path": "./resources/llama.png",
+        "frames": 24,
+        "w": 128,
+        "h": 128
       }
     },
 

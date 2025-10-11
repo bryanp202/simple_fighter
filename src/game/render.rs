@@ -29,7 +29,7 @@ pub fn draw_collision_box_system(canvas: &mut Canvas<Window>, offset: FPoint, co
 pub fn load_texture<'a>(
     texture_creator: &'a TextureCreator<WindowContext>,
     global_textures: &mut Vec<Texture<'a>>,
-    file_path: &str, width: u32, height: u32
+    file_path: &str,
 ) -> Result<usize, String> {
     let file = std::fs::File::open(file_path).map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
     let reader = std::io::BufReader::new(file);
@@ -41,8 +41,8 @@ pub fn load_texture<'a>(
 
     let mut texture = texture_creator.create_texture_streaming(
         unsafe {PixelFormat::from_ll(SDL_PIXELFORMAT_ABGR8888)},
-        width,
-        height
+        img.width(),
+        img.height(),
     ).map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
     texture.update(None, &img.to_rgba8(), 4 * img.width() as usize)
         .map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;

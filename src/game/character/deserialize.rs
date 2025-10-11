@@ -15,15 +15,13 @@ pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, globa
             texture_creator,
             global_textures,
             &mov.animation.texture_path,
-            mov.animation.w as u32,
-            mov.animation.h as u32
         )?;
 
         let frames = mov.animation.frames;
         let frame_w = mov.animation.w as f32;
         let frame_h = mov.animation.h as f32;
 
-        animation_data.push(Animation::new(texture_index, frames, frame_w, frame_h));
+        animation_data.push(Animation::new(texture_index, frames as usize, frame_w, frame_h));
     }
 
     let move_names_to_pos: HashMap<_, _> = character_json.moves.iter()
@@ -414,9 +412,9 @@ impl RectJson {
 #[derive(Deserialize)]
 struct AnimationJson {
     texture_path: String,
-    frames: usize,
-    w: usize,
-    h: usize,
+    frames: u32,
+    w: u32,
+    h: u32,
 }
 
 #[derive(Deserialize)]
