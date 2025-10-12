@@ -26,7 +26,7 @@ pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, globa
 
     let move_names_to_pos: HashMap<_, _> = character_json.moves.iter()
         .enumerate()
-        .map(|(i, mov)| (mov.name.clone(), i))
+        .map(|(i, mov)| (mov.name.as_str(), i))
         .collect();
 
     let mut hit_box_data = Vec::new();
@@ -189,7 +189,7 @@ fn append_hurt_box_data(
 
 fn append_cancel_options_data(
     mov: &MoveJson,
-    map: &HashMap<String, usize>,
+    map: &HashMap<&str, usize>,
     cancel_options: &mut Vec<Range<usize>>,
     run_length_cancel_options: &mut Vec<usize>,
     offset: &mut usize,
@@ -199,7 +199,7 @@ fn append_cancel_options_data(
     cancel_options.push(range);
 
     for cancel_option in mov.cancel_options.iter() {
-        let index = map.get(cancel_option)
+        let index = map.get(cancel_option.as_str())
             .ok_or_else(|| format!("Could not find a move named: {}", cancel_option))?;
         run_length_cancel_options.push(*index);
     }
@@ -254,14 +254,14 @@ enum EndBehaviorJson {
 }
 
 impl EndBehaviorJson {
-    fn to_end_behavior(&self, map: &HashMap<String, usize>) -> Result<EndBehavior, String> {
+    fn to_end_behavior(&self, map: &HashMap<&str, usize>) -> Result<EndBehavior, String> {
         Ok (
             match self {
                 EndBehaviorJson::Endless => EndBehavior::Endless,
                 EndBehaviorJson::OnFrameXToStateY { x, y }
-                    => EndBehavior::OnFrameXToStateY { x: *x, y: *map.get(y).ok_or_else(|| y.clone())? },
+                    => EndBehavior::OnFrameXToStateY { x: *x, y: *map.get(y.as_str()).ok_or_else(|| y.clone())? },
                 EndBehaviorJson::OnGroundedToStateY { y }
-                    => EndBehavior::OnGroundedToStateY { y: *map.get(y).ok_or_else(|| y.clone())? },
+                    => EndBehavior::OnGroundedToStateY { y: *map.get(y.as_str()).ok_or_else(|| y.clone())? },
             }
         )
     }
