@@ -1,6 +1,6 @@
-use sdl3::{pixels::{FColor, PixelFormat}, render::{Canvas, FPoint, Texture, TextureCreator}, sys::pixels::SDL_PIXELFORMAT_ABGR8888, video::{Window, WindowContext}};
+use sdl3::{pixels::{FColor, PixelFormat}, rect::Rect, render::{Canvas, FPoint, Texture, TextureCreator}, sys::pixels::SDL_PIXELFORMAT_ABGR8888, video::{Window, WindowContext}};
 
-use crate::game::boxes::{CollisionBox, HitBox, HurtBox};
+use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, render::animation::AnimationLayout};
 
 pub mod animation;
 
@@ -30,6 +30,7 @@ pub fn load_texture<'a>(
     texture_creator: &'a TextureCreator<WindowContext>,
     global_textures: &mut Vec<Texture<'a>>,
     file_path: &str,
+    width: u32, height: u32, frames: u32, layout: AnimationLayout,
 ) -> Result<usize, String> {
     let file = std::fs::File::open(file_path).map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
     let reader = std::io::BufReader::new(file);
@@ -41,11 +42,32 @@ pub fn load_texture<'a>(
 
     let mut texture = texture_creator.create_texture_streaming(
         unsafe {PixelFormat::from_ll(SDL_PIXELFORMAT_ABGR8888)},
-        img.width(),
-        img.height(),
+        width,
+        height * frames,
     ).map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
-    texture.update(None, &img.to_rgba8(), 4 * img.width() as usize)
-        .map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
+
+    match layout {
+        AnimationLayout::VERTICAL => {
+            let frames_rect = Rect::new(0, 0, width, height * frames);
+            let frames = img.crop_imm(frames_rect.x as u32, frames_rect.y as u32, frames_rect.width(), frames_rect.height());
+            texture.update(frames_rect, &frames.to_rgba8(), 4 * frames.width() as usize)
+                .map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
+        },
+        AnimationLayout::HORIZONTAL => {
+            for frame in 0..frames {
+                let frame_rect = Rect::new((frame * width) as i32, 0, width, height);
+                let frame = img.crop_imm(frame_rect.x as u32, frame_rect.y as u32, frame_rect.width(), frame_rect.height());
+                let texture_frame = Rect::new(frame_rect.y, frame_rect.x, frame_rect.width(), frame_rect.height());
+                texture.update(texture_frame, &frame.to_rgba8(), 4 * frame.width() as usize)
+                    .map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
+            }
+        },
+    }
     global_textures.push(texture);
+    
+    if cfg!(feature = "debug") {
+        println!("Loaded texture: {}", file_path);
+    }
+
     Ok(global_textures.len() - 1)
 }

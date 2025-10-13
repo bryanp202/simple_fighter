@@ -1,5 +1,10 @@
 use sdl3::render::{FRect, Texture};
 
+pub enum AnimationLayout {
+    HORIZONTAL,
+    VERTICAL,
+}
+
 /// Animation frames are stored vertically
 pub struct Animation {
     texture_index: usize,

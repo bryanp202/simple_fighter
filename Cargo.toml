@@ -3,6 +3,10 @@ name = "fighter"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+# default = ["debug"]
+debug = []
+
 [dependencies]
 bitflags = "2.9.4"
 image = "0.25.8"

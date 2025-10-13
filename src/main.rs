@@ -15,7 +15,10 @@ fn main() {
     let events = sdl.event_pump().expect("Failed to make event pump");
 
     let game = Game::init(&texture_creator, canvas, events);
-    println!("Game initaliazed");
+
+    if cfg!(feature = "debug") {
+        println!("Game initaliazed");
+    }
 
     game.run();
 }

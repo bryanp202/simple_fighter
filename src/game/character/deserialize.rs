@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ops::Range, usize};
 
-use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States}, Character}, input::{ButtonFlag, RelativeDirection, RelativeMotion}, render::{self, animation::Animation}};
+use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States}, Character}, input::{ButtonFlag, RelativeDirection, RelativeMotion}, render::{self, animation::{Animation, AnimationLayout}}};
 
 use sdl3::{render::{FPoint, FRect, Texture, TextureCreator}, video::WindowContext};
 use serde::Deserialize;
@@ -15,6 +15,10 @@ pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, globa
             texture_creator,
             global_textures,
             &mov.animation.texture_path,
+            mov.animation.h,
+            mov.animation.w,
+            mov.animation.frames,
+            mov.animation.layout.to_animation_layout(),
         )?;
 
         let frames = mov.animation.frames;
@@ -435,9 +439,26 @@ impl RectJson {
 #[derive(Deserialize)]
 struct AnimationJson {
     texture_path: String,
+    layout: AnimationLayoutJson,
     frames: u32,
     w: u32,
     h: u32,
+}
+
+#[derive(Deserialize)]
+#[serde(tag = "type")]
+pub enum AnimationLayoutJson {
+    Horz,
+    Vert,
+}
+
+impl AnimationLayoutJson {
+    fn to_animation_layout(&self) -> AnimationLayout {
+        match self {
+            AnimationLayoutJson::Horz => AnimationLayout::HORIZONTAL,
+            AnimationLayoutJson::Vert => AnimationLayout::VERTICAL,
+        }
+    }
 }
 
 #[derive(Deserialize)]

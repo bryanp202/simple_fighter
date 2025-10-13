@@ -19,10 +19,11 @@
       "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "crotching", "back_walk", "forward_walk"],
 
       "animation": {
-        "texture_path": "./resources/llama.png",
-        "frames": 1,
-        "w": 128,
-        "h": 128
+        "texture_path": "./resources/IDLE.png",
+        "layout": {"type": "Horz"},
+        "frames": 10,
+        "w": 96,
+        "h": 96
       }
     },
 
@@ -44,6 +45,7 @@
 
       "animation": {
         "texture_path": "./resources/character1_neutral.png",
+        "layout": {"type": "Vert"},
         "frames": 1,
         "w": 64,
         "h": 64
@@ -67,10 +69,11 @@
       "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "crotching", "back_walk", "neutral"],
 
       "animation": {
-        "texture_path": "./resources/llama.png",
-        "frames": 24,
-        "w": 128,
-        "h": 128
+        "texture_path": "./resources/BackRun.png",
+        "layout": {"type": "Horz"},
+        "frames": 16,
+        "w": 96,
+        "h": 96
       }
     },
 
@@ -83,7 +86,7 @@
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
 
-      "start_behavior": {"type" : "SetVel", "x": -4, "y": 0},
+      "start_behavior": {"type" : "SetVel", "x": -2, "y": 0},
       "flags": [],
       "end_behavior": {"type": "Endless"},
       
@@ -91,10 +94,11 @@
       "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "crotching", "forward_walk", "neutral"],
 
       "animation": {
-        "texture_path": "./resources/llama_walk_back.png",
-        "frames": 24,
-        "w": 128,
-        "h": 128
+        "texture_path": "./resources/BackRun.png",
+        "layout": {"type": "Horz"},
+        "frames": 16,
+        "w": 96,
+        "h": 96
       }
     },
 
@@ -116,6 +120,7 @@
 
       "animation": {
         "texture_path": "./resources/llama.png",
+        "layout": {"type": "Vert"},
         "frames": 24,
         "w": 128,
         "h": 128
@@ -140,6 +145,7 @@
 
       "animation": {
         "texture_path": "./resources/llama_walk_back.png",
+        "layout": {"type": "Vert"},
         "frames": 24,
         "w": 128,
         "h": 128
@@ -164,6 +170,7 @@
 
       "animation": {
         "texture_path": "./resources/llama.png",
+        "layout": {"type": "Vert"},
         "frames": 1,
         "w": 128,
         "h": 128
@@ -175,7 +182,7 @@
       "input": {"Direction": {"dir": {"type" : "Any"}, "button": {"type" : "L"}}},
       "hit_boxes": [
         {"frame": 0, "boxes": []},
-        {"frame": 4, "boxes":
+        {"frame": 7, "boxes":
           [
             {
               "rect": {"x": 0, "y": 0, "w": 200, "h": 50},
@@ -185,7 +192,7 @@
             }
           ]
         },
-        {"frame": 6, "boxes":
+        {"frame": 8, "boxes":
           [
             {
               "rect": {"x": 0, "y": 0, "w": 250, "h": 50},
@@ -195,7 +202,7 @@
             }
           ]
         },
-        {"frame": 8, "boxes": []}
+        {"frame": 9, "boxes": []}
       ],
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
@@ -204,16 +211,17 @@
 
       "start_behavior": {"type" : "SetVel", "x": 0, "y": 0},
       "flags": [],
-      "end_behavior": { "type" : "OnFrameXToStateY", "x" : 16, "y" : "neutral"},
+      "end_behavior": { "type" : "OnFrameXToStateY", "x" : 13, "y" : "neutral"},
       
-      "cancel_window": {"start": 8, "end": 11},
+      "cancel_window": {"start": 7, "end": 9},
       "cancel_options": ["medium_attack", "light_attack"],
 
       "animation": {
-        "texture_path": "./resources/character1_standing_light.png",
-        "frames": 1,
-        "w": 64,
-        "h": 64
+        "texture_path": "./resources/Attack1.png",
+        "layout": {"type": "Vert"},
+        "frames": 12,
+        "w": 200,
+        "h": 200
       }
     },
 
@@ -257,10 +265,11 @@
       "cancel_options": ["spin_attack"],
 
       "animation": {
-        "texture_path": "./resources/character1_standing_medium.png",
-        "frames": 1,
-        "w": 64,
-        "h": 64
+        "texture_path": "./resources/Attack2.png",
+        "layout": {"type": "Horz"},
+        "frames": 7,
+        "w": 96,
+        "h": 96
       }
     },
 
@@ -305,6 +314,7 @@
 
       "animation": {
         "texture_path": "./resources/character1_spin_attack.png",
+        "layout": {"type": "Vert"},
         "frames": 1,
         "w": 64,
         "h": 64
