@@ -4,7 +4,7 @@
   "moves": [
     {
       "name": "neutral",
-      "input": {"motion": {"type" : "Neutral"}, "button": {"type" : "NONE"}},
+      "input": {"Direction": {"dir": {"type" : "Neutral"}, "button": {"type" : "NONE"}}},
       "hit_boxes": [],
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
@@ -28,7 +28,7 @@
 
     {
       "name": "crotching",
-      "input": {"motion": {"type" : "Down"}, "button": {"type" : "NONE"}},
+      "input": {"Direction": {"dir": {"type" : "Down"}, "button": {"type" : "NONE"}}},
       "hit_boxes": [],
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 50, "w": 100, "h": 50}}]}
@@ -52,7 +52,7 @@
 
     {
       "name": "forward_walk",
-      "input": {"motion": {"type" : "Forward"}, "button": {"type" : "NONE"}},
+      "input": {"Direction": {"dir": {"type" : "Forward"}, "button": {"type" : "NONE"}}},
       "hit_boxes": [],
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
@@ -76,7 +76,7 @@
 
     {
       "name": "back_walk",
-      "input": {"motion": {"type" : "Back"}, "button": {"type" : "NONE"}},
+      "input": {"Direction": {"dir": {"type" : "Back"}, "button": {"type" : "NONE"}}},
       "hit_boxes": [],
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
@@ -91,7 +91,7 @@
       "cancel_options": ["spin_attack", "medium_attack", "light_attack", "crotching", "forward_walk", "neutral"],
 
       "animation": {
-        "texture_path": "./resources/llama.png",
+        "texture_path": "./resources/llama_walk_back.png",
         "frames": 24,
         "w": 128,
         "h": 128
@@ -100,7 +100,7 @@
 
     {
       "name": "light_attack",
-      "input": {"motion": {"type" : "Any"}, "button": {"type" : "L"}},
+      "input": {"Direction": {"dir": {"type" : "Any"}, "button": {"type" : "L"}}},
       "hit_boxes": [
         {"frame": 0, "boxes": []},
         {"frame": 4, "boxes":
@@ -147,7 +147,7 @@
 
     {
       "name": "medium_attack",
-      "input": {"motion": {"type" : "Any"}, "button": {"type" : "M"}},
+      "input": {"Direction": {"dir": {"type" : "Any"}, "button": {"type" : "M"}}},
       "hit_boxes": [
         {"frame": 0, "boxes": []},
         {"frame": 10, "boxes":
@@ -194,7 +194,7 @@
 
     {
       "name": "spin_attack",
-      "input": {"motion": {"type" : "DpForward"}, "button": {"type" : "H"}},
+      "input": {"Motion": {"motion": {"type" : "DpForward"}, "button": {"type" : "H"}}},
       "hit_boxes": [
         {"frame": 0, "boxes": []},
         {"frame": 16, "boxes":

@@ -3,7 +3,7 @@ use std::ops::Range;
 use bitflags::bitflags;
 use sdl3::render::FPoint;
 
-use crate::game::{input::{ButtonFlag, Inputs, RelativeMotion}};
+use crate::game::input::{ButtonFlag, Inputs, RelativeDirection, RelativeMotion};
 
 type StateIndex = usize;
 
@@ -145,11 +145,18 @@ impl States {
         let cancel_options = &self.run_length_cancel_options[cancel_options_range];
         for i in cancel_options.iter() {
             let cancel_option = &self.inputs[*i];
+
+            // Check direction first
+            if !cancel_option.dir.matches_or_is_none(&inputs.dir().on_left_side()) {
+                continue;
+            }
+
             let maybe_index = inputs
                 .move_buf()
                 .iter()
                 .position(|(buf_motion, buf_buttons)| {
-                    buf_motion.on_left_side().matches(&cancel_option.motion) && buf_buttons.contains(cancel_option.button)
+                    cancel_option.motion.matches_or_is_none(&buf_motion.on_left_side()) &&
+                    buf_buttons.contains(cancel_option.button)
                 });
             if let Some(_) = maybe_index {
                 self.enter_state(state_data, *i);
@@ -177,11 +184,12 @@ impl States {
 pub struct MoveInput {
     button: ButtonFlag,
     motion: RelativeMotion,
+    dir: RelativeDirection,
 }
 
 impl MoveInput {
-    pub fn new(button: ButtonFlag, motion: RelativeMotion) -> Self {
-        Self {button, motion}
+    pub fn new(button: ButtonFlag, motion: RelativeMotion, dir: RelativeDirection) -> Self {
+        Self {button, motion, dir}
     }
 }
 

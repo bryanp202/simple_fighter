@@ -192,6 +192,7 @@ bitflags! {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Direction {
+    None,
     Neutral,
     Up,
     Down,
@@ -203,17 +204,52 @@ pub enum Direction {
     DownRight,
 }
 
+impl Direction {
+    /// Returns true if self and other match, or if self is none
+    pub fn matches_or_is_none(&self, other: &Self) -> bool {
+        *self == *other || *self == Self::None
+    }
+
+    pub fn on_left_side(&self) -> RelativeDirection {
+        match self {
+            Direction::None => RelativeDirection::None,
+            Direction::Down => RelativeDirection::Down,
+            Direction::DownLeft => RelativeDirection::DownBack,
+            Direction::UpLeft => RelativeDirection::UpBack,
+            Direction::Left => RelativeDirection::Back,
+            Direction::Right => RelativeDirection::Forward,
+            Direction::Neutral => RelativeDirection::Neutral,
+            Direction::UpRight => RelativeDirection::UpForward,
+            Direction::DownRight => RelativeDirection::DownForward,
+            Direction::Up => RelativeDirection::Up,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Motion {
+pub enum RelativeDirection {
+    None,
     Neutral,
     Up,
-    UpRight,
-    Right,
-    DownRight,
     Down,
-    DownLeft,
-    Left,
-    UpLeft,
+    Back,
+    Forward,
+    UpBack,
+    DownBack,
+    UpForward,
+    DownForward,
+}
+
+impl RelativeDirection {
+    /// Returns true if self and other match, or if self is none
+    pub fn matches_or_is_none(&self, other: &Self) -> bool {
+        *self == *other || *self == Self::None
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Motion {
+    None,
     DownDown,
     QcRight,
     QcLeft,
@@ -224,15 +260,7 @@ pub enum Motion {
 impl Motion {
     pub fn on_left_side(&self) -> RelativeMotion {
         match self {
-            Motion::Neutral => RelativeMotion::Neutral,
-            Motion::Up => RelativeMotion::Up,
-            Motion::UpRight => RelativeMotion::UpForward,
-            Motion::Right => RelativeMotion::Forward,
-            Motion::DownRight => RelativeMotion::DownForward,
-            Motion::Down => RelativeMotion::Down,
-            Motion::DownLeft => RelativeMotion::DownBack,
-            Motion::Left => RelativeMotion::Back,
-            Motion::UpLeft => RelativeMotion::UpBack,
+            Motion::None => RelativeMotion::None,
             Motion::DownDown => RelativeMotion::DownDown,
             Motion::QcRight => RelativeMotion::QcForward,
             Motion::QcLeft => RelativeMotion::QcBack, 
@@ -243,15 +271,7 @@ impl Motion {
 
     pub fn on_right_side(&self) -> RelativeMotion {
         match self {
-            Motion::Neutral => RelativeMotion::Neutral,
-            Motion::Up => RelativeMotion::Up,
-            Motion::UpRight => RelativeMotion::UpBack,
-            Motion::Right => RelativeMotion::Back,
-            Motion::DownRight => RelativeMotion::DownBack,
-            Motion::Down => RelativeMotion::Down,
-            Motion::DownLeft => RelativeMotion::DownForward,
-            Motion::Left => RelativeMotion::Forward,
-            Motion::UpLeft => RelativeMotion::UpForward,
+            Motion::None => RelativeMotion::None,
             Motion::DownDown => RelativeMotion::DownDown,
             Motion::QcRight => RelativeMotion::QcBack,
             Motion::QcLeft => RelativeMotion::QcForward, 
@@ -263,16 +283,7 @@ impl Motion {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RelativeMotion {
-    Any,
-    Neutral,
-    Up,
-    UpForward,
-    Forward,
-    DownForward,
-    Down,
-    DownBack,
-    Back,
-    UpBack,
+    None,
     DownDown,
     QcForward,
     QcBack,
@@ -281,8 +292,9 @@ pub enum RelativeMotion {
 }
 
 impl RelativeMotion {
-    pub fn matches(&self, other: &RelativeMotion) -> bool {
-        *self == RelativeMotion::Any || *other == RelativeMotion::Any || *self == *other
+    /// Returns true if self and other match, or if self is none
+    pub fn matches_or_is_none(&self, other: &RelativeMotion) -> bool {
+        *self == *other || *self == RelativeMotion::None
     }
 }
 
@@ -310,18 +322,18 @@ impl InputHistory {
     pub fn new() -> Self {
         Self {
             buf: std::array::from_fn(|_| (Direction::Neutral, ButtonFlag::NONE, 1)),
-            motion_buf: std::array::from_fn(|_| (Motion::Neutral, ButtonFlag::NONE)),
+            motion_buf: std::array::from_fn(|_| (Motion::None, ButtonFlag::NONE)),
             current_index: 0,
         }
     }
 
     pub fn update(&mut self, dir: Direction, held_buttons: ButtonFlag, just_pressed_buttons: ButtonFlag) {
         self.append_input(dir, held_buttons);
-        self.shift_motion_buf(just_pressed_buttons);
+        self.shift_motion_buf(dir, just_pressed_buttons);
     }
 
-    fn shift_motion_buf(&mut self, just_pressed_buttons: ButtonFlag) {
-        let mut new_buf: MoveBuffer = std::array::from_fn(|_| (Motion::Neutral, ButtonFlag::NONE));
+    fn shift_motion_buf(&mut self, dir: Direction, just_pressed_buttons: ButtonFlag) {
+        let mut new_buf: MoveBuffer = std::array::from_fn(|_| (Motion::None, ButtonFlag::NONE));
         new_buf[1..].copy_from_slice(&self.motion_buf[0..Self::MOTION_BUF_SIZE - 1]);
         new_buf[0] = (self.parse_motion(), just_pressed_buttons);
         self.motion_buf = new_buf;
@@ -382,19 +394,9 @@ impl InputHistory {
         }
 
         if let Some(_) = Self::find_dir_sequence(motion_slice, Self::DOWNDOWN_INVERSE) {
-            return Motion::DownDown;
-        }
-
-        match motion_slice[0] {
-            Direction::Down => Motion::Down,
-            Direction::DownLeft => Motion::DownLeft,
-            Direction::DownRight => Motion::DownRight,
-            Direction::Neutral => Motion::Neutral,
-            Direction::Up => Motion::Up,
-            Direction::UpLeft => Motion::UpLeft,
-            Direction::UpRight => Motion::UpRight,
-            Direction::Left => Motion::Left,
-            Direction::Right => Motion::Right,
+            Motion::DownDown
+        } else {
+            Motion::None
         }
     }
 

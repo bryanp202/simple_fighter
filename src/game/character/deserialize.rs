@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ops::Range, usize};
 
-use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States}, Character}, input::{ButtonFlag, RelativeMotion}, render::{self, animation::Animation}};
+use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States}, Character}, input::{ButtonFlag, RelativeDirection, RelativeMotion}, render::{self, animation::Animation}};
 
 use sdl3::{render::{FPoint, FRect, Texture, TextureCreator}, video::WindowContext};
 use serde::Deserialize;
@@ -281,17 +281,39 @@ impl CancelWindowJson {
 
 #[derive(Deserialize, Clone, Copy)]
 #[serde(tag = "type")]
-enum RelativeMotionJson {
+enum RelativeDirectionJson {
     Any,
     Neutral,
     Up,
-    UpForward,
-    Forward,
-    DownForward,
     Down,
-    DownBack,
     Back,
+    Forward,
     UpBack,
+    DownBack,
+    UpForward,
+    DownForward,
+}
+
+impl RelativeDirectionJson {
+    fn to_relative_direction(self) -> RelativeDirection {
+        match self {
+            RelativeDirectionJson::Any => RelativeDirection::None,
+            RelativeDirectionJson::Back => RelativeDirection::Back,
+            RelativeDirectionJson::Down => RelativeDirection::Down,
+            RelativeDirectionJson::DownBack => RelativeDirection::DownBack,
+            RelativeDirectionJson::DownForward => RelativeDirection::DownForward,
+            RelativeDirectionJson::Neutral => RelativeDirection::Neutral,
+            RelativeDirectionJson::Up => RelativeDirection::Up,
+            RelativeDirectionJson::UpBack => RelativeDirection::UpBack,
+            RelativeDirectionJson::UpForward => RelativeDirection::UpForward,
+            RelativeDirectionJson::Forward => RelativeDirection::Forward,
+        }
+    }
+}
+
+#[derive(Deserialize, Clone, Copy)]
+#[serde(tag = "type")]
+enum RelativeMotionJson {
     DownDown,
     QcForward,
     QcBack,
@@ -302,21 +324,11 @@ enum RelativeMotionJson {
 impl RelativeMotionJson {
     fn to_relative_motion(self) -> RelativeMotion {
         match self {
-            RelativeMotionJson::Any => RelativeMotion::Any,
-            RelativeMotionJson::Back => RelativeMotion::Back,
-            RelativeMotionJson::Down => RelativeMotion::Down,
-            RelativeMotionJson::DownBack => RelativeMotion::DownBack,
             RelativeMotionJson::DownDown => RelativeMotion::DownDown,
-            RelativeMotionJson::DownForward => RelativeMotion::DownForward,
             RelativeMotionJson::DpBack => RelativeMotion::DpBack,
             RelativeMotionJson::DpForward => RelativeMotion::DpForward,
-            RelativeMotionJson::Neutral => RelativeMotion::Neutral,
             RelativeMotionJson::QcBack => RelativeMotion::QcBack,
             RelativeMotionJson::QcForward => RelativeMotion::QcForward,
-            RelativeMotionJson::Up => RelativeMotion::Up,
-            RelativeMotionJson::UpBack => RelativeMotion::UpBack,
-            RelativeMotionJson::UpForward => RelativeMotion::UpForward,
-            RelativeMotionJson::Forward => RelativeMotion::Forward,
         }
     }
 }
@@ -342,14 +354,21 @@ impl ButtonJson {
 }
 
 #[derive(Deserialize, Clone, Copy)]
-struct InputJson {
-    motion: RelativeMotionJson,
-    button: ButtonJson,
+enum InputJson {
+    Direction { dir: RelativeDirectionJson, button: ButtonJson },
+    Motion { motion: RelativeMotionJson, button: ButtonJson },
 }
 
 impl InputJson {
     fn to_move_input(&self) -> MoveInput {
-        MoveInput::new(self.button.to_button_flag(), self.motion.to_relative_motion())
+        match self {
+            Self::Direction { dir, button } => {
+                MoveInput::new(button.to_button_flag(), RelativeMotion::None, dir.to_relative_direction())
+            },
+            Self::Motion { motion, button } => {
+                MoveInput::new(button.to_button_flag(), motion.to_relative_motion(), RelativeDirection::None)
+            }
+        }
     }
 }
 
