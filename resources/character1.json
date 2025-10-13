@@ -16,7 +16,7 @@
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "crotching", "back_walk", "forward_walk"],
+      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "crotching", "back_walk", "forward_walk"],
 
       "animation": {
         "texture_path": "./resources/llama.png",
@@ -40,7 +40,7 @@
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "back_walk", "forward_walk", "neutral"],
+      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "back_walk", "forward_walk", "neutral"],
 
       "animation": {
         "texture_path": "./resources/character1_neutral.png",
@@ -59,12 +59,12 @@
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
 
-      "start_behavior": {"type" : "SetVel", "x": 10, "y": 0},
+      "start_behavior": {"type" : "SetVel", "x": 4, "y": 0},
       "flags": [],
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "crotching", "back_walk", "neutral"],
+      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "crotching", "back_walk", "neutral"],
 
       "animation": {
         "texture_path": "./resources/llama.png",
@@ -83,12 +83,60 @@
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
 
-      "start_behavior": {"type" : "SetVel", "x": -10, "y": 0},
+      "start_behavior": {"type" : "SetVel", "x": -4, "y": 0},
       "flags": [],
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "crotching", "forward_walk", "neutral"],
+      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "crotching", "forward_walk", "neutral"],
+
+      "animation": {
+        "texture_path": "./resources/llama_walk_back.png",
+        "frames": 24,
+        "w": 128,
+        "h": 128
+      }
+    },
+
+    {
+      "name": "forward_dash",
+      "input": {"Direction": {"dir": {"type" : "Forward"}, "button": {"type" : "H"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": {"type" : "SetVel", "x": 10, "y": 0},
+      "flags": [],
+      "end_behavior": {"type": "OnFrameXToStateY", "x": 20, "y": "neutral"},
+      
+      "cancel_window": {"start": null, "end": null},
+      "cancel_options": [],
+
+      "animation": {
+        "texture_path": "./resources/llama.png",
+        "frames": 24,
+        "w": 128,
+        "h": 128
+      }
+    },
+
+    {
+      "name": "back_dash",
+      "input": {"Direction": {"dir": {"type" : "Back"}, "button": {"type" : "H"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": {"type" : "SetVel", "x": -10, "y": 0},
+      "flags": [],
+      "end_behavior": {"type": "OnFrameXToStateY", "x": 20, "y": "neutral"},
+      
+      "cancel_window": {"start": null, "end": null},
+      "cancel_options": [],
 
       "animation": {
         "texture_path": "./resources/llama_walk_back.png",
