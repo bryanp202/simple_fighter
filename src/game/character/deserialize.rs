@@ -336,7 +336,7 @@ impl RelativeMotionJson {
 #[derive(Deserialize, Clone, Copy)]
 #[serde(tag = "type")]
 enum ButtonJson {
-    NONE,
+    None,
     L,
     M,
     H,
@@ -347,7 +347,7 @@ impl ButtonJson {
         match self {
             ButtonJson::H => ButtonFlag::H,
             ButtonJson::L => ButtonFlag::L,
-            ButtonJson::NONE => ButtonFlag::NONE,
+            ButtonJson::None => ButtonFlag::NONE,
             ButtonJson::M => ButtonFlag::M,
         }
     }

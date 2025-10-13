@@ -4,7 +4,7 @@
   "moves": [
     {
       "name": "neutral",
-      "input": {"Direction": {"dir": {"type" : "Neutral"}, "button": {"type" : "NONE"}}},
+      "input": {"Direction": {"dir": {"type" : "Neutral"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
@@ -28,7 +28,7 @@
 
     {
       "name": "crotching",
-      "input": {"Direction": {"dir": {"type" : "Down"}, "button": {"type" : "NONE"}}},
+      "input": {"Direction": {"dir": {"type" : "Down"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 50, "w": 100, "h": 50}}]}
@@ -52,7 +52,7 @@
 
     {
       "name": "forward_walk",
-      "input": {"Direction": {"dir": {"type" : "Forward"}, "button": {"type" : "NONE"}}},
+      "input": {"Direction": {"dir": {"type" : "Forward"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
@@ -76,7 +76,7 @@
 
     {
       "name": "back_walk",
-      "input": {"Direction": {"dir": {"type" : "Back"}, "button": {"type" : "NONE"}}},
+      "input": {"Direction": {"dir": {"type" : "Back"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
@@ -109,7 +109,7 @@
 
       "start_behavior": {"type" : "SetVel", "x": 10, "y": 0},
       "flags": [],
-      "end_behavior": {"type": "OnFrameXToStateY", "x": 20, "y": "neutral"},
+      "end_behavior": {"type": "OnFrameXToStateY", "x": 20, "y": "dash_recovery"},
       
       "cancel_window": {"start": null, "end": null},
       "cancel_options": [],
@@ -133,7 +133,7 @@
 
       "start_behavior": {"type" : "SetVel", "x": -10, "y": 0},
       "flags": [],
-      "end_behavior": {"type": "OnFrameXToStateY", "x": 20, "y": "neutral"},
+      "end_behavior": {"type": "OnFrameXToStateY", "x": 20, "y": "dash_recovery"},
       
       "cancel_window": {"start": null, "end": null},
       "cancel_options": [],
@@ -141,6 +141,30 @@
       "animation": {
         "texture_path": "./resources/llama_walk_back.png",
         "frames": 24,
+        "w": 128,
+        "h": 128
+      }
+    },
+
+    {
+      "name": "dash_recovery",
+      "input": {"Direction": {"dir": {"type" : "Any"}, "button": {"type" : "None"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": {"type" : "SetVel", "x": 0, "y": 0},
+      "flags": [],
+      "end_behavior": {"type": "OnFrameXToStateY", "x": 20, "y": "neutral"},
+      
+      "cancel_window": {"start": null, "end": null},
+      "cancel_options": [],
+
+      "animation": {
+        "texture_path": "./resources/llama.png",
+        "frames": 1,
         "w": 128,
         "h": 128
       }
