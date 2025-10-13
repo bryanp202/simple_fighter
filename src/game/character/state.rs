@@ -145,7 +145,6 @@ impl States {
         let cancel_options = &self.run_length_cancel_options[cancel_options_range];
         for i in cancel_options.iter() {
             let cancel_option = &self.inputs[*i];
-
             // Check direction first
             if !cancel_option.dir.matches_or_is_none(&inputs.dir().on_left_side()) {
                 continue;

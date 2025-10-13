@@ -100,7 +100,7 @@
 
     {
       "name": "forward_dash",
-      "input": {"Direction": {"dir": {"type" : "Forward"}, "button": {"type" : "H"}}},
+      "input": {"Motion": {"motion": {"type" : "ForwardForward"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
@@ -124,7 +124,7 @@
 
     {
       "name": "back_dash",
-      "input": {"Direction": {"dir": {"type" : "Back"}, "button": {"type" : "H"}}},
+      "input": {"Motion": {"motion": {"type" : "BackBack"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
@@ -151,7 +151,7 @@
       "input": {"Direction": {"dir": {"type" : "Any"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect" : {"x": -50, "y": 0, "w": 200, "h": 100}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
 

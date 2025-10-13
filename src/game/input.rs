@@ -251,6 +251,8 @@ impl RelativeDirection {
 pub enum Motion {
     None,
     DownDown,
+    LeftLeft,
+    RightRight,
     QcRight,
     QcLeft,
     DpRight,
@@ -262,6 +264,8 @@ impl Motion {
         match self {
             Motion::None => RelativeMotion::None,
             Motion::DownDown => RelativeMotion::DownDown,
+            Motion::LeftLeft => RelativeMotion::BackBack,
+            Motion::RightRight => RelativeMotion::ForwardForward,
             Motion::QcRight => RelativeMotion::QcForward,
             Motion::QcLeft => RelativeMotion::QcBack, 
             Motion::DpRight => RelativeMotion::DpForward,
@@ -273,6 +277,8 @@ impl Motion {
         match self {
             Motion::None => RelativeMotion::None,
             Motion::DownDown => RelativeMotion::DownDown,
+            Motion::LeftLeft => RelativeMotion::ForwardForward,
+            Motion::RightRight => RelativeMotion::BackBack,
             Motion::QcRight => RelativeMotion::QcBack,
             Motion::QcLeft => RelativeMotion::QcForward, 
             Motion::DpRight => RelativeMotion::DpBack,
@@ -285,6 +291,8 @@ impl Motion {
 pub enum RelativeMotion {
     None,
     DownDown,
+    ForwardForward,
+    BackBack,
     QcForward,
     QcBack,
     DpForward,
@@ -317,7 +325,10 @@ impl InputHistory {
     const QC_RIGHT_INVERSE: &[Direction] = &[Direction::Right, Direction::DownRight, Direction::Down];
     const QC_LEFT_INVERSE: &[Direction] = &[Direction::Left, Direction::DownLeft, Direction::Down];
     // Least Valuable Motion Input
-    const DOWNDOWN_INVERSE: &[Direction] = &[Direction::Down, Direction::Neutral, Direction::Down];
+    const RIGHT_RIGHT_INVERSE: &[Direction] = &[Direction::Right, Direction::Neutral, Direction::Right];
+    const LEFT_LEFT_INVERSE: &[Direction] = &[Direction::Left, Direction::Neutral, Direction::Left];
+    // Second Least Valuable Motion Input
+    const DOWN_DOWN_INVERSE: &[Direction] = &[Direction::Down, Direction::Neutral, Direction::Down];
 
     pub fn new() -> Self {
         Self {
@@ -393,7 +404,22 @@ impl InputHistory {
             _ => {},
         }
 
-        if let Some(_) = Self::find_dir_sequence(motion_slice, Self::DOWNDOWN_INVERSE) {
+        let right_right = Self::find_dir_sequence(motion_slice, Self::RIGHT_RIGHT_INVERSE);
+        let left_left = Self::find_dir_sequence(motion_slice, Self::LEFT_LEFT_INVERSE);
+        match (right_right, left_left) {
+            (Some(_), None) => return Motion::RightRight,
+            (None, Some(_)) => return Motion::LeftLeft,
+            (Some(right), Some(left)) => {
+                return if right <= left {
+                    Motion::RightRight
+                } else {
+                    Motion::LeftLeft
+                };
+            },
+            _ => {},
+        }
+
+        if let Some(_) = Self::find_dir_sequence(motion_slice, Self::DOWN_DOWN_INVERSE) {
             Motion::DownDown
         } else {
             Motion::None

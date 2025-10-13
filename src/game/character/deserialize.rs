@@ -315,6 +315,8 @@ impl RelativeDirectionJson {
 #[serde(tag = "type")]
 enum RelativeMotionJson {
     DownDown,
+    ForwardForward,
+    BackBack,
     QcForward,
     QcBack,
     DpForward,
@@ -325,6 +327,8 @@ impl RelativeMotionJson {
     fn to_relative_motion(self) -> RelativeMotion {
         match self {
             RelativeMotionJson::DownDown => RelativeMotion::DownDown,
+            RelativeMotionJson::ForwardForward => RelativeMotion::ForwardForward,
+            RelativeMotionJson::BackBack => RelativeMotion::BackBack,
             RelativeMotionJson::DpBack => RelativeMotion::DpBack,
             RelativeMotionJson::DpForward => RelativeMotion::DpForward,
             RelativeMotionJson::QcBack => RelativeMotion::QcBack,
