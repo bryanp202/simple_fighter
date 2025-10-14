@@ -56,20 +56,21 @@ impl Character {
             .get_frame_cycle(current_frame, global_textures);
         canvas.copy(texture, src, FRect::new(shifted_pos.x, shifted_pos.y - src.h, src.w, src.h))?;
 
-        canvas.set_blend_mode(sdl3::render::BlendMode::Blend);
-        let collision_box = &self.collision_box_data[current_state];
-        draw_collision_box_system(canvas, shifted_pos, collision_box)?;
+        if cfg!(feature = "debug") {
+            canvas.set_blend_mode(sdl3::render::BlendMode::Blend);
+            let collision_box = &self.collision_box_data[current_state];
+            draw_collision_box_system(canvas, shifted_pos, collision_box)?;
 
-        let hit_box_range = self.states.hit_box_range(current_state, current_frame);
-        let hitboxes = &self.hit_box_data[hit_box_range];
-        draw_hit_boxes_system(canvas, shifted_pos, hitboxes)?;
+            let hit_box_range = self.states.hit_box_range(current_state, current_frame);
+            let hitboxes = &self.hit_box_data[hit_box_range];
+            draw_hit_boxes_system(canvas, shifted_pos, hitboxes)?;
 
-        let hurt_box_range = self.states.hurt_box_range(current_state, current_frame);
-        let hurtboxes = &self.hurt_box_data[hurt_box_range];
-        draw_hurt_boxes_system(canvas, shifted_pos, hurtboxes)?;
+            let hurt_box_range = self.states.hurt_box_range(current_state, current_frame);
+            let hurtboxes = &self.hurt_box_data[hurt_box_range];
+            draw_hurt_boxes_system(canvas, shifted_pos, hurtboxes)?;
 
-
-        canvas.set_blend_mode(sdl3::render::BlendMode::None);
+            canvas.set_blend_mode(sdl3::render::BlendMode::None);
+        }
 
         Ok(())
     }
