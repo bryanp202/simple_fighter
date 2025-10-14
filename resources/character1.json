@@ -36,7 +36,7 @@
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
 
-      "start_behavior": {"type" : "SetVel", "x": 0, "y": 4},
+      "start_behavior": {"type" : "SetVel", "x": 0, "y": 10},
       "flags": [{"type": "Airborne"}],
       "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
       
@@ -61,7 +61,7 @@
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
 
-      "start_behavior": {"type" : "SetVel", "x": 4, "y": 4},
+      "start_behavior": {"type" : "SetVel", "x": 4, "y": 10},
       "flags": [{"type": "Airborne"}],
       "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
       
@@ -86,7 +86,7 @@
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
 
-      "start_behavior": {"type" : "SetVel", "x": -4, "y": 4},
+      "start_behavior": {"type" : "SetVel", "x": -4, "y": 10},
       "flags": [{"type": "Airborne"}],
       "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
       
@@ -399,8 +399,7 @@
               "cancel_window": 10
             }
           ]
-        },
-        {"frame": 9, "boxes": []}
+        }
       ],
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}

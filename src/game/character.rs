@@ -33,11 +33,11 @@ impl Character {
         self.states.update(&mut self.state_data, inputs);
         let FPoint { x, y } = self.state_data.vel();
 
-        self.pos.x += x;
+        self.pos.x = (self.pos.x + x).clamp(-(DEFAULT_SCREEN_WIDTH as f32) / 2.0, DEFAULT_SCREEN_WIDTH as f32 / 2.0);
         self.pos.y += y;
 
         if self.state_data.is_airborne(&self.states) {
-            self.state_data.set_vel(FPoint::new(x, y - 0.1));
+            self.state_data.set_vel(FPoint::new(x, y - 0.4));
             if self.pos.y <= 0.0 {
                 self.state_data.ground(&self.states);
                 self.pos.y = 0.0;
