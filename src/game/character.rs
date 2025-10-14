@@ -9,6 +9,7 @@ pub struct Character {
     name: String,
     hp: f32,
     pos: FPoint,
+    facing_right: bool,
     
     // State Data
     states: States,
@@ -58,7 +59,8 @@ impl Character {
     
         let (texture, src) = self.animation_data[current_state]
             .get_frame_cycle(current_frame, global_textures);
-        canvas.copy(texture, src, FRect::new(shifted_pos.x, shifted_pos.y - src.h, src.w, src.h))?;
+        canvas.copy_ex(texture, src, FRect::new(shifted_pos.x, shifted_pos.y - src.h, src.w, src.h),
+            0.0, None, !self.facing_right, false)?;
 
         if cfg!(feature = "debug") {
             canvas.set_blend_mode(sdl3::render::BlendMode::Blend);

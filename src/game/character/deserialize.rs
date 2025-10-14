@@ -112,6 +112,7 @@ pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, globa
             name: character_json.name,
             hp: character_json.hp as f32,
             pos: FPoint::new(0.0, 0.0),
+            facing_right: true,
             states,
             projectiles: Vec::new(),
             hit_box_data,

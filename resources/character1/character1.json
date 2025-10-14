@@ -41,7 +41,7 @@
       "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
       
       "cancel_window": {"start": 10, "end": null},
-      "cancel_options": ["air_forward_dash", "air_back_dash", "jump_light"],
+      "cancel_options": ["air_down_dash", "air_forward_dash", "air_back_dash", "jump_light"],
 
       "animation": {
         "texture_path": "./resources/character1/Jump.png",
@@ -66,7 +66,7 @@
       "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
       
       "cancel_window": {"start": 10, "end": null},
-      "cancel_options": ["air_forward_dash", "air_back_dash", "jump_light"],
+      "cancel_options": ["air_down_dash", "air_forward_dash", "air_back_dash", "jump_light"],
 
       "animation": {
         "texture_path": "./resources/character1/Jump.png",
@@ -91,7 +91,7 @@
       "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
       
       "cancel_window": {"start": 10, "end": null},
-      "cancel_options": ["air_forward_dash", "air_back_dash", "jump_light"],
+      "cancel_options": ["air_down_dash", "air_forward_dash", "air_back_dash", "jump_light"],
 
       "animation": {
         "texture_path": "./resources/character1/Jump.png",
@@ -220,6 +220,31 @@
 
       "animation": {
         "texture_path": "./resources/character1/llama_walk_back.png",
+        "layout": {"type": "Vert"},
+        "frames": 24,
+        "w": 128,
+        "h": 128
+      }
+    },
+
+    {
+      "name": "air_down_dash",
+      "input": {"Motion": {"motion": {"type" : "DownDown"}, "button": {"type" : "None"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": {"type" : "SetVel", "x": 0, "y": -20},
+      "flags": [{"type": "Airborne"}],
+      "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
+      
+      "cancel_window": {"start": null, "end": null},
+      "cancel_options": [],
+
+      "animation": {
+        "texture_path": "./resources/character1/llama.png",
         "layout": {"type": "Vert"},
         "frames": 24,
         "w": 128,
