@@ -11,7 +11,7 @@ pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, globa
 
     let mut animation_data = Vec::new();
     for mov in character_json.moves.iter() {
-        let texture_index = render::load_texture(
+        let texture_index = render::load_animation(
             texture_creator,
             global_textures,
             &mov.animation.texture_path,

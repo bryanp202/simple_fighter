@@ -30,6 +30,37 @@ pub fn load_texture<'a>(
     texture_creator: &'a TextureCreator<WindowContext>,
     global_textures: &mut Vec<Texture<'a>>,
     file_path: &str,
+) -> Result<usize, String> {
+    let file = std::fs::File::open(file_path).map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
+    let reader = std::io::BufReader::new(file);
+    let img = image::ImageReader::new(reader)
+        .with_guessed_format()
+        .unwrap()
+        .decode()
+        .unwrap();
+
+    let mut texture = texture_creator.create_texture_streaming(
+        unsafe {PixelFormat::from_ll(SDL_PIXELFORMAT_ABGR8888)},
+        img.width(),
+        img.height(),
+    ).map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
+
+    texture.update(None, &img.to_rgba8(), 4 * img.width() as usize)
+        .map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
+
+    global_textures.push(texture);
+    
+    if cfg!(feature = "debug") {
+        println!("Loaded texture: {}", file_path);
+    }
+
+    Ok(global_textures.len() - 1)
+}
+
+pub fn load_animation<'a>(
+    texture_creator: &'a TextureCreator<WindowContext>,
+    global_textures: &mut Vec<Texture<'a>>,
+    file_path: &str,
     width: u32, height: u32, frames: u32, layout: AnimationLayout,
 ) -> Result<usize, String> {
     let file = std::fs::File::open(file_path).map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;

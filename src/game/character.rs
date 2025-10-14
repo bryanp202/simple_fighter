@@ -29,6 +29,10 @@ impl Character {
         deserialize(texture_creator, global_textures, config)
     }
 
+    pub fn pos(&self) -> FPoint {
+        self.pos
+    }
+
     pub fn update(&mut self, inputs: &Inputs) {
         self.states.update(&mut self.state_data, inputs);
         let FPoint { x, y } = self.state_data.vel();
@@ -50,7 +54,7 @@ impl Character {
         let current_frame = self.state_data.current_frame();
 
         let game_center = (DEFAULT_SCREEN_WIDTH as f32 / 2.0, DEFAULT_SCREEN_HEIGHT as f32);
-        let shifted_pos = FPoint::new(game_center.0 + self.pos.x, game_center.1 - self.pos.y);
+        let shifted_pos = FPoint::new(game_center.0 + self.pos.x, game_center.1 - self.pos.y + 32.0);
     
         let (texture, src) = self.animation_data[current_state]
             .get_frame_cycle(current_frame, global_textures);

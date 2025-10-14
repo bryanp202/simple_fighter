@@ -19,7 +19,7 @@
       "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "jump_forward", "jump_back", "jump", "crotching", "back_walk", "forward_walk"],
 
       "animation": {
-        "texture_path": "./resources/Idle.png",
+        "texture_path": "./resources/character1/Idle.png",
         "layout": {"type": "Horz"},
         "frames": 8,
         "w": 200,
@@ -44,7 +44,7 @@
       "cancel_options": ["air_forward_dash", "air_back_dash", "jump_light"],
 
       "animation": {
-        "texture_path": "./resources/Jump.png",
+        "texture_path": "./resources/character1/Jump.png",
         "layout": {"type": "Horz"},
         "frames": 2,
         "w": 200,
@@ -69,7 +69,7 @@
       "cancel_options": ["air_forward_dash", "air_back_dash", "jump_light"],
 
       "animation": {
-        "texture_path": "./resources/Jump.png",
+        "texture_path": "./resources/character1/Jump.png",
         "layout": {"type": "Horz"},
         "frames": 2,
         "w": 200,
@@ -94,7 +94,7 @@
       "cancel_options": ["air_forward_dash", "air_back_dash", "jump_light"],
 
       "animation": {
-        "texture_path": "./resources/Jump.png",
+        "texture_path": "./resources/character1/Jump.png",
         "layout": {"type": "Horz"},
         "frames": 2,
         "w": 200,
@@ -119,7 +119,7 @@
       "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "back_walk", "forward_walk", "neutral"],
 
       "animation": {
-        "texture_path": "./resources/Idle.png",
+        "texture_path": "./resources/character1/Idle.png",
         "layout": {"type": "Horz"},
         "frames": 1,
         "w": 200,
@@ -144,7 +144,7 @@
       "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "jump_forward", "crotching", "back_walk", "neutral"],
 
       "animation": {
-        "texture_path": "./resources/Run.png",
+        "texture_path": "./resources/character1/Run.png",
         "layout": {"type": "Vert"},
         "frames": 16,
         "w": 200,
@@ -169,7 +169,7 @@
       "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "jump_back", "crotching", "forward_walk", "neutral"],
 
       "animation": {
-        "texture_path": "./resources/BackRun.png",
+        "texture_path": "./resources/character1/BackRun.png",
         "layout": {"type": "Vert"},
         "frames": 16,
         "w": 200,
@@ -194,7 +194,7 @@
       "cancel_options": ["jump_light"],
 
       "animation": {
-        "texture_path": "./resources/llama.png",
+        "texture_path": "./resources/character1/llama.png",
         "layout": {"type": "Vert"},
         "frames": 24,
         "w": 128,
@@ -219,7 +219,7 @@
       "cancel_options": ["jump_light"],
 
       "animation": {
-        "texture_path": "./resources/llama_walk_back.png",
+        "texture_path": "./resources/character1/llama_walk_back.png",
         "layout": {"type": "Vert"},
         "frames": 24,
         "w": 128,
@@ -244,7 +244,7 @@
       "cancel_options": ["jump_light"],
 
       "animation": {
-        "texture_path": "./resources/Fall.png",
+        "texture_path": "./resources/character1/Fall.png",
         "layout": {"type": "Horz"},
         "frames": 2,
         "w": 200,
@@ -269,7 +269,7 @@
       "cancel_options": [],
 
       "animation": {
-        "texture_path": "./resources/llama.png",
+        "texture_path": "./resources/character1/llama.png",
         "layout": {"type": "Vert"},
         "frames": 24,
         "w": 128,
@@ -294,7 +294,7 @@
       "cancel_options": [],
 
       "animation": {
-        "texture_path": "./resources/llama_walk_back.png",
+        "texture_path": "./resources/character1/llama_walk_back.png",
         "layout": {"type": "Vert"},
         "frames": 24,
         "w": 128,
@@ -319,7 +319,7 @@
       "cancel_options": [],
 
       "animation": {
-        "texture_path": "./resources/llama.png",
+        "texture_path": "./resources/character1/llama.png",
         "layout": {"type": "Vert"},
         "frames": 1,
         "w": 128,
@@ -367,7 +367,7 @@
       "cancel_options": ["medium_attack", "light_attack"],
 
       "animation": {
-        "texture_path": "./resources/Attack1.png",
+        "texture_path": "./resources/character1/Attack1.png",
         "layout": {"type": "Vert"},
         "frames": 12,
         "w": 200,
@@ -414,7 +414,7 @@
       "cancel_options": [],
 
       "animation": {
-        "texture_path": "./resources/Attack1.png",
+        "texture_path": "./resources/character1/Attack1.png",
         "layout": {"type": "Vert"},
         "frames": 12,
         "w": 200,
@@ -462,7 +462,7 @@
       "cancel_options": ["spin_attack", "jump_forward", "jump_back", "jump"],
 
       "animation": {
-        "texture_path": "./resources/Attack2.png",
+        "texture_path": "./resources/character1/Attack2.png",
         "layout": {"type": "Horz"},
         "frames": 6,
         "w": 200,
@@ -510,7 +510,7 @@
       "cancel_options": [],
 
       "animation": {
-        "texture_path": "./resources/character1_spin_attack.png",
+        "texture_path": "./resources/character1/character1_spin_attack.png",
         "layout": {"type": "Vert"},
         "frames": 1,
         "w": 64,

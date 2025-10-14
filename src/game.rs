@@ -2,6 +2,7 @@ mod boxes;
 mod character;
 mod input;
 mod projectile;
+mod stage;
 mod render;
 
 use std::time::{Duration, Instant};
@@ -9,12 +10,13 @@ use std::time::{Duration, Instant};
 use character::Character;
 use sdl3::{event::Event, pixels::Color, render::{Canvas, Texture, TextureCreator}, video::{Window, WindowContext}, EventPump};
 
-use crate::game::input::Inputs;
+use crate::game::{input::Inputs, stage::Stage};
 
 const FRAME_RATE: usize = 60;
 const FRAME_DURATION: f32 = 1.0 / FRAME_RATE as f32;
 
 pub struct Game<'a> {
+    stage: Stage,
     player1: Character,
     //player2: Character,
     timer: f32,
@@ -35,7 +37,8 @@ impl <'a> Game<'a> {
     pub fn init(texture_creator: &'a TextureCreator<WindowContext>, canvas: Canvas<Window>, events: EventPump) -> Self {
         let mut textures = Vec::new();
         Self {
-            player1: Character::from_config(&texture_creator, &mut textures, "./resources/character1.json").unwrap(),
+            stage: Stage::init(texture_creator, &mut textures),
+            player1: Character::from_config(&texture_creator, &mut textures, "./resources/character1/character1.json").unwrap(),
             //player2: Character::from_config(&texture_creator, &mut textures, "character2.json").unwrap(),
             timer: 0.0,
             score: (0, 0),
@@ -88,6 +91,7 @@ impl <'a> Game<'a> {
     fn render(&mut self) {
         self.canvas.set_draw_color(Color::BLACK);
         self.canvas.clear();
+        self.stage.render(&mut self.canvas, &self.textures).unwrap();
 
         self.player1.render(&mut self.canvas, &self.textures).unwrap();
 
