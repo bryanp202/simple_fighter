@@ -16,7 +16,7 @@
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "crotching", "back_walk", "forward_walk"],
+      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "jump_forward", "jump_back", "jump", "crotching", "back_walk", "forward_walk"],
 
       "animation": {
         "texture_path": "./resources/IDLE.png",
@@ -24,6 +24,81 @@
         "frames": 10,
         "w": 96,
         "h": 96
+      }
+    },
+
+    {
+      "name": "jump",
+      "input": {"Direction": {"dir": {"type" : "Up"}, "button": {"type" : "None"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": {"type" : "SetVel", "x": 0, "y": 4},
+      "flags": [{"type": "Airborne"}],
+      "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
+      
+      "cancel_window": {"start": 10, "end": null},
+      "cancel_options": ["air_forward_dash", "air_back_dash", "jump_light"],
+
+      "animation": {
+        "texture_path": "./resources/Jump.png",
+        "layout": {"type": "Horz"},
+        "frames": 2,
+        "w": 200,
+        "h": 200
+      }
+    },
+
+    {
+      "name": "jump_forward",
+      "input": {"Direction": {"dir": {"type" : "UpForward"}, "button": {"type" : "None"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": {"type" : "SetVel", "x": 4, "y": 4},
+      "flags": [{"type": "Airborne"}],
+      "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
+      
+      "cancel_window": {"start": 10, "end": null},
+      "cancel_options": ["air_forward_dash", "air_back_dash", "jump_light"],
+
+      "animation": {
+        "texture_path": "./resources/Jump.png",
+        "layout": {"type": "Horz"},
+        "frames": 2,
+        "w": 200,
+        "h": 200
+      }
+    },
+
+    {
+      "name": "jump_back",
+      "input": {"Direction": {"dir": {"type" : "UpBack"}, "button": {"type" : "None"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": {"type" : "SetVel", "x": -4, "y": 4},
+      "flags": [{"type": "Airborne"}],
+      "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
+      
+      "cancel_window": {"start": 10, "end": null},
+      "cancel_options": ["air_forward_dash", "air_back_dash", "jump_light"],
+
+      "animation": {
+        "texture_path": "./resources/Jump.png",
+        "layout": {"type": "Horz"},
+        "frames": 2,
+        "w": 200,
+        "h": 200
       }
     },
 
@@ -66,7 +141,7 @@
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "crotching", "back_walk", "neutral"],
+      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "jump_forward", "crotching", "back_walk", "neutral"],
 
       "animation": {
         "texture_path": "./resources/BackRun.png",
@@ -91,7 +166,7 @@
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "crotching", "forward_walk", "neutral"],
+      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "jump_back", "crotching", "forward_walk", "neutral"],
 
       "animation": {
         "texture_path": "./resources/BackRun.png",
@@ -99,6 +174,81 @@
         "frames": 16,
         "w": 96,
         "h": 96
+      }
+    },
+
+    {
+      "name": "air_forward_dash",
+      "input": {"Motion": {"motion": {"type" : "ForwardForward"}, "button": {"type" : "None"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": {"type" : "SetVel", "x": 10, "y": 0},
+      "flags": [],
+      "end_behavior": {"type": "OnFrameXToStateY", "x": 20, "y": "falling"},
+      
+      "cancel_window": {"start": 16, "end": null},
+      "cancel_options": ["jump_light"],
+
+      "animation": {
+        "texture_path": "./resources/llama.png",
+        "layout": {"type": "Vert"},
+        "frames": 24,
+        "w": 128,
+        "h": 128
+      }
+    },
+
+    {
+      "name": "air_back_dash",
+      "input": {"Motion": {"motion": {"type" : "BackBack"}, "button": {"type" : "None"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": {"type" : "SetVel", "x": -10, "y": 0},
+      "flags": [],
+      "end_behavior": {"type": "OnFrameXToStateY", "x": 20, "y": "falling"},
+      
+      "cancel_window": {"start": 16, "end": null},
+      "cancel_options": ["jump_light"],
+
+      "animation": {
+        "texture_path": "./resources/llama_walk_back.png",
+        "layout": {"type": "Vert"},
+        "frames": 24,
+        "w": 128,
+        "h": 128
+      }
+    },
+
+    {
+      "name": "falling",
+      "input": {"Direction": {"dir": {"type" : "Up"}, "button": {"type" : "None"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": {"type" : "SetVel", "x": 0, "y": -1},
+      "flags": [{"type": "Airborne"}],
+      "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
+      
+      "cancel_window": {"start": 10, "end": null},
+      "cancel_options": ["jump_light"],
+
+      "animation": {
+        "texture_path": "./resources/Jump.png",
+        "layout": {"type": "Horz"},
+        "frames": 2,
+        "w": 200,
+        "h": 200
       }
     },
 
@@ -226,6 +376,54 @@
     },
 
     {
+      "name": "jump_light",
+      "input": {"Direction": {"dir": {"type" : "Any"}, "button": {"type" : "L"}}},
+      "hit_boxes": [
+        {"frame": 0, "boxes": []},
+        {"frame": 7, "boxes":
+          [
+            {
+              "rect": {"x": 0, "y": 0, "w": 200, "h": 50},
+              "dmg": 30,
+              "hit_stun": 20,
+              "cancel_window": 10
+            }
+          ]
+        },
+        {"frame": 8, "boxes":
+          [
+            {
+              "rect": {"x": 0, "y": 0, "w": 250, "h": 50},
+              "dmg": 30,
+              "hit_stun": 20,
+              "cancel_window": 10
+            }
+          ]
+        },
+        {"frame": 9, "boxes": []}
+      ],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": {"type" : "None"},
+      "flags": [{"type": "Airborne"}],
+      "end_behavior": { "type" : "OnGroundedToStateY", "y" : "neutral"},
+      
+      "cancel_window": {"start": null, "end": null},
+      "cancel_options": [],
+
+      "animation": {
+        "texture_path": "./resources/Attack1.png",
+        "layout": {"type": "Vert"},
+        "frames": 12,
+        "w": 200,
+        "h": 200
+      }
+    },
+
+    {
       "name": "medium_attack",
       "input": {"Direction": {"dir": {"type" : "Any"}, "button": {"type" : "M"}}},
       "hit_boxes": [
@@ -262,7 +460,7 @@
       "end_behavior": { "type" : "OnFrameXToStateY", "x" : 30, "y" : "neutral"},
       
       "cancel_window": {"start": 16, "end": 18},
-      "cancel_options": ["spin_attack"],
+      "cancel_options": ["spin_attack", "jump_forward", "jump_back", "jump"],
 
       "animation": {
         "texture_path": "./resources/Attack2.png",

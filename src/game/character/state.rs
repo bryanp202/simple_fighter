@@ -25,6 +25,20 @@ impl StateData {
     pub fn vel(&self) -> FPoint {
         self.vel
     }
+
+    pub fn set_vel(&mut self, new_vel: FPoint) {
+        self.vel = new_vel;
+    }
+
+    pub fn is_airborne(&self, states: &States) -> bool {
+        states.flags[self.current_state].contains(StateFlags::Airborne)
+    }
+
+    pub fn ground(&mut self, states: &States) {
+        if let EndBehavior::OnGroundedToStateY { y } = states.end_behaviors[self.current_state] {
+            states.enter_state(self, y);
+        }
+    }
 }
 
 impl Default for StateData {
@@ -135,7 +149,7 @@ impl States {
         }
     }
 
-    fn check_cancels(&mut self, state_data: &mut StateData, inputs: &Inputs) {
+    fn check_cancels(&self, state_data: &mut StateData, inputs: &Inputs) {
         // Check if not in cancel window
         if !self.in_cancel_window(state_data) {
             return;
@@ -168,10 +182,11 @@ impl States {
         self.cancel_windows[state_data.current_state].contains(&state_data.current_frame)
     }
 
-    fn enter_state(&mut self, state_data: &mut StateData, new_state: StateIndex) {
+    fn enter_state(&self, state_data: &mut StateData, new_state: StateIndex) {
         state_data.current_state = new_state;
         state_data.current_frame = 0;
         match self.start_behaviors[new_state] {
+            StartBehavior::None => {},
             StartBehavior::SetVel { x, y } => {
                 state_data.vel = FPoint::new(x, y);
             }
@@ -194,6 +209,7 @@ impl MoveInput {
 
 #[derive(Debug)]
 pub enum StartBehavior {
+    None,
     SetVel {x: f32, y: f32}
 }
 

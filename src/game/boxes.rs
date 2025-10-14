@@ -18,7 +18,7 @@ impl HitBox {
     }
 
     pub fn pos_with_offset(&self, offset: FPoint) -> FRect {
-        FRect { x: self.pos.x + offset.x, y: self.pos.y + offset.y, w: self.pos.w, h: self.pos.h }
+        FRect { x: self.pos.x + offset.x, y: self.pos.y + offset.y - self.pos.h, w: self.pos.w, h: self.pos.h }
     }
 }
 
@@ -36,7 +36,7 @@ impl HurtBox {
     }
 
     pub fn pos_with_offset(&self, offset: FPoint) -> FRect {
-        FRect { x: self.pos.x + offset.x, y: self.pos.y + offset.y, w: self.pos.w, h: self.pos.h }
+        FRect { x: self.pos.x + offset.x, y: self.pos.y + offset.y - self.pos.h, w: self.pos.w, h: self.pos.h }
     }
 }
 
@@ -54,6 +54,6 @@ impl CollisionBox {
     }
 
     pub fn pos_with_offset(&self, offset: FPoint) -> FRect {
-        FRect { x: self.pos.x + offset.x, y: self.pos.y + offset.y, w: self.pos.w, h: self.pos.h }
+        FRect { x: self.pos.x + offset.x, y: self.pos.y + offset.y - self.pos.h, w: self.pos.w, h: self.pos.h }
     }
 }

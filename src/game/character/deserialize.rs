@@ -238,12 +238,14 @@ struct MoveJson {
 #[derive(Deserialize, Clone, Copy)]
 #[serde(tag = "type")]
 enum StartBehaviorJson {
+    None,
     SetVel {x: f32, y: f32},
 }
 
 impl StartBehaviorJson {
     fn to_start_behavior(&self) -> StartBehavior {
         match self {
+            &StartBehaviorJson::None => StartBehavior::None,
             &StartBehaviorJson::SetVel { x, y } => StartBehavior::SetVel { x, y }
         }
     }
