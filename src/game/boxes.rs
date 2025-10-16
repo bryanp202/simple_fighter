@@ -1,6 +1,6 @@
 use sdl3::render::{FPoint, FRect};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct HitBox {
     pos: FRect,
     dmg: f32,
@@ -19,6 +19,18 @@ impl HitBox {
 
     pub fn pos_with_offset(&self, offset: FPoint) -> FRect {
         FRect { x: self.pos.x + offset.x, y: self.pos.y + offset.y - self.pos.h, w: self.pos.w, h: self.pos.h }
+    }
+
+    pub fn dmg(&self) -> f32 {
+        self.dmg
+    }
+
+    pub fn hit_stun(&self) -> usize {
+        self.hit_stun
+    }
+
+    pub fn cancel_window(&self) -> usize {
+        self.cancel_window
     }
 }
 

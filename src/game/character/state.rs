@@ -3,7 +3,7 @@ use std::ops::Range;
 use bitflags::bitflags;
 use sdl3::render::FPoint;
 
-use crate::game::input::{ButtonFlag, Inputs, RelativeDirection, RelativeMotion};
+use crate::game::input::{ButtonFlag, RelativeDirection, RelativeMotion};
 
 type StateIndex = usize;
 
@@ -11,6 +11,8 @@ pub struct StateData {
     current_state: StateIndex,
     current_frame: usize,
     vel: FPoint,
+    gravity_mult: f32,
+    hit_connected: bool,
 }
 
 impl StateData {
@@ -22,6 +24,15 @@ impl StateData {
         self.current_frame
     }
 
+    pub fn on_hit_connect(&mut self) {
+        self.hit_connected = true;
+    }
+
+    pub fn set_launch_hit_state(&mut self, states: &States) {
+        self.enter_state(states, states.launch_hit_state);
+        self.gravity_mult *= 1.2;
+    }
+
     pub fn vel(&self) -> FPoint {
         self.vel
     }
@@ -30,13 +41,81 @@ impl StateData {
         self.vel = new_vel;
     }
 
+    pub fn gravity_mult(&self) -> f32 {
+        self.gravity_mult
+    }
+
     pub fn is_airborne(&self, states: &States) -> bool {
         states.flags[self.current_state].contains(StateFlags::Airborne)
     }
 
     pub fn ground(&mut self, states: &States) {
         if let EndBehavior::OnGroundedToStateY { y } = states.end_behaviors[self.current_state] {
-            states.enter_state(self, y);
+            self.enter_state(states, y);
+            self.gravity_mult = 1.0;
+        }
+    }
+
+    pub fn update<T>(&mut self, states: &States, dir: RelativeDirection, move_iter: T)
+    where T: Iterator<Item = (RelativeMotion, ButtonFlag)> + Clone {
+        self.current_frame += 1;
+        self.check_state_end(states);
+        self.check_cancels(states, dir, move_iter);
+    }
+
+    fn check_state_end(&mut self, states: &States) {
+        match states.end_behaviors[self.current_state] {
+            EndBehavior::Endless => {},
+            EndBehavior::OnFrameXToStateY { x: end_frame, y: transition_state } => {
+                if self.current_frame >= end_frame {
+                    self.enter_state(states, transition_state);
+                }
+            },
+            EndBehavior::OnGroundedToStateY { .. } => {},
+        }
+    }
+
+    fn check_cancels<T>(&mut self, states: &States, dir: RelativeDirection, move_iter: T)
+    where T: Iterator<Item = (RelativeMotion, ButtonFlag)> + Clone {
+        // Check if not in cancel window
+        if !self.in_cancel_window(states) {
+            return;
+        }
+
+        let cancel_options_range = states.cancel_options[self.current_state].clone();
+        let cancel_options = &states.run_length_cancel_options[cancel_options_range];
+        for i in cancel_options.iter() {
+            let cancel_option = &states.inputs[*i];
+            // Check direction first
+            if !cancel_option.dir.matches_or_is_none(&dir) {
+                continue;
+            }
+
+            let maybe_index = move_iter.clone()
+                .position(|(buf_motion, buf_buttons)| {
+                    cancel_option.motion.matches_or_is_none(&buf_motion) &&
+                    buf_buttons.contains(cancel_option.button)
+                });
+            if let Some(_) = maybe_index {
+                self.enter_state(states, *i);
+                break;
+            }
+        }
+    }
+
+    fn in_cancel_window(&self, states: &States) -> bool {
+        states.cancel_windows[self.current_state].contains(&self.current_frame)
+    }
+
+    fn enter_state(&mut self, states: &States, new_state: StateIndex) {
+        self.current_state = new_state;
+        self.current_frame = 0;
+        self.hit_connected = false;
+        match states.start_behaviors[new_state] {
+            StartBehavior::None => {},
+            StartBehavior::SetVel { x, y } => {
+                self.vel = FPoint::new(x, y);
+            }
         }
     }
 }
@@ -47,6 +126,8 @@ impl Default for StateData {
             current_state: 0,
             current_frame: 0,
             vel: FPoint::new(0.0, 0.0),
+            gravity_mult: 1.0,
+            hit_connected: false,
         }
     }
 }
@@ -71,6 +152,10 @@ pub struct States {
     run_length_hit_boxes: Vec<(usize, Range<usize>)>, // Frames active, global hitboxes index range
     run_length_hurt_boxes: Vec<(usize, Range<usize>)>, // Frames active, global hurtboxes index range
     run_length_cancel_options: Vec<StateIndex>,
+
+    // Special cached states
+    ground_hit_state: StateIndex,
+    launch_hit_state: StateIndex,
 }
 
 impl States {
@@ -86,6 +171,8 @@ impl States {
         run_length_hit_boxes: Vec<(usize, Range<usize>)>, // Frames active, global hitboxes index range
         run_length_hurt_boxes: Vec<(usize, Range<usize>)>, // Frames active, global hurtboxes index range
         run_length_cancel_options: Vec<StateIndex>,
+        ground_hit_state: StateIndex,
+        launch_hit_state: StateIndex,
     ) -> Self {
         Self {
             inputs,
@@ -99,11 +186,18 @@ impl States {
             run_length_hit_boxes,
             run_length_hurt_boxes,
             run_length_cancel_options,
-
+            ground_hit_state,
+            launch_hit_state,
         }
     }
 
-    pub fn hit_box_range(&self, current_state: StateIndex, mut current_frame: usize) -> Range<usize> {
+    pub fn hit_box_range(&self, state_data: &StateData) -> Range<usize> {
+        if state_data.hit_connected {
+            return 0..0;
+        }
+
+        let current_state = state_data.current_state;
+        let mut current_frame = state_data.current_frame;
         let mut run_start = self.hit_boxes_start[current_state];
         
         loop {
@@ -116,7 +210,9 @@ impl States {
         }
     }
 
-    pub fn hurt_box_range(&self, current_state: StateIndex, mut current_frame: usize) -> Range<usize> {
+    pub fn hurt_box_range(&self, state_data: &StateData) -> Range<usize> {
+        let current_state = state_data.current_state;
+        let mut current_frame = state_data.current_frame;
         let mut run_start = self.hurt_boxes_start[current_state];
         
         loop {
@@ -126,70 +222,6 @@ impl States {
             }
             current_frame -= frames;
             run_start += 1;
-        }
-    }
-
-    pub fn update(&mut self, state_data: &mut StateData, inputs: &Inputs) {
-        state_data.current_frame += 1;
-        self.check_state_end(state_data);
-        self.check_cancels(state_data, inputs);
-    }
-
-    fn check_state_end(&mut self, state_data: &mut StateData) {
-        match self.end_behaviors[state_data.current_state] {
-            EndBehavior::Endless => {},
-            EndBehavior::OnFrameXToStateY { x: end_frame, y: transition_state } => {
-                if state_data.current_frame >= end_frame {
-                    self.enter_state(state_data, transition_state);
-                }
-            },
-            EndBehavior::OnGroundedToStateY { y: transition_state } => {
-
-            },
-        }
-    }
-
-    fn check_cancels(&self, state_data: &mut StateData, inputs: &Inputs) {
-        // Check if not in cancel window
-        if !self.in_cancel_window(state_data) {
-            return;
-        }
-
-        let cancel_options_range = self.cancel_options[state_data.current_state].clone();
-        let cancel_options = &self.run_length_cancel_options[cancel_options_range];
-        for i in cancel_options.iter() {
-            let cancel_option = &self.inputs[*i];
-            // Check direction first
-            if !cancel_option.dir.matches_or_is_none(&inputs.dir().on_left_side()) {
-                continue;
-            }
-
-            let maybe_index = inputs
-                .move_buf()
-                .iter()
-                .position(|(buf_motion, buf_buttons)| {
-                    cancel_option.motion.matches_or_is_none(&buf_motion.on_left_side()) &&
-                    buf_buttons.contains(cancel_option.button)
-                });
-            if let Some(_) = maybe_index {
-                self.enter_state(state_data, *i);
-                break;
-            }
-        }
-    }
-
-    fn in_cancel_window(&self, state_data: &StateData) -> bool {
-        self.cancel_windows[state_data.current_state].contains(&state_data.current_frame)
-    }
-
-    fn enter_state(&self, state_data: &mut StateData, new_state: StateIndex) {
-        state_data.current_state = new_state;
-        state_data.current_frame = 0;
-        match self.start_behaviors[new_state] {
-            StartBehavior::None => {},
-            StartBehavior::SetVel { x, y } => {
-                state_data.vel = FPoint::new(x, y);
-            }
         }
     }
 }

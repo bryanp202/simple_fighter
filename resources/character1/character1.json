@@ -1,7 +1,34 @@
 {
   "name": "Character1",
-  "hp": 100,
+  "hp": 1000,
+  "ground_hit_state": "launched",
+  "launch_hit_state": "launched",
   "moves": [
+    {
+      "name": "launched",
+      "input": {"Direction": {"dir": {"type" : "Neutral"}, "button": {"type" : "None"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+
+      "start_behavior": {"type" : "SetVel", "x": -2, "y": 10},
+      "flags": [{"type": "Airborne"}],
+      "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
+
+      "cancel_window": {"start": null, "end": null},
+      "cancel_options": [],
+
+      "animation": {
+        "texture_path": "./resources/character1/TakeHit.png",
+        "layout": {"type": "Horz"},
+        "frames": 4,
+        "w": 200,
+        "h": 200
+      }
+    },
+
     {
       "name": "neutral",
       "input": {"Direction": {"dir": {"type" : "Neutral"}, "button": {"type" : "None"}}},
@@ -288,7 +315,7 @@
 
       "start_behavior": {"type" : "SetVel", "x": 10, "y": 0},
       "flags": [],
-      "end_behavior": {"type": "OnFrameXToStateY", "x": 20, "y": "dash_recovery"},
+      "end_behavior": {"type": "OnFrameXToStateY", "x": 14, "y": "dash_recovery"},
       
       "cancel_window": {"start": null, "end": null},
       "cancel_options": [],
@@ -313,7 +340,7 @@
 
       "start_behavior": {"type" : "SetVel", "x": -10, "y": 0},
       "flags": [],
-      "end_behavior": {"type": "OnFrameXToStateY", "x": 20, "y": "dash_recovery"},
+      "end_behavior": {"type": "OnFrameXToStateY", "x": 14, "y": "dash_recovery"},
       
       "cancel_window": {"start": null, "end": null},
       "cancel_options": [],
@@ -338,7 +365,7 @@
 
       "start_behavior": {"type" : "SetVel", "x": 0, "y": 0},
       "flags": [],
-      "end_behavior": {"type": "OnFrameXToStateY", "x": 20, "y": "neutral"},
+      "end_behavior": {"type": "OnFrameXToStateY", "x": 6, "y": "neutral"},
       
       "cancel_window": {"start": null, "end": null},
       "cancel_options": [],
@@ -360,7 +387,7 @@
         {"frame": 7, "boxes":
           [
             {
-              "rect": {"x": 0, "y": 0, "w": 200, "h": 50},
+              "rect": {"x": 0, "y": 0, "w": 100, "h": 100},
               "dmg": 30,
               "hit_stun": 20,
               "cancel_window": 10
@@ -370,7 +397,7 @@
         {"frame": 8, "boxes":
           [
             {
-              "rect": {"x": 0, "y": 0, "w": 250, "h": 50},
+              "rect": {"x": 0, "y": 0, "w": 250, "h": 150},
               "dmg": 30,
               "hit_stun": 20,
               "cancel_window": 10
@@ -483,8 +510,8 @@
       "flags": [],
       "end_behavior": { "type" : "OnFrameXToStateY", "x" : 30, "y" : "neutral"},
       
-      "cancel_window": {"start": 16, "end": 18},
-      "cancel_options": ["spin_attack", "jump_forward", "jump_back", "jump"],
+      "cancel_window": {"start": 12, "end": 16},
+      "cancel_options": ["spin_attack", "forward_dash", "jump_forward", "jump_back", "jump"],
 
       "animation": {
         "texture_path": "./resources/character1/Attack2.png",
@@ -500,27 +527,17 @@
       "input": {"Motion": {"motion": {"type" : "DpForward"}, "button": {"type" : "H"}}},
       "hit_boxes": [
         {"frame": 0, "boxes": []},
-        {"frame": 16, "boxes":
+        {"frame": 10, "boxes":
           [
             {
-              "rect": {"x": -200, "y": 0, "w": 400, "h": 150},
+              "rect": {"x": -50, "y": 0, "w": 400, "h": 150},
               "dmg": 100,
               "hit_stun": 20,
               "cancel_window": 10
             }
           ]
         },
-        {"frame": 24, "boxes":
-          [
-            {
-              "rect": {"x": -300, "y": 0, "w": 600, "h": 50},
-              "dmg": 100,
-              "hit_stun": 20,
-              "cancel_window": 10
-            }
-          ]
-        },
-        {"frame": 30, "boxes": []}
+        {"frame": 15, "boxes": []}
       ],
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
@@ -529,17 +546,17 @@
 
       "start_behavior": {"type" : "SetVel", "x": 0, "y": 0},
       "flags": [],
-      "end_behavior": { "type" : "OnFrameXToStateY", "x" : 50, "y" : "neutral"},
+      "end_behavior": { "type" : "OnFrameXToStateY", "x" : 20, "y" : "neutral"},
       
-      "cancel_window": {"start": 8, "end": 11},
+      "cancel_window": {"start": 10, "end": 14},
       "cancel_options": [],
 
       "animation": {
-        "texture_path": "./resources/character1/character1_spin_attack.png",
+        "texture_path": "./resources/character1/Attack3.png",
         "layout": {"type": "Vert"},
-        "frames": 1,
-        "w": 64,
-        "h": 64
+        "frames": 20,
+        "w": 400,
+        "h": 200
       }
     }
   ]

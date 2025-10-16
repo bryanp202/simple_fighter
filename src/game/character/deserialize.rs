@@ -5,7 +5,13 @@ use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{state::{En
 use sdl3::{render::{FPoint, FRect, Texture, TextureCreator}, video::WindowContext};
 use serde::Deserialize;
 
-pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, global_textures: &mut Vec<Texture<'a>>, config: &str) -> Result<Character, String> {
+pub fn deserialize<'a>(
+    texture_creator: &'a TextureCreator<WindowContext>,
+    global_textures: &mut Vec<Texture<'a>>,
+    config: &str,
+    pos: FPoint,
+    facing_right: bool,
+) -> Result<Character, String> {
     let src = std::fs::read_to_string(config).map_err(|err| err.to_string())?;
     let character_json: CharacterJson = serde_json::from_str(&src).map_err(|err| err.to_string())?;
 
@@ -15,8 +21,8 @@ pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, globa
             texture_creator,
             global_textures,
             &mov.animation.texture_path,
-            mov.animation.h,
             mov.animation.w,
+            mov.animation.h,
             mov.animation.frames,
             mov.animation.layout.to_animation_layout(),
         )?;
@@ -93,6 +99,13 @@ pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, globa
         cancel_windows.push(conv_cancel_range);
     }
 
+    let Some(&ground_hit_state) = move_names_to_pos.get(character_json.ground_hit_state.as_str()) else {
+        return Err(format!("Invalid ground_hit_state: '{}'", character_json.ground_hit_state));
+    };
+    let Some(&launch_hit_state) = move_names_to_pos.get(character_json.launch_hit_state.as_str()) else {
+        return Err(format!("Invalid launch_hit_state: '{}'", character_json.launch_hit_state));
+    };
+
     let states = States::init(
         inputs,
         cancel_windows,
@@ -105,14 +118,17 @@ pub fn deserialize<'a>(texture_creator: &'a TextureCreator<WindowContext>, globa
         run_length_hit_boxes,
         run_length_hurt_boxes,
         run_length_cancel_options,
+        ground_hit_state,
+        launch_hit_state,
     );
 
     Ok (
         Character {
             name: character_json.name,
             hp: character_json.hp as f32,
-            pos: FPoint::new(0.0, 0.0),
-            facing_right: true,
+            current_hp: character_json.hp as f32,
+            pos,
+            facing_right,
             states,
             projectiles: Vec::new(),
             hit_box_data,
@@ -216,6 +232,8 @@ struct CharacterJson {
     name: String,
     hp: usize,
     moves: Vec<MoveJson>,
+    ground_hit_state: String,
+    launch_hit_state: String,
 }
 
 #[derive(Deserialize)]

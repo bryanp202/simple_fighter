@@ -224,6 +224,21 @@ impl Direction {
             Direction::Up => RelativeDirection::Up,
         }
     }
+
+    pub fn on_right_side(&self) -> RelativeDirection {
+        match self {
+            Direction::None => RelativeDirection::None,
+            Direction::Down => RelativeDirection::Down,
+            Direction::DownLeft => RelativeDirection::DownForward,
+            Direction::UpLeft => RelativeDirection::UpForward,
+            Direction::Left => RelativeDirection::Forward,
+            Direction::Right => RelativeDirection::Back,
+            Direction::Neutral => RelativeDirection::Neutral,
+            Direction::UpRight => RelativeDirection::UpBack,
+            Direction::DownRight => RelativeDirection::DownBack,
+            Direction::Up => RelativeDirection::Up,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
