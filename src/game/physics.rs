@@ -2,7 +2,11 @@ use std::cmp::Ordering;
 
 use sdl3::render::{FPoint, FRect};
 
-use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, stage::Stage, Side};
+use crate::game::{
+    Side,
+    boxes::{CollisionBox, HitBox, HurtBox},
+    stage::Stage,
+};
 
 const GRAVITY_CONSTANT: f32 = 0.4;
 
@@ -38,7 +42,7 @@ pub fn check_hit_collisions(
     hit_boxes: &[HitBox],
     hurt_side: &Side,
     hurt_box_offset: FPoint,
-    hurt_boxes: &[HurtBox]
+    hurt_boxes: &[HurtBox],
 ) -> Option<HitBox> {
     for hit_box in hit_boxes.iter() {
         let hit_box_with_offset = &hit_box.on_side(hit_side, hit_box_offset);
@@ -71,7 +75,7 @@ pub fn movement_system(
     if x_overlap != 0.0 {
         let pos1_x_shift = -x_overlap / 2.0;
         let pos2_x_shift = x_overlap / 2.0;
-    
+
         let new_pos1 = FPoint::new(pos1.x + pos1_x_shift, pos1.y);
         let new_pos2 = FPoint::new(pos2.x + pos2_x_shift, pos2.y);
         (stage.bind_pos(&new_pos1), stage.bind_pos(&new_pos2))
@@ -81,10 +85,10 @@ pub fn movement_system(
 }
 
 fn aabb_collision(rect1: &FRect, rect2: &FRect) -> bool {
-    rect1.x < rect2.x + rect2.w &&
-    rect1.x + rect1.w > rect2.x &&
-    rect1.y >= rect2.y - rect2.h &&
-    rect1.y - rect1.h <= rect2.y
+    rect1.x < rect2.x + rect2.w
+        && rect1.x + rect1.w > rect2.x
+        && rect1.y >= rect2.y - rect2.h
+        && rect1.y - rect1.h <= rect2.y
 }
 
 fn aabb_x_overlap(rect1: &FRect, rect2: &FRect) -> f32 {

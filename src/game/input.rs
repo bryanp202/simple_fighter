@@ -45,7 +45,8 @@ impl Inputs {
 
     pub fn update(&mut self) {
         self.state.update();
-        self.input_history.update(self.dir(), self.held_buttons(), self.just_pressed_buttons());
+        self.input_history
+            .update(self.dir(), self.held_buttons(), self.just_pressed_buttons());
     }
 }
 
@@ -87,30 +88,26 @@ impl InputState {
         }
     }
 
-    fn held_buttons(&self) -> ButtonFlag {
-        self.buttons_pressed
-    }
-
-    fn just_pressed_buttons(&self) -> ButtonFlag {
-        self.buttons_just_pressed
-    }
-
-    fn dir(&self) -> Direction {
-        self.dir
-    }
-
     fn handle_keypress(&mut self, keycode: Keycode) {
-        let pairing = self.key_to_button
-            .iter()
-            .find_map(|pair| if pair.0 == keycode { Some(pair.1) } else { None });
+        let pairing = self.key_to_button.iter().find_map(|pair| {
+            if pair.0 == keycode {
+                Some(pair.1)
+            } else {
+                None
+            }
+        });
 
         if let Some(pressed_button) = pairing {
             self.buttons_pressed |= pressed_button;
             self.buttons_just_pressed_temp |= pressed_button;
         } else {
-            let dir_pairing = self.key_to_direction
-                .iter()
-                .find_map(|pair| if pair.0 == keycode { Some(pair.1) } else { None });
+            let dir_pairing = self.key_to_direction.iter().find_map(|pair| {
+                if pair.0 == keycode {
+                    Some(pair.1)
+                } else {
+                    None
+                }
+            });
 
             if let Some(pressed_direction) = dir_pairing {
                 self.held_dir |= pressed_direction;
@@ -119,16 +116,24 @@ impl InputState {
     }
 
     fn handle_keyrelease(&mut self, keycode: Keycode) {
-        let pairing = self.key_to_button
-            .iter()
-            .find_map(|pair| if pair.0 == keycode { Some(pair.1) } else { None });
+        let pairing = self.key_to_button.iter().find_map(|pair| {
+            if pair.0 == keycode {
+                Some(pair.1)
+            } else {
+                None
+            }
+        });
 
         if let Some(pressed_button) = pairing {
             self.buttons_pressed ^= pressed_button;
         } else {
-            let dir_pairing = self.key_to_direction
-                .iter()
-                .find_map(|pair| if pair.0 == keycode { Some(pair.1) } else { None });
+            let dir_pairing = self.key_to_direction.iter().find_map(|pair| {
+                if pair.0 == keycode {
+                    Some(pair.1)
+                } else {
+                    None
+                }
+            });
 
             if let Some(pressed_direction) = dir_pairing {
                 self.held_dir ^= pressed_direction;
@@ -189,10 +194,8 @@ bitflags! {
     }
 }
 
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Direction {
-    None,
     Neutral,
     Up,
     Down,
@@ -205,14 +208,8 @@ pub enum Direction {
 }
 
 impl Direction {
-    /// Returns true if self and other match, or if self is none
-    pub fn matches_or_is_none(&self, other: &Self) -> bool {
-        *self == *other || *self == Self::None
-    }
-
     pub fn on_left_side(&self) -> RelativeDirection {
         match self {
-            Direction::None => RelativeDirection::None,
             Direction::Down => RelativeDirection::Down,
             Direction::DownLeft => RelativeDirection::DownBack,
             Direction::UpLeft => RelativeDirection::UpBack,
@@ -227,7 +224,6 @@ impl Direction {
 
     pub fn on_right_side(&self) -> RelativeDirection {
         match self {
-            Direction::None => RelativeDirection::None,
             Direction::Down => RelativeDirection::Down,
             Direction::DownLeft => RelativeDirection::DownForward,
             Direction::UpLeft => RelativeDirection::UpForward,
@@ -282,7 +278,7 @@ impl Motion {
             Motion::LeftLeft => RelativeMotion::BackBack,
             Motion::RightRight => RelativeMotion::ForwardForward,
             Motion::QcRight => RelativeMotion::QcForward,
-            Motion::QcLeft => RelativeMotion::QcBack, 
+            Motion::QcLeft => RelativeMotion::QcBack,
             Motion::DpRight => RelativeMotion::DpForward,
             Motion::DpLeft => RelativeMotion::DpBack,
         }
@@ -295,7 +291,7 @@ impl Motion {
             Motion::LeftLeft => RelativeMotion::ForwardForward,
             Motion::RightRight => RelativeMotion::BackBack,
             Motion::QcRight => RelativeMotion::QcBack,
-            Motion::QcLeft => RelativeMotion::QcForward, 
+            Motion::QcLeft => RelativeMotion::QcForward,
             Motion::DpRight => RelativeMotion::DpBack,
             Motion::DpLeft => RelativeMotion::DpForward,
         }
@@ -334,13 +330,25 @@ impl InputHistory {
     const MOTION_BUF_SIZE: usize = 4;
 
     // Most Valuable
-    const DP_RIGHT_INVERSE: &[Direction] = &[Direction::DownRight, Direction::Down, Direction::Neutral, Direction::Right];
-    const DP_LEFT_INVERSE: &[Direction] = &[Direction::DownLeft, Direction::Down, Direction::Neutral, Direction::Left];
+    const DP_RIGHT_INVERSE: &[Direction] = &[
+        Direction::DownRight,
+        Direction::Down,
+        Direction::Neutral,
+        Direction::Right,
+    ];
+    const DP_LEFT_INVERSE: &[Direction] = &[
+        Direction::DownLeft,
+        Direction::Down,
+        Direction::Neutral,
+        Direction::Left,
+    ];
     // Second Most valuable
-    const QC_RIGHT_INVERSE: &[Direction] = &[Direction::Right, Direction::DownRight, Direction::Down];
+    const QC_RIGHT_INVERSE: &[Direction] =
+        &[Direction::Right, Direction::DownRight, Direction::Down];
     const QC_LEFT_INVERSE: &[Direction] = &[Direction::Left, Direction::DownLeft, Direction::Down];
     // Least Valuable Motion Input
-    const RIGHT_RIGHT_INVERSE: &[Direction] = &[Direction::Right, Direction::Neutral, Direction::Right];
+    const RIGHT_RIGHT_INVERSE: &[Direction] =
+        &[Direction::Right, Direction::Neutral, Direction::Right];
     const LEFT_LEFT_INVERSE: &[Direction] = &[Direction::Left, Direction::Neutral, Direction::Left];
     // Second Least Valuable Motion Input
     const DOWN_DOWN_INVERSE: &[Direction] = &[Direction::Down, Direction::Neutral, Direction::Down];
@@ -353,12 +361,17 @@ impl InputHistory {
         }
     }
 
-    pub fn update(&mut self, dir: Direction, held_buttons: ButtonFlag, just_pressed_buttons: ButtonFlag) {
+    pub fn update(
+        &mut self,
+        dir: Direction,
+        held_buttons: ButtonFlag,
+        just_pressed_buttons: ButtonFlag,
+    ) {
         self.append_input(dir, held_buttons);
-        self.shift_motion_buf(dir, just_pressed_buttons);
+        self.shift_motion_buf(just_pressed_buttons);
     }
 
-    fn shift_motion_buf(&mut self, dir: Direction, just_pressed_buttons: ButtonFlag) {
+    fn shift_motion_buf(&mut self, just_pressed_buttons: ButtonFlag) {
         let mut new_buf: MoveBuffer = std::array::from_fn(|_| (Motion::None, ButtonFlag::NONE));
         new_buf[1..].copy_from_slice(&self.motion_buf[0..Self::MOTION_BUF_SIZE - 1]);
         new_buf[0] = (self.parse_motion(), just_pressed_buttons);
@@ -381,7 +394,8 @@ impl InputHistory {
         let mut frame_count = 0;
         let mut i = 0;
         while frame_count < Self::HISTORY_FRAME_LEN {
-            let current_index = (Self::HISTORY_FRAME_LEN + self.current_index - i) % Self::HISTORY_FRAME_LEN;
+            let current_index =
+                (Self::HISTORY_FRAME_LEN + self.current_index - i) % Self::HISTORY_FRAME_LEN;
             let (dir, _, frames) = &self.buf[current_index];
             ordered_frames[i] = *dir;
             frame_count += *frames;
@@ -400,8 +414,8 @@ impl InputHistory {
                 } else {
                     Motion::DpLeft
                 };
-            },
-            _ => {},
+            }
+            _ => {}
         }
 
         let right_qc = Self::find_dir_sequence(motion_slice, Self::QC_RIGHT_INVERSE);
@@ -415,8 +429,8 @@ impl InputHistory {
                 } else {
                     Motion::QcLeft
                 };
-            },
-            _ => {},
+            }
+            _ => {}
         }
 
         let right_right = Self::find_dir_sequence(motion_slice, Self::RIGHT_RIGHT_INVERSE);
@@ -430,8 +444,8 @@ impl InputHistory {
                 } else {
                     Motion::LeftLeft
                 };
-            },
-            _ => {},
+            }
+            _ => {}
         }
 
         if let Some(_) = Self::find_dir_sequence(motion_slice, Self::DOWN_DOWN_INVERSE) {

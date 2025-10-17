@@ -1,17 +1,31 @@
 mod boxes;
 mod character;
 mod input;
-mod projectile;
-mod stage;
-mod render;
 mod physics;
+mod projectile;
+mod render;
+mod stage;
 
 use std::time::{Duration, Instant};
 
 use character::Character;
-use sdl3::{event::Event, keyboard::Keycode, pixels::Color, render::{Canvas, FPoint, FRect, Texture, TextureCreator}, video::{Window, WindowContext}, EventPump};
+use sdl3::{
+    EventPump,
+    event::Event,
+    keyboard::Keycode,
+    pixels::Color,
+    render::{Canvas, FPoint, FRect, Texture, TextureCreator},
+    video::{Window, WindowContext},
+};
 
-use crate::{game::{input::Inputs, physics::{check_hit_collisions, movement_system, side_detection}, stage::Stage}, DEFAULT_SCREEN_WIDTH};
+use crate::{
+    DEFAULT_SCREEN_WIDTH,
+    game::{
+        input::Inputs,
+        physics::{check_hit_collisions, movement_system, side_detection},
+        stage::Stage,
+    },
+};
 
 const FRAME_RATE: usize = 60;
 const FRAME_DURATION: f32 = 1.0 / FRAME_RATE as f32;
@@ -51,8 +65,12 @@ pub struct Game<'a> {
     should_quit: bool,
 }
 
-impl <'a> Game<'a> {
-    pub fn init(texture_creator: &'a TextureCreator<WindowContext>, canvas: Canvas<Window>, events: EventPump) -> Self {
+impl<'a> Game<'a> {
+    pub fn init(
+        texture_creator: &'a TextureCreator<WindowContext>,
+        canvas: Canvas<Window>,
+        events: EventPump,
+    ) -> Self {
         let mut textures = Vec::new();
         Self {
             stage: Stage::init(texture_creator, &mut textures),
@@ -62,14 +80,16 @@ impl <'a> Game<'a> {
                 "./resources/character1/character1.json",
                 FPoint::new(-100.0, 0.0),
                 Side::Left,
-            ).unwrap(),
+            )
+            .unwrap(),
             player2: Character::from_config(
                 &texture_creator,
                 &mut textures,
                 "./resources/character1/character2.json",
                 FPoint::new(100.0, 0.0),
                 Side::Right,
-            ).unwrap(),
+            )
+            .unwrap(),
             timer: 0.0,
             score: (0, 0),
             hit_freeze: 0,
@@ -88,14 +108,19 @@ impl <'a> Game<'a> {
         let mut last_frame = Instant::now();
         while !self.should_quit {
             let frame_start = Instant::now();
-            let dt = frame_start.checked_duration_since(last_frame).unwrap_or(Duration::ZERO).as_secs_f32();
+            let dt = frame_start
+                .checked_duration_since(last_frame)
+                .unwrap_or(Duration::ZERO)
+                .as_secs_f32();
 
             self.input();
             self.update(dt);
             self.render();
 
             last_frame = frame_start;
-            std::thread::sleep(Duration::from_secs_f32(FRAME_DURATION).saturating_sub(frame_start.elapsed()));
+            std::thread::sleep(
+                Duration::from_secs_f32(FRAME_DURATION).saturating_sub(frame_start.elapsed()),
+            );
         }
     }
 
@@ -103,17 +128,28 @@ impl <'a> Game<'a> {
         for event in self.events.poll_iter() {
             match event {
                 Event::Quit { .. } => self.should_quit = true,
-                Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => {
                     self.player1.reset();
                     self.player2.reset();
-                },
-                Event::KeyDown { keycode: Some(keycode), repeat: false, .. } => {
+                }
+                Event::KeyDown {
+                    keycode: Some(keycode),
+                    repeat: false,
+                    ..
+                } => {
                     self.inputs.handle_keypress(keycode);
-                },
-                Event::KeyUp { keycode: Some(keycode), repeat: false, .. } => {
+                }
+                Event::KeyUp {
+                    keycode: Some(keycode),
+                    repeat: false,
+                    ..
+                } => {
                     self.inputs.handle_keyrelease(keycode);
                 }
-                _ => {},
+                _ => {}
             }
         }
     }
@@ -128,7 +164,7 @@ impl <'a> Game<'a> {
             self.player2.movement_update();
 
             let (player1_pos, player2_pos) = movement_system(
-                    self.player1.get_side(),
+                self.player1.get_side(),
                 &self.player1.pos(),
                 &self.player1.get_collision_box(),
                 self.player2.get_side(),
@@ -155,8 +191,12 @@ impl <'a> Game<'a> {
         self.canvas.clear();
 
         self.stage.render(&mut self.canvas, &self.textures).unwrap();
-        self.player1.render(&mut self.canvas, &self.textures).unwrap();
-        self.player2.render(&mut self.canvas, &self.textures).unwrap();
+        self.player1
+            .render(&mut self.canvas, &self.textures)
+            .unwrap();
+        self.player2
+            .render(&mut self.canvas, &self.textures)
+            .unwrap();
 
         let player1_hp_per = self.player1.current_hp() / self.player1.max_hp();
         render_player1_health(&mut self.canvas, player1_hp_per).unwrap();
@@ -182,9 +222,9 @@ fn handle_hit_boxes(player1: &mut Character, player2: &mut Character) -> usize {
         player1_hit_boxes,
         player2_side,
         player2_pos,
-        player2_hurt_boxes
+        player2_hurt_boxes,
     );
-    
+
     let player2_hit_boxes = player2.get_hit_boxes();
     let player1_hurt_boxes = player1.get_hurt_boxes();
     let player2_hit = check_hit_collisions(
@@ -193,7 +233,7 @@ fn handle_hit_boxes(player1: &mut Character, player2: &mut Character) -> usize {
         player2_hit_boxes,
         player1_side,
         player1_pos,
-        player1_hurt_boxes
+        player1_hurt_boxes,
     );
 
     match (player1_hit, player2_hit) {
@@ -201,15 +241,15 @@ fn handle_hit_boxes(player1: &mut Character, player2: &mut Character) -> usize {
             player1.successful_hit(&player1_hit);
             player2.receive_hit(&player1_hit);
             4
-        },
+        }
         (None, Some(player2_hit)) => {
             player2.successful_hit(&player2_hit);
             player1.receive_hit(&player2_hit);
             4
-        },
-        (Some(_), Some(_)) => { 4 },
-        _ => { 0 },
-    }    
+        }
+        (Some(_), Some(_)) => 4,
+        _ => 0,
+    }
 }
 
 fn render_player1_health(canvas: &mut Canvas<Window>, hp_per: f32) -> Result<(), sdl3::Error> {
@@ -224,10 +264,20 @@ fn render_player1_health(canvas: &mut Canvas<Window>, hp_per: f32) -> Result<(),
 
 fn render_player2_health(canvas: &mut Canvas<Window>, hp_per: f32) -> Result<(), sdl3::Error> {
     canvas.set_draw_color(Color::RED);
-    canvas.fill_rect(FRect::new(DEFAULT_SCREEN_WIDTH as f32 - 300.0, 0.0, 300.0, 20.0))?;
+    canvas.fill_rect(FRect::new(
+        DEFAULT_SCREEN_WIDTH as f32 - 300.0,
+        0.0,
+        300.0,
+        20.0,
+    ))?;
     canvas.set_draw_color(Color::GREEN);
     let health_bar = hp_per * 300.0;
-    canvas.fill_rect(FRect::new(DEFAULT_SCREEN_WIDTH as f32 - 300.0, 0.0, health_bar, 20.0))?;
+    canvas.fill_rect(FRect::new(
+        DEFAULT_SCREEN_WIDTH as f32 - 300.0,
+        0.0,
+        health_bar,
+        20.0,
+    ))?;
 
     Ok(())
 }

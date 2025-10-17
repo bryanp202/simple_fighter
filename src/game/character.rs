@@ -1,19 +1,33 @@
-mod state;
 mod deserialize;
+mod state;
 
-use crate::{game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{deserialize::deserialize, state::StateData}, input::Inputs, physics::{gravity_system, velocity_system}, projectile::Projectile, render::{animation::Animation, draw_collision_box_system, draw_hit_boxes_system, draw_hurt_boxes_system, to_screen_pos}, Side}, DEFAULT_SCREEN_HEIGHT, DEFAULT_SCREEN_WIDTH};
-use sdl3::{render::{Canvas, FPoint, FRect, Texture, TextureCreator}, video::{Window, WindowContext}};
+use crate::game::{
+    Side,
+    boxes::{CollisionBox, HitBox, HurtBox},
+    character::{deserialize::deserialize, state::StateData},
+    input::Inputs,
+    physics::{gravity_system, velocity_system},
+    projectile::Projectile,
+    render::{
+        animation::Animation, draw_collision_box_system, draw_hit_boxes_system,
+        draw_hurt_boxes_system, to_screen_pos,
+    },
+};
+use sdl3::{
+    render::{Canvas, FPoint, FRect, Texture, TextureCreator},
+    video::{Window, WindowContext},
+};
 use state::States;
 
 pub struct Character {
     name: String,
     current_hp: f32,
     pos: FPoint,
-    
+
     // State Data
     states: States,
     state_data: StateData,
-    
+
     // Other Data
     projectiles: Vec<Projectile>,
     hit_box_data: Vec<HitBox>,
@@ -57,10 +71,7 @@ impl Character {
     }
 
     pub fn update(&mut self, inputs: &Inputs) {
-        self.state_data.update(
-            &self.states,
-            &inputs,
-        );
+        self.state_data.update(&self.states, &inputs);
     }
 
     pub fn movement_update(&mut self) {
@@ -71,7 +82,7 @@ impl Character {
             let (new_pos, new_vel, grounded) = gravity_system(
                 &self.pos,
                 &self.state_data.vel(),
-                self.state_data.gravity_mult()
+                self.state_data.gravity_mult(),
             );
             self.pos = new_pos;
             self.state_data.set_vel(new_vel);
@@ -81,18 +92,22 @@ impl Character {
         }
     }
 
-    pub fn render(&self, canvas: &mut Canvas<Window>, global_textures: &Vec<Texture>) -> Result<(), sdl3::Error> {
+    pub fn render(
+        &self,
+        canvas: &mut Canvas<Window>,
+        global_textures: &Vec<Texture>,
+    ) -> Result<(), sdl3::Error> {
         let current_state = self.state_data.current_state();
         let current_frame = self.state_data.current_frame();
 
         let screen_pos = to_screen_pos(&self.pos);
-    
+
         let flip_horz = match self.state_data.get_side() {
             Side::Left => false,
             Side::Right => true,
         };
-        let (texture, src) = self.animation_data[current_state]
-            .get_frame_cycle(current_frame, global_textures);
+        let (texture, src) =
+            self.animation_data[current_state].get_frame_cycle(current_frame, global_textures);
         // Sprite is rendered with the character pos in the center
         let dst = FRect::new(
             screen_pos.x - src.w / 2.0,
@@ -100,8 +115,7 @@ impl Character {
             src.w,
             src.h,
         );
-        canvas.copy_ex(texture, src, dst,
-            0.0, None, flip_horz, false)?;
+        canvas.copy_ex(texture, src, dst, 0.0, None, flip_horz, false)?;
 
         if cfg!(feature = "debug") {
             canvas.set_blend_mode(sdl3::render::BlendMode::Blend);
@@ -139,13 +153,13 @@ impl Character {
 
     pub fn reset(&mut self) {
         self.pos = self.start_pos;
-        self.current_hp = self.max_hp; 
+        self.current_hp = self.max_hp;
         self.state_data = StateData::new(self.start_side);
     }
 
     pub fn reset_to(&mut self, pos: FPoint) {
         self.pos = pos;
-        self.current_hp = self.max_hp; 
+        self.current_hp = self.max_hp;
         self.state_data = StateData::new(self.start_side);
     }
 
@@ -165,7 +179,7 @@ impl Character {
 impl Character {
     pub fn successful_hit(&mut self, hit: &HitBox) {
         self.state_data.on_hit_connect();
-    } 
+    }
 
     pub fn receive_hit(&mut self, hit: &HitBox) {
         self.current_hp -= hit.dmg();

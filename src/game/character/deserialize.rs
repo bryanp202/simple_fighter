@@ -1,8 +1,23 @@
 use std::{collections::HashMap, ops::Range, usize};
 
-use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States}, Character}, input::{ButtonFlag, RelativeDirection, RelativeMotion}, render::{self, animation::{Animation, AnimationLayout}}, Side};
+use crate::game::{
+    Side,
+    boxes::{CollisionBox, HitBox, HurtBox},
+    character::{
+        Character,
+        state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States},
+    },
+    input::{ButtonFlag, RelativeDirection, RelativeMotion},
+    render::{
+        self,
+        animation::{Animation, AnimationLayout},
+    },
+};
 
-use sdl3::{render::{FPoint, FRect, Texture, TextureCreator}, video::WindowContext};
+use sdl3::{
+    render::{FPoint, FRect, Texture, TextureCreator},
+    video::WindowContext,
+};
 use serde::Deserialize;
 
 pub fn deserialize<'a>(
@@ -13,7 +28,8 @@ pub fn deserialize<'a>(
     start_side: Side,
 ) -> Result<Character, String> {
     let src = std::fs::read_to_string(config).map_err(|err| err.to_string())?;
-    let character_json: CharacterJson = serde_json::from_str(&src).map_err(|err| err.to_string())?;
+    let character_json: CharacterJson =
+        serde_json::from_str(&src).map_err(|err| err.to_string())?;
 
     let mut animation_data = Vec::new();
     for mov in character_json.moves.iter() {
@@ -31,10 +47,17 @@ pub fn deserialize<'a>(
         let frame_w = mov.animation.w as f32;
         let frame_h = mov.animation.h as f32;
 
-        animation_data.push(Animation::new(texture_index, frames as usize, frame_w, frame_h));
+        animation_data.push(Animation::new(
+            texture_index,
+            frames as usize,
+            frame_w,
+            frame_h,
+        ));
     }
 
-    let move_names_to_pos: HashMap<_, _> = character_json.moves.iter()
+    let move_names_to_pos: HashMap<_, _> = character_json
+        .moves
+        .iter()
         .enumerate()
         .map(|(i, mov)| (mov.name.as_str(), i))
         .collect();
@@ -55,7 +78,7 @@ pub fn deserialize<'a>(
     let mut run_length_hit_boxes = Vec::new();
     let mut run_length_hurt_boxes = Vec::new();
     let mut run_length_cancel_options = Vec::new();
-    
+
     let mut hit_box_offset = 0usize;
     let mut hurt_box_offset = 0usize;
     let mut cancel_options_offset = 0usize;
@@ -65,45 +88,59 @@ pub fn deserialize<'a>(
             &mut hit_box_data,
             &mut run_length_hit_boxes,
             &mut hit_boxes_start,
-            &mut hit_box_offset
+            &mut hit_box_offset,
         )?;
         append_hurt_box_data(
             mov,
             &mut hurt_box_data,
             &mut run_length_hurt_boxes,
             &mut hurt_boxes_start,
-            &mut hurt_box_offset
+            &mut hurt_box_offset,
         )?;
         append_cancel_options_data(
             mov,
             &move_names_to_pos,
             &mut cancel_options,
             &mut run_length_cancel_options,
-            &mut cancel_options_offset
+            &mut cancel_options_offset,
         )?;
         inputs.push(mov.input.to_move_input());
         collision_box_data.push(mov.collision_box.to_collision_box());
         start_behaviors.push(mov.start_behavior.to_start_behavior());
 
-        let conv_end_beh = mov.end_behavior
-                .to_end_behavior(&move_names_to_pos)
-                .map_err(|missing_move| format!("Move '{}', EndBehavior: Could not found move '{}'", mov.name, missing_move))?;
+        let conv_end_beh = mov
+            .end_behavior
+            .to_end_behavior(&move_names_to_pos)
+            .map_err(|missing_move| {
+                format!(
+                    "Move '{}', EndBehavior: Could not found move '{}'",
+                    mov.name, missing_move
+                )
+            })?;
         end_behaviors.push(conv_end_beh);
 
-        let conv_flags = mov.flags
-            .iter()
-            .fold(StateFlags::NONE, |flags, next| flags.union(next.to_state_json()));
+        let conv_flags = mov.flags.iter().fold(StateFlags::NONE, |flags, next| {
+            flags.union(next.to_state_json())
+        });
         flags.push(conv_flags);
 
         let conv_cancel_range = mov.cancel_window.to_range();
         cancel_windows.push(conv_cancel_range);
     }
 
-    let Some(&ground_hit_state) = move_names_to_pos.get(character_json.ground_hit_state.as_str()) else {
-        return Err(format!("Invalid ground_hit_state: '{}'", character_json.ground_hit_state));
+    let Some(&ground_hit_state) = move_names_to_pos.get(character_json.ground_hit_state.as_str())
+    else {
+        return Err(format!(
+            "Invalid ground_hit_state: '{}'",
+            character_json.ground_hit_state
+        ));
     };
-    let Some(&launch_hit_state) = move_names_to_pos.get(character_json.launch_hit_state.as_str()) else {
-        return Err(format!("Invalid launch_hit_state: '{}'", character_json.launch_hit_state));
+    let Some(&launch_hit_state) = move_names_to_pos.get(character_json.launch_hit_state.as_str())
+    else {
+        return Err(format!(
+            "Invalid launch_hit_state: '{}'",
+            character_json.launch_hit_state
+        ));
     };
 
     let states = States::init(
@@ -122,23 +159,21 @@ pub fn deserialize<'a>(
         launch_hit_state,
     );
 
-    Ok (
-        Character {
-            name: character_json.name,
-            max_hp: character_json.hp as f32,
-            start_side,
-            start_pos,
-            current_hp: character_json.hp as f32,
-            pos: start_pos,
-            states,
-            projectiles: Vec::new(),
-            hit_box_data,
-            hurt_box_data,
-            collision_box_data,
-            animation_data,
-            state_data: StateData::new(start_side),
-        }
-    )
+    Ok(Character {
+        name: character_json.name,
+        max_hp: character_json.hp as f32,
+        start_side,
+        start_pos,
+        current_hp: character_json.hp as f32,
+        pos: start_pos,
+        states,
+        projectiles: Vec::new(),
+        hit_box_data,
+        hurt_box_data,
+        collision_box_data,
+        animation_data,
+        state_data: StateData::new(start_side),
+    })
 }
 
 fn append_hit_box_data(
@@ -146,25 +181,30 @@ fn append_hit_box_data(
     hit_box_data: &mut Vec<HitBox>,
     run_length_hit_boxes: &mut Vec<(usize, Range<usize>)>,
     hit_boxes_start: &mut Vec<usize>,
-    offset: &mut usize
-) -> Result<(), String>{
+    offset: &mut usize,
+) -> Result<(), String> {
     hit_boxes_start.push(run_length_hit_boxes.len());
 
     for pair in mov.hit_boxes.windows(2) {
         let first = &pair[0];
         let second = &pair[1];
-        let duration = second.frame.checked_sub(first.frame)
-            .ok_or_else(|| format!("'{}': {}", mov.name, "Run length encoding required for hitbox frames".to_string()))?;
-        let range = *offset .. *offset + first.boxes.len();
+        let duration = second.frame.checked_sub(first.frame).ok_or_else(|| {
+            format!(
+                "'{}': {}",
+                mov.name,
+                "Run length encoding required for hitbox frames".to_string()
+            )
+        })?;
+        let range = *offset..*offset + first.boxes.len();
         *offset += first.boxes.len();
 
         run_length_hit_boxes.push((duration, range));
         hit_box_data.extend(first.boxes.iter().map(|hit_box| hit_box.to_hit_box()));
     }
     if let Some(last) = mov.hit_boxes.last() {
-        let range = *offset .. *offset + last.boxes.len();
+        let range = *offset..*offset + last.boxes.len();
         *offset += last.boxes.len();
-        
+
         run_length_hit_boxes.push((usize::MAX, range));
         hit_box_data.extend(last.boxes.iter().map(|hit_box| hit_box.to_hit_box()));
     } else {
@@ -180,23 +220,28 @@ fn append_hurt_box_data(
     hurt_box_data: &mut Vec<HurtBox>,
     run_length_hurt_boxes: &mut Vec<(usize, Range<usize>)>,
     hurt_boxes_start: &mut Vec<usize>,
-    offset: &mut usize
-) -> Result<(), String>{
+    offset: &mut usize,
+) -> Result<(), String> {
     hurt_boxes_start.push(run_length_hurt_boxes.len());
 
     for pair in mov.hurt_boxes.windows(2) {
         let first = &pair[0];
         let second = &pair[1];
-        let duration = second.frame.checked_sub(first.frame)
-            .ok_or_else(|| format!("'{}': {}", mov.name, "Run length encoding required for hurtbox frames".to_string()))?;
-        let range = *offset .. *offset + first.boxes.len();
+        let duration = second.frame.checked_sub(first.frame).ok_or_else(|| {
+            format!(
+                "'{}': {}",
+                mov.name,
+                "Run length encoding required for hurtbox frames".to_string()
+            )
+        })?;
+        let range = *offset..*offset + first.boxes.len();
         *offset += first.boxes.len();
 
         run_length_hurt_boxes.push((duration, range));
         hurt_box_data.extend(first.boxes.iter().map(|hit_box| hit_box.to_hurt_box()));
     }
     if let Some(last) = mov.hurt_boxes.last() {
-        let range = *offset .. *offset + last.boxes.len();
+        let range = *offset..*offset + last.boxes.len();
         *offset += last.boxes.len();
 
         run_length_hurt_boxes.push((usize::MAX, range));
@@ -221,7 +266,8 @@ fn append_cancel_options_data(
     cancel_options.push(range);
 
     for cancel_option in mov.cancel_options.iter() {
-        let index = map.get(cancel_option.as_str())
+        let index = map
+            .get(cancel_option.as_str())
             .ok_or_else(|| format!("Could not find a move named: {}", cancel_option))?;
         run_length_cancel_options.push(*index);
     }
@@ -259,14 +305,14 @@ struct MoveJson {
 #[serde(tag = "type")]
 enum StartBehaviorJson {
     None,
-    SetVel {x: f32, y: f32},
+    SetVel { x: f32, y: f32 },
 }
 
 impl StartBehaviorJson {
     fn to_start_behavior(&self) -> StartBehavior {
         match self {
             &StartBehaviorJson::None => StartBehavior::None,
-            &StartBehaviorJson::SetVel { x, y } => StartBehavior::SetVel { x, y }
+            &StartBehaviorJson::SetVel { x, y } => StartBehavior::SetVel { x, y },
         }
     }
 }
@@ -275,21 +321,22 @@ impl StartBehaviorJson {
 #[serde(tag = "type")]
 enum EndBehaviorJson {
     Endless,
-    OnFrameXToStateY {x: usize, y: String},
-    OnGroundedToStateY {y: String},
+    OnFrameXToStateY { x: usize, y: String },
+    OnGroundedToStateY { y: String },
 }
 
 impl EndBehaviorJson {
     fn to_end_behavior(&self, map: &HashMap<&str, usize>) -> Result<EndBehavior, String> {
-        Ok (
-            match self {
-                EndBehaviorJson::Endless => EndBehavior::Endless,
-                EndBehaviorJson::OnFrameXToStateY { x, y }
-                    => EndBehavior::OnFrameXToStateY { x: *x, y: *map.get(y.as_str()).ok_or_else(|| y.clone())? },
-                EndBehaviorJson::OnGroundedToStateY { y }
-                    => EndBehavior::OnGroundedToStateY { y: *map.get(y.as_str()).ok_or_else(|| y.clone())? },
-            }
-        )
+        Ok(match self {
+            EndBehaviorJson::Endless => EndBehavior::Endless,
+            EndBehaviorJson::OnFrameXToStateY { x, y } => EndBehavior::OnFrameXToStateY {
+                x: *x,
+                y: *map.get(y.as_str()).ok_or_else(|| y.clone())?,
+            },
+            EndBehaviorJson::OnGroundedToStateY { y } => EndBehavior::OnGroundedToStateY {
+                y: *map.get(y.as_str()).ok_or_else(|| y.clone())?,
+            },
+        })
     }
 }
 
@@ -385,19 +432,29 @@ impl ButtonJson {
 
 #[derive(Deserialize, Clone, Copy)]
 enum InputJson {
-    Direction { dir: RelativeDirectionJson, button: ButtonJson },
-    Motion { motion: RelativeMotionJson, button: ButtonJson },
+    Direction {
+        dir: RelativeDirectionJson,
+        button: ButtonJson,
+    },
+    Motion {
+        motion: RelativeMotionJson,
+        button: ButtonJson,
+    },
 }
 
 impl InputJson {
     fn to_move_input(&self) -> MoveInput {
         match self {
-            Self::Direction { dir, button } => {
-                MoveInput::new(button.to_button_flag(), RelativeMotion::None, dir.to_relative_direction())
-            },
-            Self::Motion { motion, button } => {
-                MoveInput::new(button.to_button_flag(), motion.to_relative_motion(), RelativeDirection::None)
-            }
+            Self::Direction { dir, button } => MoveInput::new(
+                button.to_button_flag(),
+                RelativeMotion::None,
+                dir.to_relative_direction(),
+            ),
+            Self::Motion { motion, button } => MoveInput::new(
+                button.to_button_flag(),
+                motion.to_relative_motion(),
+                RelativeDirection::None,
+            ),
         }
     }
 }
@@ -418,7 +475,12 @@ struct HitBoxJson {
 
 impl HitBoxJson {
     fn to_hit_box(self) -> HitBox {
-        HitBox::new(self.rect.to_frect(), self.dmg as f32, self.hit_stun, self.cancel_window)
+        HitBox::new(
+            self.rect.to_frect(),
+            self.dmg as f32,
+            self.hit_stun,
+            self.cancel_window,
+        )
     }
 }
 
