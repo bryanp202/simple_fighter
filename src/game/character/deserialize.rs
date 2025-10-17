@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ops::Range, usize};
 
-use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States}, Character}, input::{ButtonFlag, RelativeDirection, RelativeMotion}, render::{self, animation::{Animation, AnimationLayout}}};
+use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, character::{state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States}, Character}, input::{ButtonFlag, RelativeDirection, RelativeMotion}, render::{self, animation::{Animation, AnimationLayout}}, Side};
 
 use sdl3::{render::{FPoint, FRect, Texture, TextureCreator}, video::WindowContext};
 use serde::Deserialize;
@@ -9,8 +9,8 @@ pub fn deserialize<'a>(
     texture_creator: &'a TextureCreator<WindowContext>,
     global_textures: &mut Vec<Texture<'a>>,
     config: &str,
-    pos: FPoint,
-    facing_right: bool,
+    start_pos: FPoint,
+    start_side: Side,
 ) -> Result<Character, String> {
     let src = std::fs::read_to_string(config).map_err(|err| err.to_string())?;
     let character_json: CharacterJson = serde_json::from_str(&src).map_err(|err| err.to_string())?;
@@ -125,17 +125,18 @@ pub fn deserialize<'a>(
     Ok (
         Character {
             name: character_json.name,
-            hp: character_json.hp as f32,
+            max_hp: character_json.hp as f32,
+            start_side,
+            start_pos,
             current_hp: character_json.hp as f32,
-            pos,
-            facing_right,
+            pos: start_pos,
             states,
             projectiles: Vec::new(),
             hit_box_data,
             hurt_box_data,
             collision_box_data,
             animation_data,
-            state_data: StateData::default(),
+            state_data: StateData::new(start_side),
         }
     )
 }
@@ -453,7 +454,7 @@ struct RectJson {
 
 impl RectJson {
     fn to_frect(self) -> FRect {
-        FRect::new(self.x, self.y, self.w, self.h)
+        FRect::new(self.x - self.w / 2.0, self.y + self.h / 2.0, self.w, self.h)
     }
 }
 
@@ -487,6 +488,7 @@ impl AnimationLayoutJson {
 enum FlagsJson {
     Airborne,
     CancelOnWhiff,
+    LockSide,
 }
 
 impl FlagsJson {
@@ -494,6 +496,7 @@ impl FlagsJson {
         match self {
             FlagsJson::Airborne => StateFlags::Airborne,
             FlagsJson::CancelOnWhiff => StateFlags::CancelOnWhiff,
+            FlagsJson::LockSide => StateFlags::LockSide,
         }
     }
 }

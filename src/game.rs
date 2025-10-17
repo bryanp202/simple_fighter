@@ -11,10 +11,25 @@ use std::time::{Duration, Instant};
 use character::Character;
 use sdl3::{event::Event, keyboard::Keycode, pixels::Color, render::{Canvas, FPoint, FRect, Texture, TextureCreator}, video::{Window, WindowContext}, EventPump};
 
-use crate::{game::{input::Inputs, physics::check_hit_collisions, stage::Stage}, DEFAULT_SCREEN_WIDTH};
+use crate::{game::{input::Inputs, physics::{check_hit_collisions, movement_system, side_detection}, stage::Stage}, DEFAULT_SCREEN_WIDTH};
 
 const FRAME_RATE: usize = 60;
 const FRAME_DURATION: f32 = 1.0 / FRAME_RATE as f32;
+
+#[derive(Clone, Copy, Debug)]
+pub enum Side {
+    Left,
+    Right,
+}
+
+impl Side {
+    pub fn opposite(&self) -> Side {
+        match self {
+            Self::Left => Self::Right,
+            Self::Right => Self::Left,
+        }
+    }
+}
 
 pub struct Game<'a> {
     stage: Stage,
@@ -45,15 +60,15 @@ impl <'a> Game<'a> {
                 &texture_creator,
                 &mut textures,
                 "./resources/character1/character1.json",
-                FPoint::new(-200.0, 0.0),
-                true,
+                FPoint::new(-100.0, 0.0),
+                Side::Left,
             ).unwrap(),
             player2: Character::from_config(
                 &texture_creator,
                 &mut textures,
                 "./resources/character1/character2.json",
-                FPoint::new(0.0, 0.0),
-                false,
+                FPoint::new(100.0, 0.0),
+                Side::Right,
             ).unwrap(),
             timer: 0.0,
             score: (0, 0),
@@ -89,8 +104,8 @@ impl <'a> Game<'a> {
             match event {
                 Event::Quit { .. } => self.should_quit = true,
                 Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                    self.player1.reset(FPoint::new(-200.0, 0.0));
-                    self.player2.reset(FPoint::new(0.0, 0.0));
+                    self.player1.reset();
+                    self.player2.reset();
                 },
                 Event::KeyDown { keycode: Some(keycode), repeat: false, .. } => {
                     self.inputs.handle_keypress(keycode);
@@ -105,10 +120,30 @@ impl <'a> Game<'a> {
 
     fn update(&mut self, dt: f32) {
         self.inputs.update();
+        self.player1.update(&self.inputs);
+        self.player2.update(&self.inputs);
 
         if self.hit_freeze == 0 {
-            self.player1.update(&self.inputs);
-            self.player2.update(&self.inputs);
+            self.player1.movement_update();
+            self.player2.movement_update();
+
+            let (player1_pos, player2_pos) = movement_system(
+                    self.player1.get_side(),
+                &self.player1.pos(),
+                &self.player1.get_collision_box(),
+                self.player2.get_side(),
+                &self.player2.pos(),
+                &self.player2.get_collision_box(),
+                &self.stage,
+            );
+            self.player1.set_pos(player1_pos);
+            self.player2.set_pos(player2_pos);
+
+            if let Some(player1_side) = side_detection(&self.player1.pos(), &self.player2.pos()) {
+                self.player1.set_side(player1_side);
+                self.player2.set_side(player1_side.opposite());
+            }
+
             self.hit_freeze = handle_hit_boxes(&mut self.player1, &mut self.player2);
         } else {
             self.hit_freeze -= 1;
@@ -134,16 +169,32 @@ impl <'a> Game<'a> {
 
 // Returns the amount of frames for hit freeze
 fn handle_hit_boxes(player1: &mut Character, player2: &mut Character) -> usize {
-    let player1_pos = player1.absolute_pos();
-    let player2_pos = player2.absolute_pos();
+    let player1_pos = player1.pos();
+    let player1_side = player1.get_side();
+    let player2_pos = player2.pos();
+    let player2_side = player2.get_side();
 
     let player1_hit_boxes = player1.get_hit_boxes();
     let player2_hurt_boxes = player2.get_hurt_boxes();
-    let player1_hit = check_hit_collisions(player1_pos, player1_hit_boxes, player2_pos, player2_hurt_boxes);
-
+    let player1_hit = check_hit_collisions(
+        player1_side,
+        player1_pos,
+        player1_hit_boxes,
+        player2_side,
+        player2_pos,
+        player2_hurt_boxes
+    );
+    
     let player2_hit_boxes = player2.get_hit_boxes();
     let player1_hurt_boxes = player1.get_hurt_boxes();
-    let player2_hit = check_hit_collisions(player2_pos, player2_hit_boxes, player1_pos, player1_hurt_boxes);
+    let player2_hit = check_hit_collisions(
+        player2_side,
+        player2_pos,
+        player2_hit_boxes,
+        player1_side,
+        player1_pos,
+        player1_hurt_boxes
+    );
 
     match (player1_hit, player2_hit) {
         (Some(player1_hit), None) => {

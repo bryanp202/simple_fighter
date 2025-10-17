@@ -1,29 +1,34 @@
 use image::DynamicImage;
 use sdl3::{pixels::{FColor, PixelFormat}, rect::Rect, render::{Canvas, FPoint, Texture, TextureCreator}, sys::pixels::SDL_PIXELFORMAT_ABGR8888, video::{Window, WindowContext}};
 
-use crate::game::{boxes::{CollisionBox, HitBox, HurtBox}, render::animation::AnimationLayout};
+use crate::{game::{boxes::{CollisionBox, HitBox, HurtBox}, render::animation::AnimationLayout, Side}, DEFAULT_SCREEN_HEIGHT, DEFAULT_SCREEN_WIDTH};
 
 pub mod animation;
 
-pub fn draw_hit_boxes_system(canvas: &mut Canvas<Window>, offset: FPoint, hitboxes: &[HitBox]) -> Result<(), sdl3::Error> {
+pub fn to_screen_pos(pos: &FPoint) -> FPoint {
+    let game_center = (DEFAULT_SCREEN_WIDTH as f32 / 2.0, DEFAULT_SCREEN_HEIGHT as f32);
+    FPoint::new(game_center.0 + pos.x, game_center.1 - pos.y - 64.0)
+}
+
+pub fn draw_hit_boxes_system(canvas: &mut Canvas<Window>, side: &Side, offset: FPoint, hitboxes: &[HitBox]) -> Result<(), sdl3::Error> {
     canvas.set_draw_color(FColor::RGBA(1.0, 0.0, 0.0, 0.5));
     for hitbox in hitboxes {
-        canvas.fill_rect(hitbox.pos_with_offset(offset))?;
+        canvas.fill_rect(hitbox.on_side_screen(side, offset))?;
     }
     Ok(())
 }
 
-pub fn draw_hurt_boxes_system(canvas: &mut Canvas<Window>, offset: FPoint, hurtboxes: &[HurtBox]) -> Result<(), sdl3::Error> {
+pub fn draw_hurt_boxes_system(canvas: &mut Canvas<Window>, side: &Side, offset: FPoint, hurtboxes: &[HurtBox]) -> Result<(), sdl3::Error> {
     canvas.set_draw_color(FColor::RGBA(0.0, 1.0, 0.0, 0.5));
     for hurtbox in hurtboxes {
-        canvas.fill_rect(hurtbox.pos_with_offset(offset))?;
+        canvas.fill_rect(hurtbox.on_side_screen(side, offset))?;
     }
     Ok(())
 }
 
-pub fn draw_collision_box_system(canvas: &mut Canvas<Window>, offset: FPoint, collision_box: &CollisionBox) -> Result<(), sdl3::Error> {
+pub fn draw_collision_box_system(canvas: &mut Canvas<Window>, side: &Side, offset: FPoint, collision_box: &CollisionBox) -> Result<(), sdl3::Error> {
     canvas.set_draw_color(FColor::RGBA(1.0, 1.0, 1.0, 0.5));
-    canvas.fill_rect(collision_box.pos_with_offset(offset))?;
+    canvas.fill_rect(collision_box.on_side_screen(side, offset))?;
     Ok(())
 }
 

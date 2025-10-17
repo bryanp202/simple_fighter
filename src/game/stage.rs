@@ -1,6 +1,6 @@
-use sdl3::{render::{Canvas, Texture, TextureCreator}, video::{Window, WindowContext}};
+use sdl3::{render::{Canvas, FPoint, Texture, TextureCreator}, video::{Window, WindowContext}};
 
-use crate::game::render::load_texture;
+use crate::{game::render::load_texture, DEFAULT_SCREEN_WIDTH};
 
 const STATIC_LAYERS: &[&str] = &[
     "./resources/stage1/Layer_0011_0.png", "./resources/stage1/Layer_0010_1.png", "./resources/stage1/Layer_0009_2.png",
@@ -11,6 +11,8 @@ const STATIC_LAYERS: &[&str] = &[
 
 pub struct Stage {
     layers: Vec<usize>,
+    left_wall: f32,
+    right_wall: f32,
 }
 
 impl Stage {
@@ -23,7 +25,9 @@ impl Stage {
         }
         
         Self {
-            layers
+            layers,
+            left_wall: DEFAULT_SCREEN_WIDTH as f32 / -2.0 + 50.0,
+            right_wall: DEFAULT_SCREEN_WIDTH as f32 / 2.0 - 50.0,
         }
     }
 
@@ -33,5 +37,9 @@ impl Stage {
         }
 
         Ok(())
+    }
+
+    pub fn bind_pos(&self, pos: &FPoint) -> FPoint {
+        FPoint::new(pos.x.clamp(self.left_wall, self.right_wall), pos.y)
     }
 }
