@@ -9,7 +9,7 @@
       "input": {"Direction": {"dir": {"type" : "Neutral"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -34,7 +34,7 @@
       "input": {"Direction": {"dir": {"type" : "Neutral"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -59,7 +59,7 @@
       "input": {"Direction": {"dir": {"type" : "Up"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -84,7 +84,7 @@
       "input": {"Direction": {"dir": {"type" : "UpForward"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -109,7 +109,7 @@
       "input": {"Direction": {"dir": {"type" : "UpBack"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -159,7 +159,7 @@
       "input": {"Direction": {"dir": {"type" : "Forward"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -184,7 +184,7 @@
       "input": {"Direction": {"dir": {"type" : "Back"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -209,7 +209,7 @@
       "input": {"Motion": {"motion": {"type" : "ForwardForward"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -234,7 +234,7 @@
       "input": {"Motion": {"motion": {"type" : "BackBack"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -259,7 +259,7 @@
       "input": {"Motion": {"motion": {"type" : "DownDown"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -284,7 +284,7 @@
       "input": {"Direction": {"dir": {"type" : "Up"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -309,7 +309,7 @@
       "input": {"Motion": {"motion": {"type" : "ForwardForward"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -334,7 +334,7 @@
       "input": {"Motion": {"motion": {"type" : "BackBack"}, "button": {"type" : "None"}}},
       "hit_boxes": [],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -387,7 +387,7 @@
         {"frame": 7, "boxes":
           [
             {
-              "rect": {"x": 50, "y": 0, "w": 100, "h": 100},
+              "rect": {"x": 50, "y": 20, "w": 100, "h": 80},
               "dmg": 30,
               "hit_stun": 20,
               "cancel_window": 10
@@ -397,7 +397,7 @@
         {"frame": 8, "boxes":
           [
             {
-              "rect": {"x": 125, "y": 0, "w": 250, "h": 150},
+              "rect": {"x": 20, "y": 0, "w": 40, "h": 50},
               "dmg": 30,
               "hit_stun": 20,
               "cancel_window": 10
@@ -407,7 +407,7 @@
         {"frame": 9, "boxes": []}
       ],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -435,17 +435,7 @@
         {"frame": 7, "boxes":
           [
             {
-              "rect": {"x": 100, "y": 0, "w": 200, "h": 50},
-              "dmg": 30,
-              "hit_stun": 20,
-              "cancel_window": 10
-            }
-          ]
-        },
-        {"frame": 8, "boxes":
-          [
-            {
-              "rect": {"x": 125, "y": 0, "w": 250, "h": 50},
+              "rect": {"x": 50, "y": 0, "w": 100, "h": 50},
               "dmg": 30,
               "hit_stun": 20,
               "cancel_window": 10
@@ -454,7 +444,7 @@
         }
       ],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -482,7 +472,7 @@
         {"frame": 10, "boxes":
           [
             {
-              "rect": {"x": 150, "y": 0, "w": 300, "h": 150},
+              "rect": {"x": 60, "y": 10, "w": 120, "h": 60},
               "dmg": 60,
               "hit_stun": 20,
               "cancel_window": 10
@@ -492,7 +482,7 @@
         {"frame": 14, "boxes":
           [
             {
-              "rect": {"x": 200, "y": 0, "w": 400, "h": 50},
+              "rect": {"x": 20, "y": 10, "w": 40, "h": 60},
               "dmg": 60,
               "hit_stun": 20,
               "cancel_window": 10
@@ -502,7 +492,7 @@
         {"frame": 16, "boxes": []}
       ],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
@@ -530,7 +520,7 @@
         {"frame": 10, "boxes":
           [
             {
-              "rect": {"x": 200, "y": 0, "w": 400, "h": 150},
+              "rect": {"x": 100, "y": 0, "w": 200, "h": 150},
               "dmg": 100,
               "hit_stun": 20,
               "cancel_window": 10
@@ -540,7 +530,7 @@
         {"frame": 15, "boxes": []}
       ],
       "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
