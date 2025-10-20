@@ -327,6 +327,7 @@ struct InputHistory {
 
 impl InputHistory {
     const HISTORY_FRAME_LEN: usize = 32;
+    const DASH_HISTORY_LEN: usize = Self::HISTORY_FRAME_LEN / 2;
     const MOTION_BUF_SIZE: usize = 4;
 
     // Most Valuable
@@ -393,7 +394,11 @@ impl InputHistory {
         let mut ordered_frames = [Direction::Neutral; Self::HISTORY_FRAME_LEN];
         let mut frame_count = 0;
         let mut i = 0;
+        let mut dash_buffer_end = None;
         while frame_count < Self::HISTORY_FRAME_LEN {
+            if dash_buffer_end.is_none() && frame_count >= Self::DASH_HISTORY_LEN {
+                dash_buffer_end = Some(i);
+            }
             let current_index =
                 (Self::HISTORY_FRAME_LEN + self.current_index - i) % Self::HISTORY_FRAME_LEN;
             let (dir, _, frames) = &self.buf[current_index];
@@ -402,6 +407,7 @@ impl InputHistory {
             i += 1;
         }
         let motion_slice = &ordered_frames[0..i];
+        let dash_slice = &ordered_frames[0..dash_buffer_end.unwrap_or(i)];
 
         let right_dp = Self::find_dir_sequence(motion_slice, Self::DP_RIGHT_INVERSE);
         let left_dp = Self::find_dir_sequence(motion_slice, Self::DP_LEFT_INVERSE);
@@ -433,8 +439,8 @@ impl InputHistory {
             _ => {}
         }
 
-        let right_right = Self::find_dir_sequence(motion_slice, Self::RIGHT_RIGHT_INVERSE);
-        let left_left = Self::find_dir_sequence(motion_slice, Self::LEFT_LEFT_INVERSE);
+        let right_right = Self::find_dir_sequence(dash_slice, Self::RIGHT_RIGHT_INVERSE);
+        let left_left = Self::find_dir_sequence(dash_slice, Self::LEFT_LEFT_INVERSE);
         match (right_right, left_left) {
             (Some(_), None) => return Motion::RightRight,
             (None, Some(_)) => return Motion::LeftLeft,
