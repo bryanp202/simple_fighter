@@ -39,7 +39,7 @@
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
-      "start_behavior": {"type" : "SetVel", "x": 4, "y": 0},
+      "start_behavior": {"type" : "SetVel", "x": 3, "y": 0},
       "flags": [{"type": "CancelOnWhiff"}],
       "end_behavior": {"type": "Endless"},
       
@@ -65,7 +65,7 @@
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
       "start_behavior": {"type" : "SetVel", "x": -2, "y": 0},
-      "flags": [{"type": "CancelOnWhiff"}, {"type": "HighBlock"}],
+      "flags": [{"type": "CancelOnWhiff"}],
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
@@ -114,8 +114,8 @@
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
-      "start_behavior": {"type" : "SetVel", "x": -3, "y": 0},
-      "flags": [{"type": "FrictionOn"}],
+      "start_behavior": {"type" : "AddFrictionVel", "x": -3, "y": 0},
+      "flags": [],
       "end_behavior": {"type": "OnStunEndToStateY", "y": "neutral"},
 
       "cancel_window": {"start": null, "end": null},
@@ -139,8 +139,8 @@
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
-      "start_behavior": {"type" : "AddVel", "x": -1, "y": 0},
-      "flags": [{"type": "FrictionOn"}, {"type": "HighBlock"}],
+      "start_behavior": {"type" : "AddFrictionVel", "x": -1, "y": 0},
+      "flags": [{"type": "HighBlock"}],
       "end_behavior": {"type": "OnStunEndToStateY", "y": "neutral"},
 
       "cancel_window": {"start": null, "end": null},

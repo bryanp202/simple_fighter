@@ -238,13 +238,13 @@ fn handle_hit_boxes(player1: &mut Character, player2: &mut Character) -> usize {
 
     match (player1_hit, player2_hit) {
         (Some(player1_hit), None) => {
-            player1.successful_hit(&player1_hit);
-            player2.receive_hit(&player1_hit);
+            let blocked = player2.receive_hit(&player1_hit);
+            player1.successful_hit(&player1_hit, blocked);
             4
         }
         (None, Some(player2_hit)) => {
-            player2.successful_hit(&player2_hit);
-            player1.receive_hit(&player2_hit);
+            let blocked = player1.receive_hit(&player2_hit);
+            player2.successful_hit(&player2_hit, blocked);
             4
         }
         (Some(_), Some(_)) => 4,

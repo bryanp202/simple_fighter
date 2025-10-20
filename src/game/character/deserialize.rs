@@ -310,7 +310,7 @@ struct MoveJson {
 enum StartBehaviorJson {
     None,
     SetVel { x: f32, y: f32 },
-    AddVel { x: f32, y: f32 },
+    AddFrictionVel { x: f32, y: f32 },
 }
 
 impl StartBehaviorJson {
@@ -318,7 +318,7 @@ impl StartBehaviorJson {
         match self {
             &StartBehaviorJson::None => StartBehavior::None,
             &StartBehaviorJson::SetVel { x, y } => StartBehavior::SetVel { x, y },
-            &StartBehaviorJson::AddVel { x, y } => StartBehavior::AddVel { x, y },
+            &StartBehaviorJson::AddFrictionVel { x, y } => StartBehavior::AddFrictionVel { x, y },
         }
     }
 }
@@ -585,7 +585,6 @@ enum FlagsJson {
     LockSide,
     LowBlock,
     HighBlock,
-    FrictionOn,
 }
 
 impl FlagsJson {
@@ -594,7 +593,6 @@ impl FlagsJson {
             FlagsJson::Airborne => StateFlags::Airborne,
             FlagsJson::CancelOnWhiff => StateFlags::CancelOnWhiff,
             FlagsJson::LockSide => StateFlags::LockSide,
-            FlagsJson::FrictionOn => StateFlags::FrictionOn,
             FlagsJson::HighBlock => StateFlags::HighBlock,
             FlagsJson::LowBlock => StateFlags::LowBlock,
         }

@@ -9,17 +9,18 @@ use crate::game::{
 };
 
 const GRAVITY_CONSTANT: f32 = 0.4;
-const FRICTION_COEFFICIENT: f32 = 0.9;
+const FRICTION_COEFFICIENT: f32 = 0.6;
 
 pub fn velocity_system(pos: &FPoint, vel: &FPoint) -> FPoint {
     FPoint::new(pos.x + vel.x, pos.y + vel.y)
 }
 
 pub fn friction_system(vel: &FPoint) -> FPoint {
-    FPoint::new(vel.x * FRICTION_COEFFICIENT, vel.y)
+    FPoint::new(vel.x * FRICTION_COEFFICIENT, vel.y * FRICTION_COEFFICIENT)
 }
 
 /// Returns true if grounded
+/// Returns (pos, vel, grounded)
 pub fn gravity_system(pos: &FPoint, vel: &FPoint, gravity_mult: f32) -> (FPoint, FPoint, bool) {
     if pos.y <= 0.0 {
         let new_pos = FPoint::new(pos.x, 0.0);
@@ -61,6 +62,7 @@ pub fn check_hit_collisions(
     None
 }
 
+// Returns (player1_pos, player2_pos)
 pub fn movement_system(
     pos1_side: &Side,
     pos1: &FPoint,

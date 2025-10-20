@@ -4,21 +4,26 @@ use bitflags::bitflags;
 use sdl3::render::FPoint;
 
 use crate::game::{
-    Side,
-    input::{ButtonFlag, RelativeDirection, RelativeMotion},
+    boxes::HitBox, input::{ButtonFlag, RelativeDirection, RelativeMotion}, physics::friction_system, Side
 };
 
 type StateIndex = usize;
 const HIT_GRAVITY_MULT: f32 = 1.2;
+const HIT_PUSH_BACK: f32 = -6.0;
+const CHIP_PERCENTAGE: f32 = 0.1;
+const COMBO_SCALE_PER_HIT: f32 = 0.1;
+const MIN_COMBO_SCALING: f32 = 0.1;
 
 pub struct StateData {
     current_state: StateIndex,
     current_frame: usize,
     side: Side,
     vel: FPoint,
+    friction_vel: FPoint,
     gravity_mult: f32,
     hit_connected: bool,
     stun: usize,
+    combo_scaling: f32,
 }
 
 impl StateData {
@@ -40,24 +45,27 @@ impl StateData {
         self.current_frame += 1;
     }
 
-    pub fn on_hit_connect(&mut self) {
-        self.hit_connected = true;
-    }
-
-    pub fn set_block_stun_state(&mut self, states: &States, hit_stun: usize) {
-        self.stun = hit_stun;
-        self.enter_state(states, states.block_stun_state);
-    }
-
-    pub fn set_hit_state(&mut self, states: &States, hit_stun: usize) {
-        if self.current_state == states.launch_hit_state ||
-        hit_stun == u32::MAX as usize {
-            self.enter_state(states, states.launch_hit_state);
-            self.gravity_mult *= HIT_GRAVITY_MULT;
+    pub fn on_hit_receive(&mut self, states: &States, hit: &HitBox, blocking: bool) -> f32 {
+        if blocking {
+            self.set_block_stun_state(states, hit.block_stun());
+            hit.dmg() * CHIP_PERCENTAGE
         } else {
-            self.stun = hit_stun;
-            self.enter_state(states, states.ground_hit_state);
+            // Check if combo_scaling needs to reset
+            if self.current_state != states.ground_hit_state && self.current_state != states.launch_hit_state {
+                self.combo_scaling = 1.0;
+            } else {
+                self.combo_scaling = (self.combo_scaling - COMBO_SCALE_PER_HIT).max(MIN_COMBO_SCALING);
+            }
+            self.set_hit_state(states, hit.hit_stun());
+            hit.dmg() * self.combo_scaling
         }
+    }
+
+    pub fn on_hit_connect(&mut self, states: &States, blocked: bool) {
+        if !self.is_airborne(states) {
+            self.friction_vel.x += HIT_PUSH_BACK;
+        }
+        self.hit_connected = true;
     }
 
     pub fn set_side(&mut self, states: &States, new_side: Side) {
@@ -70,14 +78,16 @@ impl StateData {
         &self.side
     }
 
+    /// Only vel, not including friction velocity
     pub fn vel(&self) -> FPoint {
         self.vel
     }
 
+    /// The real total velocity, including friction_vel
     pub fn vel_rel(&self) -> FPoint {
         match self.side {
-            Side::Left => FPoint::new(self.vel.x, self.vel.y),
-            Side::Right => FPoint::new(-self.vel.x, self.vel.y),
+            Side::Left => FPoint::new(self.vel.x + self.friction_vel.x, self.vel.y + self.friction_vel.y),
+            Side::Right => FPoint::new(-(self.vel.x + self.friction_vel.x), self.vel.y + self.friction_vel.y),
         }
     }
 
@@ -101,12 +111,12 @@ impl StateData {
         states.flags[self.current_state].contains(StateFlags::HighBlock)
     }
 
-    pub fn is_friction_on(&self, states: &States) -> bool {
-        states.flags[self.current_state].contains(StateFlags::FrictionOn)
-    }
-
     pub fn is_airborne(&self, states: &States) -> bool {
         states.flags[self.current_state].contains(StateFlags::Airborne)
+    }
+
+    pub fn update_friction(&mut self) {
+        self.friction_vel = friction_system(&self.friction_vel);
     }
 
     pub fn ground(&mut self, states: &States) {
@@ -186,9 +196,25 @@ impl StateData {
             StartBehavior::SetVel { x, y } => {
                 self.vel = FPoint::new(x, y);
             },
-            StartBehavior::AddVel { x, y } => {
-                self.vel = FPoint::new(self.vel.x + x, self.vel.y + y);
+            StartBehavior::AddFrictionVel { x, y } => {
+                self.friction_vel = FPoint::new(self.vel.x + x, self.vel.y + y);
             }
+        }
+    }
+
+    fn set_block_stun_state(&mut self, states: &States, hit_stun: usize) {
+        self.stun = hit_stun;
+        self.enter_state(states, states.block_stun_state);
+    }
+
+    fn set_hit_state(&mut self, states: &States, hit_stun: usize) {
+        if self.current_state == states.launch_hit_state ||
+        hit_stun == u32::MAX as usize {
+            self.enter_state(states, states.launch_hit_state);
+            self.gravity_mult *= HIT_GRAVITY_MULT;
+        } else {
+            self.stun = hit_stun;
+            self.enter_state(states, states.ground_hit_state);
         }
     }
 }
@@ -199,10 +225,12 @@ impl Default for StateData {
             current_state: 0,
             current_frame: 0,
             vel: FPoint::new(0.0, 0.0),
+            friction_vel: FPoint::new(0.0, 0.0),
             gravity_mult: 1.0,
             hit_connected: false,
             side: Side::Left,
             stun: 0,
+            combo_scaling: 1.0,
         }
     }
 }
@@ -329,7 +357,7 @@ impl MoveInput {
 pub enum StartBehavior {
     None,
     SetVel { x: f32, y: f32 },
-    AddVel { x: f32, y: f32 },
+    AddFrictionVel { x: f32, y: f32 },
 }
 
 #[derive(Debug)]
@@ -349,6 +377,5 @@ bitflags! {
         const LockSide =      0b00000100;
         const LowBlock =      0b00001000;
         const HighBlock =     0b00010000;
-        const FrictionOn =    0b00100000;
     }
 }

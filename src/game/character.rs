@@ -13,8 +13,6 @@ use sdl3::{
 };
 use state::States;
 
-const CHIP_PERCENTAGE: f32 = 0.1;
-
 pub struct Character {
     name: String,
     current_hp: f32,
@@ -89,9 +87,7 @@ impl Character {
         self.state_data.advance_frame();
         self.pos = velocity_system(&self.pos, &self.state_data.vel_rel());
         
-        if self.state_data.is_friction_on(&self.states) {
-            self.state_data.set_vel(friction_system(&self.vel()));
-        }
+        self.state_data.update_friction();
         
         if self.state_data.is_airborne(&self.states) {
             let (new_pos, new_vel, grounded) = gravity_system(
@@ -192,24 +188,22 @@ impl Character {
 }
 
 impl Character {
-    pub fn successful_hit(&mut self, hit: &HitBox) {
-        self.state_data.on_hit_connect();
+    pub fn successful_hit(&mut self, hit: &HitBox, blocked: bool) {
+        self.state_data.on_hit_connect(&self.states, blocked);
     }
 
-    pub fn receive_hit(&mut self, hit: &HitBox) {
+    /// Returns true if the hit was blocked
+    pub fn receive_hit(&mut self, hit: &HitBox) -> bool {
         let blocking = match hit.block_type() {
             BlockType::Low => self.state_data.is_blocking_low(&self.states),
             BlockType::Mid => self.state_data.is_blocking_mid(&self.states),
             BlockType::High => self.state_data.is_blocking_high(&self.states),
         };
 
-        if blocking {
-            self.current_hp -= hit.dmg() * CHIP_PERCENTAGE;
-            self.state_data.set_block_stun_state(&self.states, hit.block_stun());
-        } else {
-            self.current_hp -= hit.dmg();
-            self.state_data.set_hit_state(&self.states, hit.hit_stun());
-        }
+        let dmg = self.state_data.on_hit_receive(&self.states, hit, blocking);
+        self.current_hp -= dmg;
+
+        blocking
     }
 }
 
