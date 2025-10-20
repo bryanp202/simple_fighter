@@ -5,18 +5,20 @@ use sdl3::render::FPoint;
 
 use crate::game::{
     Side,
-    input::{ButtonFlag, Inputs, RelativeDirection, RelativeMotion},
+    input::{ButtonFlag, RelativeDirection, RelativeMotion},
 };
 
 type StateIndex = usize;
+const HIT_GRAVITY_MULT: f32 = 1.2;
 
 pub struct StateData {
     current_state: StateIndex,
     current_frame: usize,
+    side: Side,
     vel: FPoint,
     gravity_mult: f32,
     hit_connected: bool,
-    side: Side,
+    stun: usize,
 }
 
 impl StateData {
@@ -42,13 +44,20 @@ impl StateData {
         self.hit_connected = true;
     }
 
-    pub fn set_launch_hit_state(&mut self, states: &States) {
-        match self.side {
-            Side::Left => self.enter_state::<true>(states, states.launch_hit_state),
-            Side::Right => self.enter_state::<false>(states, states.launch_hit_state),
-        }
+    pub fn set_block_stun_state(&mut self, states: &States, hit_stun: usize) {
+        self.stun = hit_stun;
+        self.enter_state(states, states.block_stun_state);
+    }
 
-        self.gravity_mult *= 1.2;
+    pub fn set_hit_state(&mut self, states: &States, hit_stun: usize) {
+        if self.current_state == states.launch_hit_state ||
+        hit_stun == u32::MAX as usize {
+            self.enter_state(states, states.launch_hit_state);
+            self.gravity_mult *= HIT_GRAVITY_MULT;
+        } else {
+            self.stun = hit_stun;
+            self.enter_state(states, states.ground_hit_state);
+        }
     }
 
     pub fn set_side(&mut self, states: &States, new_side: Side) {
@@ -65,6 +74,13 @@ impl StateData {
         self.vel
     }
 
+    pub fn vel_rel(&self) -> FPoint {
+        match self.side {
+            Side::Left => FPoint::new(self.vel.x, self.vel.y),
+            Side::Right => FPoint::new(-self.vel.x, self.vel.y),
+        }
+    }
+
     pub fn set_vel(&mut self, new_vel: FPoint) {
         self.vel = new_vel;
     }
@@ -73,49 +89,61 @@ impl StateData {
         self.gravity_mult
     }
 
+    pub fn is_blocking_mid(&self, states: &States) -> bool {
+        states.flags[self.current_state].intersects(StateFlags::LowBlock | StateFlags::HighBlock)
+    }
+
+    pub fn is_blocking_low(&self, states: &States) -> bool {
+        states.flags[self.current_state].contains(StateFlags::LowBlock)
+    }
+
+    pub fn is_blocking_high(&self, states: &States) -> bool {
+        states.flags[self.current_state].contains(StateFlags::HighBlock)
+    }
+
+    pub fn is_friction_on(&self, states: &States) -> bool {
+        states.flags[self.current_state].contains(StateFlags::FrictionOn)
+    }
+
     pub fn is_airborne(&self, states: &States) -> bool {
         states.flags[self.current_state].contains(StateFlags::Airborne)
     }
 
     pub fn ground(&mut self, states: &States) {
         if let EndBehavior::OnGroundedToStateY { y } = states.end_behaviors[self.current_state] {
-            match self.side {
-                Side::Left => self.enter_state::<true>(states, y),
-                Side::Right => self.enter_state::<false>(states, y),
-            }
+            self.enter_state(states, y);
             self.gravity_mult = 1.0;
         }
     }
 
-    pub fn update(&mut self, states: &States, inputs: &Inputs) {
-        match self.side {
-            Side::Left => {
-                self.check_state_end::<true>(states);
-                self.check_cancels::<true>(states, inputs);
-            }
-            Side::Right => {
-                self.check_state_end::<false>(states);
-                self.check_cancels::<false>(states, inputs);
-            }
-        }
+    pub fn update<T>(&mut self, states: &States, dir: RelativeDirection, move_iter: T)
+    where T: Iterator<Item = (RelativeMotion, ButtonFlag)> + Clone {
+        self.check_state_end(states);
+        self.check_cancels(states, dir, move_iter);
     }
 
-    fn check_state_end<const LEFT_SIDE: bool>(&mut self, states: &States) {
+    fn check_state_end(&mut self, states: &States) {
         match states.end_behaviors[self.current_state] {
             EndBehavior::Endless => {}
+            EndBehavior::OnStunEndToStateY { y: transition_state } => {
+                if self.current_frame >= self.stun {
+                    self.enter_state(states, transition_state);
+                }
+            }
             EndBehavior::OnFrameXToStateY {
                 x: end_frame,
                 y: transition_state,
             } => {
                 if self.current_frame >= end_frame {
-                    self.enter_state::<LEFT_SIDE>(states, transition_state);
+                    self.enter_state(states, transition_state);
                 }
             }
             EndBehavior::OnGroundedToStateY { .. } => {}
         }
     }
 
-    fn check_cancels<const LEFT_SIDE: bool>(&mut self, states: &States, inputs: &Inputs) {
+    fn check_cancels<T>(&mut self, states: &States, dir: RelativeDirection, move_iter: T)
+    where T: Iterator<Item = (RelativeMotion, ButtonFlag)> + Clone {
         // Check if not in cancel window
         if !self.in_cancel_window(states) {
             return;
@@ -125,38 +153,19 @@ impl StateData {
         let cancel_options = &states.run_length_cancel_options[cancel_options_range];
         for i in cancel_options.iter() {
             let cancel_option = &states.inputs[*i];
-            // Check direction first
-            let relative_dir = if LEFT_SIDE == true {
-                &inputs.dir().on_left_side()
-            } else {
-                &inputs.dir().on_right_side()
-            };
-            if !cancel_option.dir.matches_or_is_none(relative_dir) {
+            if !cancel_option.dir.matches_or_is_none(&dir) {
                 continue;
             }
 
-            let maybe_index = if LEFT_SIDE {
-                inputs
-                    .move_buf()
-                    .iter()
-                    .map(|(motion, buttons)| (motion.on_left_side(), *buttons))
-                    .position(|(buf_motion, buf_buttons)| {
-                        cancel_option.motion.matches_or_is_none(&buf_motion)
-                            && buf_buttons.contains(cancel_option.button)
-                    })
-            } else {
-                inputs
-                    .move_buf()
-                    .iter()
-                    .map(|(motion, buttons)| (motion.on_right_side(), *buttons))
-                    .position(|(buf_motion, buf_buttons)| {
-                        cancel_option.motion.matches_or_is_none(&buf_motion)
-                            && buf_buttons.contains(cancel_option.button)
-                    })
-            };
+            let maybe_index = move_iter
+                .clone()
+                .position(|(buf_motion, buf_buttons)| {
+                    cancel_option.motion.matches_or_is_none(&buf_motion)
+                        && buf_buttons.contains(cancel_option.button)
+                });
 
             if let Some(_) = maybe_index {
-                self.enter_state::<LEFT_SIDE>(states, *i);
+                self.enter_state(states, *i);
                 break;
             }
         }
@@ -168,15 +177,17 @@ impl StateData {
                 || states.flags[self.current_state].contains(StateFlags::CancelOnWhiff))
     }
 
-    fn enter_state<const LEFT_SIDE: bool>(&mut self, states: &States, new_state: StateIndex) {
+    fn enter_state(&mut self, states: &States, new_state: StateIndex) {
         self.current_state = new_state;
         self.current_frame = 0;
         self.hit_connected = false;
         match states.start_behaviors[new_state] {
             StartBehavior::None => {}
             StartBehavior::SetVel { x, y } => {
-                let x = if LEFT_SIDE { x } else { -x };
                 self.vel = FPoint::new(x, y);
+            },
+            StartBehavior::AddVel { x, y } => {
+                self.vel = FPoint::new(self.vel.x + x, self.vel.y + y);
             }
         }
     }
@@ -191,6 +202,7 @@ impl Default for StateData {
             gravity_mult: 1.0,
             hit_connected: false,
             side: Side::Left,
+            stun: 0,
         }
     }
 }
@@ -217,6 +229,7 @@ pub struct States {
     run_length_cancel_options: Vec<StateIndex>,
 
     // Special cached states
+    block_stun_state: StateIndex,
     ground_hit_state: StateIndex,
     launch_hit_state: StateIndex,
 }
@@ -234,6 +247,7 @@ impl States {
         run_length_hit_boxes: Vec<(usize, Range<usize>)>, // Frames active, global hitboxes index range
         run_length_hurt_boxes: Vec<(usize, Range<usize>)>, // Frames active, global hurtboxes index range
         run_length_cancel_options: Vec<StateIndex>,
+        block_stun_state: StateIndex,
         ground_hit_state: StateIndex,
         launch_hit_state: StateIndex,
     ) -> Self {
@@ -249,6 +263,7 @@ impl States {
             run_length_hit_boxes,
             run_length_hurt_boxes,
             run_length_cancel_options,
+            block_stun_state,
             ground_hit_state,
             launch_hit_state,
         }
@@ -314,11 +329,13 @@ impl MoveInput {
 pub enum StartBehavior {
     None,
     SetVel { x: f32, y: f32 },
+    AddVel { x: f32, y: f32 },
 }
 
 #[derive(Debug)]
 pub enum EndBehavior {
     Endless,
+    OnStunEndToStateY {y: StateIndex},
     OnFrameXToStateY { x: usize, y: StateIndex },
     OnGroundedToStateY { y: StateIndex },
 }
@@ -330,5 +347,8 @@ bitflags! {
         const Airborne =      0b00000001;
         const CancelOnWhiff = 0b00000010;
         const LockSide =      0b00000100;
+        const LowBlock =      0b00001000;
+        const HighBlock =     0b00010000;
+        const FrictionOn =    0b00100000;
     }
 }

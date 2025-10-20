@@ -10,7 +10,7 @@ debug = []
 [dependencies]
 bitflags = "2.9.4"
 image = "0.25.8"
-sdl3 = { version = "0.15.1", features = ["build-from-source-static"] }
+sdl3 = { version = "0.16.1", features = ["build-from-source-static"] }
 sdl3-src = { version = "3.2.24" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"

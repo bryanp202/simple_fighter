@@ -1,17 +1,12 @@
 use std::{collections::HashMap, ops::Range, usize};
 
 use crate::game::{
-    Side,
-    boxes::{CollisionBox, HitBox, HurtBox},
-    character::{
-        Character,
-        state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States},
-    },
-    input::{ButtonFlag, RelativeDirection, RelativeMotion},
-    render::{
+    boxes::{BlockType, CollisionBox, HitBox, HurtBox}, character::{
+        state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States}, Character
+    }, input::{ButtonFlag, RelativeDirection, RelativeMotion}, render::{
         self,
         animation::{Animation, AnimationLayout},
-    },
+    }, Side
 };
 
 use sdl3::{
@@ -128,6 +123,13 @@ pub fn deserialize<'a>(
         cancel_windows.push(conv_cancel_range);
     }
 
+    let Some(&block_stun_state) = move_names_to_pos.get(character_json.block_stun_state.as_str())
+    else {
+        return Err(format!(
+            "Invalid block_stun_state: '{}'",
+            character_json.ground_hit_state
+        ));
+    };
     let Some(&ground_hit_state) = move_names_to_pos.get(character_json.ground_hit_state.as_str())
     else {
         return Err(format!(
@@ -155,6 +157,7 @@ pub fn deserialize<'a>(
         run_length_hit_boxes,
         run_length_hurt_boxes,
         run_length_cancel_options,
+        block_stun_state,
         ground_hit_state,
         launch_hit_state,
     );
@@ -279,6 +282,7 @@ struct CharacterJson {
     name: String,
     hp: usize,
     moves: Vec<MoveJson>,
+    block_stun_state: String,
     ground_hit_state: String,
     launch_hit_state: String,
 }
@@ -306,6 +310,7 @@ struct MoveJson {
 enum StartBehaviorJson {
     None,
     SetVel { x: f32, y: f32 },
+    AddVel { x: f32, y: f32 },
 }
 
 impl StartBehaviorJson {
@@ -313,6 +318,7 @@ impl StartBehaviorJson {
         match self {
             &StartBehaviorJson::None => StartBehavior::None,
             &StartBehaviorJson::SetVel { x, y } => StartBehavior::SetVel { x, y },
+            &StartBehaviorJson::AddVel { x, y } => StartBehavior::AddVel { x, y },
         }
     }
 }
@@ -323,6 +329,7 @@ enum EndBehaviorJson {
     Endless,
     OnFrameXToStateY { x: usize, y: String },
     OnGroundedToStateY { y: String },
+    OnStunEndToStateY { y: String },
 }
 
 impl EndBehaviorJson {
@@ -334,6 +341,9 @@ impl EndBehaviorJson {
                 y: *map.get(y.as_str()).ok_or_else(|| y.clone())?,
             },
             EndBehaviorJson::OnGroundedToStateY { y } => EndBehavior::OnGroundedToStateY {
+                y: *map.get(y.as_str()).ok_or_else(|| y.clone())?,
+            },
+            EndBehaviorJson::OnStunEndToStateY { y } => EndBehavior::OnStunEndToStateY {
                 y: *map.get(y.as_str()).ok_or_else(|| y.clone())?,
             },
         })
@@ -466,11 +476,31 @@ struct RunLenJson<T> {
 }
 
 #[derive(Deserialize, Clone, Copy)]
+#[serde(tag = "type")]
+enum BlockTypeJson {
+    Low,
+    Mid,
+    High,
+}
+
+impl BlockTypeJson {
+    fn to_block_type(&self) -> BlockType {
+        match self {
+            Self::Low => BlockType::Low,
+            Self::Mid => BlockType::Mid,
+            Self::High => BlockType::High,
+        }
+    }
+}
+
+#[derive(Deserialize, Clone, Copy)]
 struct HitBoxJson {
     rect: RectJson,
     dmg: usize,
-    hit_stun: usize,
+    block_stun: u32,
+    hit_stun: Option<u32>,
     cancel_window: usize,
+    block_type: BlockTypeJson,
 }
 
 impl HitBoxJson {
@@ -478,8 +508,10 @@ impl HitBoxJson {
         HitBox::new(
             self.rect.to_frect(),
             self.dmg as f32,
-            self.hit_stun,
+            self.block_stun,
+            self.hit_stun.unwrap_or(u32::MAX),
             self.cancel_window,
+            self.block_type.to_block_type(),
         )
     }
 }
@@ -551,6 +583,9 @@ enum FlagsJson {
     Airborne,
     CancelOnWhiff,
     LockSide,
+    LowBlock,
+    HighBlock,
+    FrictionOn,
 }
 
 impl FlagsJson {
@@ -559,6 +594,9 @@ impl FlagsJson {
             FlagsJson::Airborne => StateFlags::Airborne,
             FlagsJson::CancelOnWhiff => StateFlags::CancelOnWhiff,
             FlagsJson::LockSide => StateFlags::LockSide,
+            FlagsJson::FrictionOn => StateFlags::FrictionOn,
+            FlagsJson::HighBlock => StateFlags::HighBlock,
+            FlagsJson::LowBlock => StateFlags::LowBlock,
         }
     }
 }

@@ -1,34 +1,10 @@
 {
   "name": "Character1",
   "hp": 1000,
-  "ground_hit_state": "launched",
+  "block_stun_state": "block_stun",
+  "ground_hit_state": "hit_stun",
   "launch_hit_state": "launched",
   "moves": [
-    {
-      "name": "launched",
-      "input": {"Direction": {"dir": {"type" : "Neutral"}, "button": {"type" : "None"}}},
-      "hit_boxes": [],
-      "hurt_boxes": [
-        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
-      ],
-      "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
-
-      "start_behavior": {"type" : "SetVel", "x": -2, "y": 10},
-      "flags": [{"type": "CancelOnWhiff"}, {"type": "Airborne"}],
-      "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
-
-      "cancel_window": {"start": null, "end": null},
-      "cancel_options": [],
-
-      "animation": {
-        "texture_path": "./resources/character1/TakeHit.png",
-        "layout": {"type": "Horz"},
-        "frames": 4,
-        "w": 200,
-        "h": 200
-      }
-    },
-
     {
       "name": "neutral",
       "input": {"Direction": {"dir": {"type" : "Neutral"}, "button": {"type" : "None"}}},
@@ -49,6 +25,81 @@
         "texture_path": "./resources/character1/Idle.png",
         "layout": {"type": "Horz"},
         "frames": 8,
+        "w": 200,
+        "h": 200
+      }
+    },
+
+    {
+      "name": "launched",
+      "input": {"Direction": {"dir": {"type" : "Neutral"}, "button": {"type" : "None"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
+
+      "start_behavior": {"type" : "SetVel", "x": -2, "y": 10},
+      "flags": [{"type": "Airborne"}],
+      "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
+
+      "cancel_window": {"start": null, "end": null},
+      "cancel_options": [],
+
+      "animation": {
+        "texture_path": "./resources/character1/TakeHit.png",
+        "layout": {"type": "Horz"},
+        "frames": 4,
+        "w": 200,
+        "h": 200
+      }
+    },
+
+    {
+      "name": "hit_stun",
+      "input": {"Direction": {"dir": {"type" : "Neutral"}, "button": {"type" : "None"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
+
+      "start_behavior": {"type" : "AddVel", "x": -2, "y": 0},
+      "flags": [{"type": "FrictionOn"}],
+      "end_behavior": {"type": "OnStunEndToStateY", "y": "neutral"},
+
+      "cancel_window": {"start": null, "end": null},
+      "cancel_options": [],
+
+      "animation": {
+        "texture_path": "./resources/character1/TakeHit.png",
+        "layout": {"type": "Horz"},
+        "frames": 4,
+        "w": 200,
+        "h": 200
+      }
+    },
+
+    {
+      "name": "block_stun",
+      "input": {"Direction": {"dir": {"type" : "Neutral"}, "button": {"type" : "None"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
+
+      "start_behavior": {"type" : "AddVel", "x": -1, "y": 0},
+      "flags": [{"type": "FrictionOn"}],
+      "end_behavior": {"type": "OnStunEndToStateY", "y": "neutral"},
+
+      "cancel_window": {"start": null, "end": null},
+      "cancel_options": [],
+
+      "animation": {
+        "texture_path": "./resources/character1/TakeHit.png",
+        "layout": {"type": "Horz"},
+        "frames": 1,
         "w": 200,
         "h": 200
       }
@@ -389,8 +440,10 @@
             {
               "rect": {"x": 50, "y": 20, "w": 100, "h": 80},
               "dmg": 30,
+              "block_stun": 12,
               "hit_stun": 20,
-              "cancel_window": 10
+              "cancel_window": 10,
+              "block_type": {"type": "Mid"}
             }
           ]
         },
@@ -399,8 +452,10 @@
             {
               "rect": {"x": 20, "y": 0, "w": 40, "h": 50},
               "dmg": 30,
+              "block_stun": 12,
               "hit_stun": 20,
-              "cancel_window": 10
+              "cancel_window": 10,
+              "block_type": {"type": "Mid"}
             }
           ]
         },
@@ -413,7 +468,7 @@
 
       "start_behavior": {"type" : "SetVel", "x": 0, "y": 0},
       "flags": [],
-      "end_behavior": { "type" : "OnFrameXToStateY", "x" : 13, "y" : "neutral"},
+      "end_behavior": { "type" : "OnFrameXToStateY", "x" : 16, "y" : "neutral"},
       
       "cancel_window": {"start": 7, "end": 10},
       "cancel_options": ["medium_attack", "light_attack"],
@@ -437,8 +492,10 @@
             {
               "rect": {"x": 50, "y": 0, "w": 100, "h": 50},
               "dmg": 30,
+              "block_stun": 10,
               "hit_stun": 20,
-              "cancel_window": 10
+              "cancel_window": 10,
+              "block_type": {"type": "High"}
             }
           ]
         }
@@ -474,8 +531,10 @@
             {
               "rect": {"x": 60, "y": 10, "w": 120, "h": 60},
               "dmg": 60,
+              "block_stun": 12,
               "hit_stun": 20,
-              "cancel_window": 10
+              "cancel_window": 10,
+              "block_type": {"type": "Mid"}
             }
           ]
         },
@@ -484,8 +543,10 @@
             {
               "rect": {"x": 20, "y": 10, "w": 40, "h": 60},
               "dmg": 60,
+              "block_stun": 12,
               "hit_stun": 20,
-              "cancel_window": 10
+              "cancel_window": 10,
+              "block_type": {"type": "Mid"}
             }
           ]
         },
@@ -522,8 +583,10 @@
             {
               "rect": {"x": 100, "y": 0, "w": 200, "h": 150},
               "dmg": 100,
-              "hit_stun": 20,
-              "cancel_window": 10
+              "block_stun": 20,
+              "hit_stun": null,
+              "cancel_window": 10,
+              "block_type": {"type": "Mid"}
             }
           ]
         },

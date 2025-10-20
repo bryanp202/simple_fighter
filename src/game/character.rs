@@ -2,22 +2,18 @@ mod deserialize;
 mod state;
 
 use crate::game::{
-    Side,
-    boxes::{CollisionBox, HitBox, HurtBox},
-    character::{deserialize::deserialize, state::StateData},
-    input::Inputs,
-    physics::{gravity_system, velocity_system},
-    projectile::Projectile,
-    render::{
+    boxes::{BlockType, CollisionBox, HitBox, HurtBox}, character::{deserialize::deserialize, state::StateData}, input::Inputs, physics::{friction_system, gravity_system, velocity_system}, projectile::Projectile, render::{
         animation::Animation, draw_collision_box_system, draw_hit_boxes_system,
         draw_hurt_boxes_system, to_screen_pos,
-    },
+    }, Side
 };
 use sdl3::{
     render::{Canvas, FPoint, FRect, Texture, TextureCreator},
     video::{Window, WindowContext},
 };
 use state::States;
+
+const CHIP_PERCENTAGE: f32 = 0.1;
 
 pub struct Character {
     name: String,
@@ -71,13 +67,32 @@ impl Character {
     }
 
     pub fn update(&mut self, inputs: &Inputs) {
-        self.state_data.update(&self.states, &inputs);
+        match self.state_data.get_side() {
+            Side::Left => {
+                self.state_data.update(
+                    &self.states,
+                    inputs.dir().on_left_side(),
+                    inputs.move_buf().iter().map(|(motion, buttons)| (motion.on_left_side(), *buttons))
+                );
+            },
+            Side::Right => {
+                self.state_data.update(
+                    &self.states,
+                    inputs.dir().on_right_side(),
+                    inputs.move_buf().iter().map(|(motion, buttons)| (motion.on_right_side(), *buttons))
+                );
+            },
+        }
     }
 
     pub fn movement_update(&mut self) {
         self.state_data.advance_frame();
-        self.pos = velocity_system(&self.pos, &self.state_data.vel());
-
+        self.pos = velocity_system(&self.pos, &self.state_data.vel_rel());
+        
+        if self.state_data.is_friction_on(&self.states) {
+            self.state_data.set_vel(friction_system(&self.vel()));
+        }
+        
         if self.state_data.is_airborne(&self.states) {
             let (new_pos, new_vel, grounded) = gravity_system(
                 &self.pos,
@@ -182,8 +197,19 @@ impl Character {
     }
 
     pub fn receive_hit(&mut self, hit: &HitBox) {
-        self.current_hp -= hit.dmg();
-        self.state_data.set_launch_hit_state(&self.states);
+        let blocking = match hit.block_type() {
+            BlockType::Low => self.state_data.is_blocking_low(&self.states),
+            BlockType::Mid => self.state_data.is_blocking_mid(&self.states),
+            BlockType::High => self.state_data.is_blocking_high(&self.states),
+        };
+
+        if blocking {
+            self.current_hp -= hit.dmg() * CHIP_PERCENTAGE;
+            self.state_data.set_block_stun_state(&self.states, hit.block_stun());
+        } else {
+            self.current_hp -= hit.dmg();
+            self.state_data.set_hit_state(&self.states, hit.hit_stun());
+        }
     }
 }
 

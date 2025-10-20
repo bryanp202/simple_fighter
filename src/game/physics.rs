@@ -9,9 +9,14 @@ use crate::game::{
 };
 
 const GRAVITY_CONSTANT: f32 = 0.4;
+const FRICTION_COEFFICIENT: f32 = 0.9;
 
 pub fn velocity_system(pos: &FPoint, vel: &FPoint) -> FPoint {
     FPoint::new(pos.x + vel.x, pos.y + vel.y)
+}
+
+pub fn friction_system(vel: &FPoint) -> FPoint {
+    FPoint::new(vel.x * FRICTION_COEFFICIENT, vel.y)
 }
 
 /// Returns true if grounded
