@@ -37,11 +37,11 @@
       "hurt_boxes": [
         {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
       ],
-      "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
+      "collision_box": {"rect": {"x": 0, "y": -460, "w": 40, "h": 1000}},
 
       "start_behavior": {"type" : "SetVel", "x": -2, "y": 10},
       "flags": [{"type": "Airborne"}],
-      "end_behavior": {"type": "OnGroundedToStateY", "y": "neutral"},
+      "end_behavior": {"type": "OnGroundedToStateY", "y": "recovery"},
 
       "cancel_window": {"start": null, "end": null},
       "cancel_options": [],
@@ -64,7 +64,7 @@
       ],
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
-      "start_behavior": {"type" : "AddFrictionVel", "x": -2, "y": 0},
+      "start_behavior": {"type" : "AddFrictionVel", "x": -3, "y": 0},
       "flags": [],
       "end_behavior": {"type": "OnStunEndToStateY", "y": "neutral"},
 
@@ -90,8 +90,31 @@
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
       "start_behavior": {"type" : "AddFrictionVel", "x": -1, "y": 0},
-      "flags": [],
+      "flags": [{"type": "HighBlock"}],
       "end_behavior": {"type": "OnStunEndToStateY", "y": "neutral"},
+
+      "cancel_window": {"start": null, "end": null},
+      "cancel_options": [],
+
+      "animation": {
+        "texture_path": "./resources/character1/TakeHit.png",
+        "layout": {"type": "Horz"},
+        "frames": 1,
+        "w": 200,
+        "h": 200
+      }
+    },
+
+    {
+      "name": "recovery",
+      "input": {"Direction": {"dir": {"type" : "Neutral"}, "button": {"type" : "None"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
+
+      "start_behavior": {"type" : "SetVel", "x": 0, "y": 0},
+      "flags": [{"type": "CancelOnWhiff"}, {"type": "Airborne"}],
+      "end_behavior": {"type": "OnFrameXToStateY", "x": 40, "y": "neutral"},
 
       "cancel_window": {"start": null, "end": null},
       "cancel_options": [],
@@ -240,7 +263,7 @@
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
       "start_behavior": {"type" : "SetVel", "x": -2, "y": 0},
-      "flags": [{"type": "CancelOnWhiff"}],
+      "flags": [{"type": "CancelOnWhiff"}, {"type": "HighBlock"}],
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},

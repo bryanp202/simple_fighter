@@ -5,16 +5,38 @@ const DIRECTION_COUNT: usize = 4;
 const BUTTON_COUNT: usize = 3;
 const INPUT_VARIANTS: usize = 1;
 
+pub const PLAYER1_BUTTONS: KEY_TO_BUTTONS = [
+    (Keycode::G, ButtonFlag::L),
+    (Keycode::H, ButtonFlag::M),
+    (Keycode::J, ButtonFlag::H),
+];
+pub const PLAYER1_DIRECTIONS: KEY_TO_DIRECTIONS = [
+    (Keycode::W, DirectionFlag::Up),
+    (Keycode::S, DirectionFlag::Down),
+    (Keycode::A, DirectionFlag::Left),
+    (Keycode::D, DirectionFlag::Right),
+];
+pub const PLAYER2_BUTTONS: KEY_TO_BUTTONS = [
+    (Keycode::Kp1, ButtonFlag::L),
+    (Keycode::Kp2, ButtonFlag::M),
+    (Keycode::Kp3, ButtonFlag::H),
+];
+pub const PLAYER2_DIRECTIONS: KEY_TO_DIRECTIONS = [
+    (Keycode::Up, DirectionFlag::Up),
+    (Keycode::Down, DirectionFlag::Down),
+    (Keycode::Left, DirectionFlag::Left),
+    (Keycode::Right, DirectionFlag::Right),
+];
+
 pub struct Inputs {
     state: InputState,
-
     input_history: InputHistory,
 }
 
 impl Inputs {
-    pub fn new() -> Self {
+    pub fn new(key_to_button: KEY_TO_BUTTONS, key_to_direction: KEY_TO_DIRECTIONS) -> Self {
         Self {
-            state: InputState::new(),
+            state: InputState::new(key_to_button, key_to_direction),
             input_history: InputHistory::new(),
         }
     }
@@ -50,6 +72,8 @@ impl Inputs {
     }
 }
 
+type KEY_TO_BUTTONS = [(Keycode, ButtonFlag); BUTTON_COUNT * INPUT_VARIANTS];
+type KEY_TO_DIRECTIONS = [(Keycode, DirectionFlag); DIRECTION_COUNT * INPUT_VARIANTS];
 struct InputState {
     dir: Direction,
     held_dir: DirectionFlag,
@@ -58,33 +82,20 @@ struct InputState {
     buttons_just_pressed_temp: ButtonFlag,
     buttons_just_pressed: ButtonFlag,
 
-    key_to_button: [(Keycode, ButtonFlag); BUTTON_COUNT * INPUT_VARIANTS],
-    key_to_direction: [(Keycode, DirectionFlag); DIRECTION_COUNT * INPUT_VARIANTS],
+    key_to_button: KEY_TO_BUTTONS,
+    key_to_direction: KEY_TO_DIRECTIONS,
 }
 
 impl InputState {
-    pub fn new() -> Self {
+    pub fn new(key_to_button: KEY_TO_BUTTONS, key_to_direction: KEY_TO_DIRECTIONS) -> Self {
         Self {
             dir: Direction::Neutral,
             held_dir: DirectionFlag::Neutral,
             buttons_pressed: ButtonFlag::NONE,
             buttons_just_pressed_temp: ButtonFlag::NONE,
             buttons_just_pressed: ButtonFlag::NONE,
-            key_to_button: [
-                (Keycode::J, ButtonFlag::L),
-                (Keycode::K, ButtonFlag::M),
-                (Keycode::L, ButtonFlag::H),
-            ],
-            key_to_direction: [
-                (Keycode::W, DirectionFlag::Up),
-                //(Keycode::Up, DirectionFlag::Up),
-                (Keycode::S, DirectionFlag::Down),
-                //(Keycode::Down, DirectionFlag::Down),
-                (Keycode::A, DirectionFlag::Left),
-                //(Keycode::Left, DirectionFlag::Left),
-                (Keycode::D, DirectionFlag::Right),
-                //(Keycode::Right, DirectionFlag::Right),
-            ],
+            key_to_button,
+            key_to_direction,
         }
     }
 

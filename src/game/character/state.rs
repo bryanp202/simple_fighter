@@ -45,7 +45,7 @@ impl StateData {
         self.current_frame += 1;
     }
 
-    pub fn on_hit_receive(&mut self, states: &States, hit: &HitBox, blocking: bool) -> f32 {
+    pub fn on_hit_receive(&mut self, states: &States, pos: &FPoint, hit: &HitBox, blocking: bool) -> f32 {
         if blocking {
             self.set_block_stun_state(states, hit.block_stun());
             hit.dmg() * CHIP_PERCENTAGE
@@ -56,7 +56,8 @@ impl StateData {
             } else {
                 self.combo_scaling = (self.combo_scaling - COMBO_SCALE_PER_HIT).max(MIN_COMBO_SCALING);
             }
-            self.set_hit_state(states, hit.hit_stun());
+            let should_launch = pos.y != 0.0;
+            self.set_hit_state(states, hit.hit_stun(), should_launch);
             hit.dmg() * self.combo_scaling
         }
     }
@@ -208,8 +209,9 @@ impl StateData {
         self.enter_state(states, states.block_stun_state);
     }
 
-    fn set_hit_state(&mut self, states: &States, hit_stun: usize) {
-        if self.current_state == states.launch_hit_state ||
+    fn set_hit_state(&mut self, states: &States, hit_stun: usize, should_launch: bool) {
+        if should_launch ||
+        self.current_state == states.launch_hit_state ||
         hit_stun == u32::MAX as usize {
             self.enter_state(states, states.launch_hit_state);
             self.gravity_mult *= HIT_GRAVITY_MULT;

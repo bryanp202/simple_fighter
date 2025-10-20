@@ -200,7 +200,7 @@ impl Character {
             BlockType::High => self.state_data.is_blocking_high(&self.states),
         };
 
-        let dmg = self.state_data.on_hit_receive(&self.states, hit, blocking);
+        let dmg = self.state_data.on_hit_receive(&self.states, &self.pos, hit, blocking);
         self.current_hp = (self.current_hp - dmg).max(0.0);
 
         blocking

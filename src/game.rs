@@ -19,12 +19,11 @@ use sdl3::{
 };
 
 use crate::{
-    DEFAULT_SCREEN_WIDTH,
     game::{
-        input::Inputs,
+        input::{Inputs, PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, PLAYER2_BUTTONS, PLAYER2_DIRECTIONS},
         physics::{check_hit_collisions, movement_system, side_detection},
         stage::Stage,
-    },
+    }, DEFAULT_SCREEN_WIDTH
 };
 
 const FRAME_RATE: usize = 60;
@@ -56,7 +55,8 @@ pub struct Game<'a> {
 
     // Resources
     textures: Vec<Texture<'a>>,
-    inputs: Inputs,
+    player1_inputs: Inputs,
+    player2_inputs: Inputs,
 
     // Window management
     canvas: Canvas<Window>,
@@ -95,7 +95,8 @@ impl<'a> Game<'a> {
             hit_freeze: 0,
 
             textures,
-            inputs: Inputs::new(),
+            player1_inputs: Inputs::new(PLAYER1_BUTTONS, PLAYER1_DIRECTIONS),
+            player2_inputs: Inputs::new(PLAYER2_BUTTONS, PLAYER2_DIRECTIONS),
 
             canvas,
             events,
@@ -140,14 +141,16 @@ impl<'a> Game<'a> {
                     repeat: false,
                     ..
                 } => {
-                    self.inputs.handle_keypress(keycode);
+                    self.player1_inputs.handle_keypress(keycode);
+                    self.player2_inputs.handle_keypress(keycode);
                 }
                 Event::KeyUp {
                     keycode: Some(keycode),
                     repeat: false,
                     ..
                 } => {
-                    self.inputs.handle_keyrelease(keycode);
+                    self.player1_inputs.handle_keyrelease(keycode);
+                    self.player2_inputs.handle_keyrelease(keycode);
                 }
                 _ => {}
             }
@@ -155,9 +158,10 @@ impl<'a> Game<'a> {
     }
 
     fn update(&mut self, dt: f32) {
-        self.inputs.update();
-        self.player1.update(&self.inputs);
-        self.player2.update(&self.inputs);
+        self.player1_inputs.update();
+        self.player2_inputs.update();
+        self.player1.update(&self.player1_inputs);
+        self.player2.update(&self.player2_inputs);
 
         if self.hit_freeze == 0 {
             self.player1.movement_update();
@@ -247,7 +251,11 @@ fn handle_hit_boxes(player1: &mut Character, player2: &mut Character) -> usize {
             player2.successful_hit(&player2_hit, blocked);
             4
         }
-        (Some(_), Some(_)) => 4,
+        (Some(player1_hit), Some(player2_hit)) => {
+            player1.successful_hit(&player1_hit, true);
+            player2.successful_hit(&player2_hit, true);
+            8
+        },
         _ => 0,
     }
 }
