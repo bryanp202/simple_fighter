@@ -197,7 +197,8 @@ impl StateData {
                 self.vel = FPoint::new(x, y);
             },
             StartBehavior::AddFrictionVel { x, y } => {
-                self.friction_vel = FPoint::new(self.vel.x + x, self.vel.y + y);
+                self.vel = FPoint::new(0.0, 0.0);
+                self.friction_vel = FPoint::new(self.friction_vel.x + x, self.friction_vel.y + y);
             }
         }
     }

@@ -201,7 +201,7 @@ impl Character {
         };
 
         let dmg = self.state_data.on_hit_receive(&self.states, hit, blocking);
-        self.current_hp -= dmg;
+        self.current_hp = (self.current_hp - dmg).max(0.0);
 
         blocking
     }
