@@ -1,4 +1,5 @@
 mod game;
+
 use crate::game::Game;
 
 const DEFAULT_SCREEN_WIDTH: u32 = 960;
