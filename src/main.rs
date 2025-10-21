@@ -21,5 +21,5 @@ fn main() {
         println!("Game initaliazed");
     }
 
-    game.run();
+    game.run()
 }
