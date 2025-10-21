@@ -10,20 +10,13 @@ use std::time::{Duration, Instant};
 
 use character::Character;
 use sdl3::{
-    EventPump,
-    event::Event,
-    keyboard::Keycode,
-    pixels::Color,
-    render::{Canvas, FPoint, FRect, Texture, TextureCreator},
-    video::{Window, WindowContext},
+    event::{Event, WindowEvent}, keyboard::Keycode, pixels::Color, render::{Canvas, FPoint, FRect, Texture, TextureCreator}, video::{Window, WindowContext}, EventPump
 };
 
 use crate::{
     game::{
-        input::{Inputs, PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, PLAYER2_BUTTONS, PLAYER2_DIRECTIONS},
-        physics::{check_hit_collisions, movement_system, side_detection},
-        stage::Stage,
-    }, DEFAULT_SCREEN_WIDTH
+        input::{Inputs, PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, PLAYER2_BUTTONS, PLAYER2_DIRECTIONS}, physics::{check_hit_collisions, movement_system, side_detection}, render::Camera, stage::Stage
+    }
 };
 
 const FRAME_RATE: usize = 60;
@@ -54,6 +47,7 @@ pub struct Game<'a> {
     hit_freeze: usize,
 
     // Resources
+    camera: Camera,
     textures: Vec<Texture<'a>>,
     player1_inputs: Inputs,
     player2_inputs: Inputs,
@@ -61,7 +55,7 @@ pub struct Game<'a> {
     // Window management
     canvas: Canvas<Window>,
     events: EventPump,
-    texture_creator: &'a TextureCreator<WindowContext>,
+    _texture_creator: &'a TextureCreator<WindowContext>,
     should_quit: bool,
 }
 
@@ -70,6 +64,7 @@ impl<'a> Game<'a> {
         texture_creator: &'a TextureCreator<WindowContext>,
         canvas: Canvas<Window>,
         events: EventPump,
+        screen_dim: (u32, u32),
     ) -> Self {
         let mut textures = Vec::new();
         Self {
@@ -94,13 +89,14 @@ impl<'a> Game<'a> {
             score: (0, 0),
             hit_freeze: 0,
 
+            camera: Camera::new(screen_dim),
             textures,
             player1_inputs: Inputs::new(PLAYER1_BUTTONS, PLAYER1_DIRECTIONS),
             player2_inputs: Inputs::new(PLAYER2_BUTTONS, PLAYER2_DIRECTIONS),
 
             canvas,
             events,
-            texture_creator,
+            _texture_creator: texture_creator,
             should_quit: false,
         }
     }
@@ -129,6 +125,9 @@ impl<'a> Game<'a> {
         for event in self.events.poll_iter() {
             match event {
                 Event::Quit { .. } => self.should_quit = true,
+                Event::Window { win_event: WindowEvent::Resized(x, y), ..} => {
+                    self.camera.resize((x as u32, y as u32));
+                },
                 Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
@@ -196,10 +195,10 @@ impl<'a> Game<'a> {
 
         self.stage.render(&mut self.canvas, &self.textures).unwrap();
         self.player1
-            .render(&mut self.canvas, &self.textures)
+            .render(&mut self.canvas, &self.camera, &self.textures)
             .unwrap();
         self.player2
-            .render(&mut self.canvas, &self.textures)
+            .render(&mut self.canvas, &self.camera, &self.textures)
             .unwrap();
 
         let player1_hp_per = self.player1.current_hp() / self.player1.max_hp();
@@ -261,30 +260,36 @@ fn handle_hit_boxes(player1: &mut Character, player2: &mut Character) -> usize {
 }
 
 fn render_player1_health(canvas: &mut Canvas<Window>, hp_per: f32) -> Result<(), sdl3::Error> {
+    let (screen_w, screen_h) = canvas.window().size();
+    let bar_h = screen_h as f32 / 20.0;
+    let bar_width = screen_w as f32 * 0.4;
     canvas.set_draw_color(Color::RED);
-    canvas.fill_rect(FRect::new(0.0, 0.0, 300.0, 20.0))?;
+    canvas.fill_rect(FRect::new(0.0, 0.0, bar_width, bar_h))?;
     canvas.set_draw_color(Color::GREEN);
-    let health_bar = hp_per * 300.0;
-    canvas.fill_rect(FRect::new(300.0 - health_bar, 0.0, health_bar, 20.0))?;
+    let health_bar = hp_per * bar_width;
+    canvas.fill_rect(FRect::new(bar_width - health_bar, 0.0, health_bar, bar_h))?;
 
     Ok(())
 }
 
 fn render_player2_health(canvas: &mut Canvas<Window>, hp_per: f32) -> Result<(), sdl3::Error> {
+    let (screen_w, screen_h) = canvas.window().size();
+    let bar_h = screen_h as f32 / 20.0;
+    let bar_width = screen_w as f32 * 0.4;
     canvas.set_draw_color(Color::RED);
     canvas.fill_rect(FRect::new(
-        DEFAULT_SCREEN_WIDTH as f32 - 300.0,
+        screen_w as f32 - bar_width,
         0.0,
-        300.0,
-        20.0,
+        bar_width,
+        bar_h,
     ))?;
     canvas.set_draw_color(Color::GREEN);
-    let health_bar = hp_per * 300.0;
+    let health_bar = hp_per * bar_width;
     canvas.fill_rect(FRect::new(
-        DEFAULT_SCREEN_WIDTH as f32 - 300.0,
+        screen_w as f32 - bar_width,
         0.0,
         health_bar,
-        20.0,
+        bar_h,
     ))?;
 
     Ok(())

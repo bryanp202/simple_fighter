@@ -2,13 +2,13 @@ mod deserialize;
 mod state;
 
 use crate::game::{
-    boxes::{BlockType, CollisionBox, HitBox, HurtBox}, character::{deserialize::deserialize, state::StateData}, input::Inputs, physics::{friction_system, gravity_system, velocity_system}, projectile::Projectile, render::{
+    boxes::{BlockType, CollisionBox, HitBox, HurtBox}, character::{deserialize::deserialize, state::StateData}, input::Inputs, physics::{gravity_system, velocity_system}, projectile::Projectile, render::{
         animation::Animation, draw_collision_box_system, draw_hit_boxes_system,
-        draw_hurt_boxes_system, to_screen_pos,
+        draw_hurt_boxes_system, Camera,
     }, Side
 };
 use sdl3::{
-    render::{Canvas, FPoint, FRect, Texture, TextureCreator},
+    render::{Canvas, FPoint, Texture, TextureCreator},
     video::{Window, WindowContext},
 };
 use state::States;
@@ -106,39 +106,25 @@ impl Character {
     pub fn render(
         &self,
         canvas: &mut Canvas<Window>,
+        camera: &Camera,
         global_textures: &Vec<Texture>,
     ) -> Result<(), sdl3::Error> {
         let current_state = self.state_data.current_state();
-        let current_frame = self.state_data.current_frame();
-
-        let screen_pos = to_screen_pos(&self.pos);
-
-        let flip_horz = match self.state_data.get_side() {
-            Side::Left => false,
-            Side::Right => true,
-        };
-        let (texture, src) =
-            self.animation_data[current_state].get_frame_cycle(current_frame, global_textures);
-        // Sprite is rendered with the character pos in the center
-        let dst = FRect::new(
-            screen_pos.x - src.w / 2.0,
-            screen_pos.y - src.h / 2.0,
-            src.w,
-            src.h,
-        );
-        canvas.copy_ex(texture, src, dst, 0.0, None, flip_horz, false)?;
+        let frame = self.state_data.current_frame();
+        let animation = &self.animation_data[current_state];
+        camera.render_animation(canvas, global_textures, &self.pos, animation, frame, self.get_side())?;
 
         if cfg!(feature = "debug") {
             canvas.set_blend_mode(sdl3::render::BlendMode::Blend);
             let side = self.get_side();
             let collision_box = self.get_collision_box();
-            draw_collision_box_system(canvas, side, screen_pos, collision_box)?;
+            draw_collision_box_system(canvas, camera, side, self.pos, collision_box)?;
 
             let hitboxes = self.get_hit_boxes_debug();
-            draw_hit_boxes_system(canvas, side, screen_pos, hitboxes)?;
+            draw_hit_boxes_system(canvas, camera, side, self.pos, hitboxes)?;
 
             let hurtboxes = self.get_hurt_boxes();
-            draw_hurt_boxes_system(canvas, side, screen_pos, hurtboxes)?;
+            draw_hurt_boxes_system(canvas, camera, side, self.pos, hurtboxes)?;
 
             canvas.set_blend_mode(sdl3::render::BlendMode::None);
         }

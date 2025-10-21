@@ -3,20 +3,17 @@ use sdl3::{
     video::{Window, WindowContext},
 };
 
-use crate::{DEFAULT_SCREEN_WIDTH, game::render::load_texture};
+use crate::game::render::load_texture;
 
 const STATIC_LAYERS: &[&str] = &[
-    "./resources/stage1/Layer_0011_0.png",
-    "./resources/stage1/Layer_0010_1.png",
-    "./resources/stage1/Layer_0009_2.png",
-    "./resources/stage1/Layer_0008_3.png",
-    "./resources/stage1/Layer_0007_Lights.png",
-    "./resources/stage1/Layer_0006_4.png",
-    "./resources/stage1/Layer_0004_Lights.png",
-    "./resources/stage1/Layer_0003_6.png",
-    "./resources/stage1/Layer_0002_7.png",
-    "./resources/stage1/Layer_0001_8.png",
-    "./resources/stage1/Layer_0000_9.png",
+    "./resources/stage1/1.png",
+    "./resources/stage1/2.png",
+    "./resources/stage1/3.png",
+    "./resources/stage1/4.png",
+    "./resources/stage1/5.png",
+    "./resources/stage1/6.png",
+    "./resources/stage1/7.png",
+    "./resources/stage1/8.png",
 ];
 
 pub struct Stage {
@@ -39,8 +36,8 @@ impl Stage {
 
         Self {
             layers,
-            left_wall: DEFAULT_SCREEN_WIDTH as f32 / -2.0 + 50.0,
-            right_wall: DEFAULT_SCREEN_WIDTH as f32 / 2.0 - 50.0,
+            left_wall: -420.0,
+            right_wall: 420.0,
         }
     }
 

@@ -31,10 +31,6 @@ impl HitBox {
         }
     }
 
-    pub fn pos(&self) -> FRect {
-        self.pos
-    }
-
     pub fn on_side(&self, side: &Side, offset: FPoint) -> FRect {
         match side {
             Side::Left => FRect {
@@ -46,23 +42,6 @@ impl HitBox {
             Side::Right => FRect {
                 x: -self.pos.x + offset.x - self.pos.w,
                 y: self.pos.y + offset.y,
-                w: self.pos.w,
-                h: self.pos.h,
-            },
-        }
-    }
-
-    pub fn on_side_screen(&self, side: &Side, offset: FPoint) -> FRect {
-        match side {
-            Side::Left => FRect {
-                x: self.pos.x + offset.x,
-                y: -self.pos.y + offset.y,
-                w: self.pos.w,
-                h: self.pos.h,
-            },
-            Side::Right => FRect {
-                x: -self.pos.x + offset.x - self.pos.w,
-                y: -self.pos.y + offset.y,
                 w: self.pos.w,
                 h: self.pos.h,
             },
@@ -99,10 +78,6 @@ impl HurtBox {
         Self { pos }
     }
 
-    pub fn pos(&self) -> FRect {
-        self.pos
-    }
-
     pub fn on_side(&self, side: &Side, offset: FPoint) -> FRect {
         match side {
             Side::Left => FRect {
@@ -114,23 +89,6 @@ impl HurtBox {
             Side::Right => FRect {
                 x: -self.pos.x + offset.x - self.pos.w,
                 y: self.pos.y + offset.y,
-                w: self.pos.w,
-                h: self.pos.h,
-            },
-        }
-    }
-
-    pub fn on_side_screen(&self, side: &Side, offset: FPoint) -> FRect {
-        match side {
-            Side::Left => FRect {
-                x: self.pos.x + offset.x,
-                y: -self.pos.y + offset.y,
-                w: self.pos.w,
-                h: self.pos.h,
-            },
-            Side::Right => FRect {
-                x: -self.pos.x + offset.x - self.pos.w,
-                y: -self.pos.y + offset.y,
                 w: self.pos.w,
                 h: self.pos.h,
             },
@@ -147,10 +105,6 @@ impl CollisionBox {
         Self { pos }
     }
 
-    pub fn pos(&self) -> FRect {
-        self.pos
-    }
-
     pub fn on_side(&self, side: &Side, offset: FPoint) -> FRect {
         match side {
             Side::Left => FRect {
@@ -162,23 +116,6 @@ impl CollisionBox {
             Side::Right => FRect {
                 x: -self.pos.x + offset.x - self.pos.w,
                 y: self.pos.y + offset.y,
-                w: self.pos.w,
-                h: self.pos.h,
-            },
-        }
-    }
-
-    pub fn on_side_screen(&self, side: &Side, offset: FPoint) -> FRect {
-        match side {
-            Side::Left => FRect {
-                x: self.pos.x + offset.x,
-                y: -self.pos.y + offset.y,
-                w: self.pos.w,
-                h: self.pos.h,
-            },
-            Side::Right => FRect {
-                x: -self.pos.x + offset.x - self.pos.w,
-                y: -self.pos.y + offset.y,
                 w: self.pos.w,
                 h: self.pos.h,
             },
