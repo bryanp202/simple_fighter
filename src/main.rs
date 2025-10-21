@@ -27,6 +27,7 @@ fn main() {
     if cfg!(feature = "debug") {
         println!("Game initaliazed");
         println!("Screen dim: (w: {}, h: {})", screen_dim.0, screen_dim.1);
+        println!("Video driver: {:?}", video_subsystem.current_video_driver());
     }
 
     game.run()
