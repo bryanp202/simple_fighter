@@ -41,6 +41,10 @@ impl Inputs {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.input_history = InputHistory::new();
+    }
+
     pub fn held_buttons(&self) -> ButtonFlag {
         self.state.buttons_pressed
     }
@@ -365,7 +369,7 @@ impl InputHistory {
     // Second Least Valuable Motion Input
     const DOWN_DOWN_INVERSE: &[Direction] = &[Direction::Down, Direction::Neutral, Direction::Down];
 
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             buf: std::array::from_fn(|_| (Direction::Neutral, ButtonFlag::NONE, 1)),
             motion_buf: std::array::from_fn(|_| (Motion::None, ButtonFlag::NONE)),
@@ -373,7 +377,7 @@ impl InputHistory {
         }
     }
 
-    pub fn update(
+    fn update(
         &mut self,
         dir: Direction,
         held_buttons: ButtonFlag,

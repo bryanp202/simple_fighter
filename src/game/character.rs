@@ -83,8 +83,11 @@ impl Character {
         }
     }
 
-    pub fn movement_update(&mut self) {
+    pub fn advance_frame(&mut self) {
         self.state_data.advance_frame();
+    }
+
+    pub fn movement_update(&mut self) {
         self.pos = velocity_system(&self.pos, &self.state_data.vel_rel());
         
         self.state_data.update_friction();

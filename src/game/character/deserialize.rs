@@ -28,7 +28,7 @@ pub fn deserialize<'a>(
 
     let mut animation_data = Vec::new();
     for mov in character_json.moves.iter() {
-        let texture_index = render::load_animation(
+        let new_animation = Animation::load(
             texture_creator,
             global_textures,
             &mov.animation.texture_path,
@@ -38,16 +38,7 @@ pub fn deserialize<'a>(
             mov.animation.layout.to_animation_layout(),
         )?;
 
-        let frames = mov.animation.frames;
-        let frame_w = mov.animation.w as f32;
-        let frame_h = mov.animation.h as f32;
-
-        animation_data.push(Animation::new(
-            texture_index,
-            frames as usize,
-            frame_w,
-            frame_h,
-        ));
+        animation_data.push(new_animation);
     }
 
     let move_names_to_pos: HashMap<_, _> = character_json
