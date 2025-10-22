@@ -4,19 +4,26 @@ mod input;
 mod physics;
 mod projectile;
 mod render;
-mod stage;
 mod scene;
+mod stage;
 
 use std::time::{Duration, Instant};
 
 use character::Character;
 use sdl3::{
-    event::{Event, WindowEvent}, pixels::Color, render::{Canvas, FPoint, Texture, TextureCreator}, video::{Window, WindowContext}, EventPump
+    EventPump,
+    event::{Event, WindowEvent},
+    pixels::Color,
+    render::{Canvas, FPoint, Texture, TextureCreator},
+    video::{Window, WindowContext},
 };
 
 use crate::game::{
-        input::{Inputs, PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, PLAYER2_BUTTONS, PLAYER2_DIRECTIONS}, render::{animation::Animation, load_texture, Camera}, scene::{Scene, Scenes}, stage::Stage
-    };
+    input::{Inputs, PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, PLAYER2_BUTTONS, PLAYER2_DIRECTIONS},
+    render::{Camera, animation::Animation, load_texture},
+    scene::{Scene, Scenes},
+    stage::Stage,
+};
 
 const FRAME_RATE: usize = 60;
 const FRAME_DURATION: f32 = 1.0 / FRAME_RATE as f32;
@@ -76,8 +83,9 @@ impl<'a> Game<'a> {
         let main_menu_texture = load_texture(
             texture_creator,
             &mut global_textures,
-            "./resources/scenes/main_menu.png"
-        ).expect("Invalid main menu texture");
+            "./resources/scenes/main_menu.png",
+        )
+        .expect("Invalid main menu texture");
         let timer_animation = Animation::load(
             texture_creator,
             &mut global_textures,
@@ -86,7 +94,8 @@ impl<'a> Game<'a> {
             128,
             100,
             render::animation::AnimationLayout::VERTICAL,
-        ).expect("Invalid timer animation");
+        )
+        .expect("Invalid timer animation");
 
         Self {
             context: GameContext {
@@ -149,9 +158,12 @@ impl<'a> Game<'a> {
         for event in self.events.poll_iter() {
             match event {
                 Event::Quit { .. } => self.should_quit = true,
-                Event::Window { win_event: WindowEvent::Resized(x, y), ..} => {
+                Event::Window {
+                    win_event: WindowEvent::Resized(x, y),
+                    ..
+                } => {
                     self.context.camera.resize((x as u32, y as u32));
-                },
+                }
                 Event::KeyDown {
                     keycode: Some(keycode),
                     repeat: false,
@@ -187,7 +199,9 @@ impl<'a> Game<'a> {
         self.canvas.set_draw_color(Color::BLACK);
         self.canvas.clear();
 
-        self.scene.render(&self.context, &mut self.canvas, &self.global_textures).unwrap();
+        self.scene
+            .render(&self.context, &mut self.canvas, &self.global_textures)
+            .unwrap();
 
         self.canvas.present();
     }

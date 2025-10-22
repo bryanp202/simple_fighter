@@ -4,7 +4,10 @@ use bitflags::bitflags;
 use sdl3::render::FPoint;
 
 use crate::game::{
-    boxes::HitBox, input::{ButtonFlag, RelativeDirection, RelativeMotion}, physics::friction_system, Side
+    Side,
+    boxes::HitBox,
+    input::{ButtonFlag, RelativeDirection, RelativeMotion},
+    physics::friction_system,
 };
 
 type StateIndex = usize;
@@ -45,16 +48,25 @@ impl StateData {
         self.current_frame += 1;
     }
 
-    pub fn on_hit_receive(&mut self, states: &States, pos: &FPoint, hit: &HitBox, blocking: bool) -> f32 {
+    pub fn on_hit_receive(
+        &mut self,
+        states: &States,
+        pos: &FPoint,
+        hit: &HitBox,
+        blocking: bool,
+    ) -> f32 {
         if blocking {
             self.set_block_stun_state(states, hit.block_stun());
             hit.dmg() * CHIP_PERCENTAGE
         } else {
             // Check if combo_scaling needs to reset
-            if self.current_state != states.ground_hit_state && self.current_state != states.launch_hit_state {
+            if self.current_state != states.ground_hit_state
+                && self.current_state != states.launch_hit_state
+            {
                 self.combo_scaling = 1.0;
             } else {
-                self.combo_scaling = (self.combo_scaling - COMBO_SCALE_PER_HIT).max(MIN_COMBO_SCALING);
+                self.combo_scaling =
+                    (self.combo_scaling - COMBO_SCALE_PER_HIT).max(MIN_COMBO_SCALING);
             }
             let should_launch = pos.y != 0.0;
             self.set_hit_state(states, hit.hit_stun(), should_launch);
@@ -87,8 +99,14 @@ impl StateData {
     /// The real total velocity, including friction_vel
     pub fn vel_rel(&self) -> FPoint {
         match self.side {
-            Side::Left => FPoint::new(self.vel.x + self.friction_vel.x, self.vel.y + self.friction_vel.y),
-            Side::Right => FPoint::new(-(self.vel.x + self.friction_vel.x), self.vel.y + self.friction_vel.y),
+            Side::Left => FPoint::new(
+                self.vel.x + self.friction_vel.x,
+                self.vel.y + self.friction_vel.y,
+            ),
+            Side::Right => FPoint::new(
+                -(self.vel.x + self.friction_vel.x),
+                self.vel.y + self.friction_vel.y,
+            ),
         }
     }
 
@@ -128,7 +146,9 @@ impl StateData {
     }
 
     pub fn update<T>(&mut self, states: &States, dir: RelativeDirection, move_iter: T)
-    where T: Iterator<Item = (RelativeMotion, ButtonFlag)> + Clone {
+    where
+        T: Iterator<Item = (RelativeMotion, ButtonFlag)> + Clone,
+    {
         self.check_state_end(states);
         self.check_cancels(states, dir, move_iter);
     }
@@ -136,7 +156,9 @@ impl StateData {
     fn check_state_end(&mut self, states: &States) {
         match states.end_behaviors[self.current_state] {
             EndBehavior::Endless => {}
-            EndBehavior::OnStunEndToStateY { y: transition_state } => {
+            EndBehavior::OnStunEndToStateY {
+                y: transition_state,
+            } => {
                 if self.current_frame >= self.stun {
                     self.enter_state(states, transition_state);
                 }
@@ -154,7 +176,9 @@ impl StateData {
     }
 
     fn check_cancels<T>(&mut self, states: &States, dir: RelativeDirection, move_iter: T)
-    where T: Iterator<Item = (RelativeMotion, ButtonFlag)> + Clone {
+    where
+        T: Iterator<Item = (RelativeMotion, ButtonFlag)> + Clone,
+    {
         // Check if not in cancel window
         if !self.in_cancel_window(states) {
             return;
@@ -168,12 +192,10 @@ impl StateData {
                 continue;
             }
 
-            let maybe_index = move_iter
-                .clone()
-                .position(|(buf_motion, buf_buttons)| {
-                    cancel_option.motion.matches_or_is_none(&buf_motion)
-                        && buf_buttons.contains(cancel_option.button)
-                });
+            let maybe_index = move_iter.clone().position(|(buf_motion, buf_buttons)| {
+                cancel_option.motion.matches_or_is_none(&buf_motion)
+                    && buf_buttons.contains(cancel_option.button)
+            });
 
             if let Some(_) = maybe_index {
                 self.enter_state(states, *i);
@@ -196,7 +218,7 @@ impl StateData {
             StartBehavior::None => {}
             StartBehavior::SetVel { x, y } => {
                 self.vel = FPoint::new(x, y);
-            },
+            }
             StartBehavior::AddFrictionVel { x, y } => {
                 self.vel = FPoint::new(0.0, 0.0);
                 self.friction_vel = FPoint::new(self.friction_vel.x + x, self.friction_vel.y + y);
@@ -210,9 +232,10 @@ impl StateData {
     }
 
     fn set_hit_state(&mut self, states: &States, hit_stun: usize, should_launch: bool) {
-        if should_launch ||
-        self.current_state == states.launch_hit_state ||
-        hit_stun == u32::MAX as usize {
+        if should_launch
+            || self.current_state == states.launch_hit_state
+            || hit_stun == u32::MAX as usize
+        {
             self.enter_state(states, states.launch_hit_state);
             self.gravity_mult *= HIT_GRAVITY_MULT;
         } else {
@@ -366,7 +389,7 @@ pub enum StartBehavior {
 #[derive(Debug)]
 pub enum EndBehavior {
     Endless,
-    OnStunEndToStateY {y: StateIndex},
+    OnStunEndToStateY { y: StateIndex },
     OnFrameXToStateY { x: usize, y: StateIndex },
     OnGroundedToStateY { y: StateIndex },
 }

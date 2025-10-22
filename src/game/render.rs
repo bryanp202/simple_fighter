@@ -8,9 +8,12 @@ use sdl3::{
 };
 
 use crate::{
+    DEFAULT_SCREEN_HEIGHT, DEFAULT_SCREEN_WIDTH,
     game::{
-        boxes::{CollisionBox, HitBox, HurtBox}, render::animation::{Animation, AnimationLayout}, Side
-    }, DEFAULT_SCREEN_HEIGHT, DEFAULT_SCREEN_WIDTH
+        Side,
+        boxes::{CollisionBox, HitBox, HurtBox},
+        render::animation::{Animation, AnimationLayout},
+    },
 };
 
 pub mod animation;
@@ -25,7 +28,7 @@ pub struct Camera {
 
 impl Camera {
     const SCREEN_WIDTH_RATIO_1: u32 = DEFAULT_SCREEN_WIDTH;
-    const SCREEN_HEIGHT_RATIO_1: u32 = DEFAULT_SCREEN_HEIGHT; 
+    const SCREEN_HEIGHT_RATIO_1: u32 = DEFAULT_SCREEN_HEIGHT;
 
     pub fn new(screen_dim: (u32, u32)) -> Self {
         let (w, h) = screen_dim;
@@ -53,7 +56,7 @@ impl Camera {
         pos: &FPoint,
         animation: &Animation,
         frame: usize,
-        side: &Side
+        side: &Side,
     ) -> Result<(), sdl3::Error> {
         let screen_pos = self.to_screen_pos(pos);
         let flip_horz = match side {
@@ -61,8 +64,7 @@ impl Camera {
             Side::Right => true,
         };
 
-        let (texture, src) =
-            animation.get_frame_cycle(frame, global_textures);
+        let (texture, src) = animation.get_frame_cycle(frame, global_textures);
         // Sprite is rendered with the character pos in the center
         let width = src.w * self.game_to_screen_ratio.x;
         let height = src.h * self.game_to_screen_ratio.y;
@@ -99,10 +101,7 @@ impl Camera {
     }
 
     fn calc_game_center(screen_w: u32, screen_h: u32) -> FPoint {
-        FPoint::new(
-            screen_w as f32 / 2.0,
-            screen_h as f32 * 0.9,
-        )
+        FPoint::new(screen_w as f32 / 2.0, screen_h as f32 * 0.9)
     }
 }
 

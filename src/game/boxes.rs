@@ -16,11 +16,18 @@ pub struct HitBox {
     hit_stun: u32,
     block_stun: u32,
     cancel_window: usize,
-    block_type: BlockType, 
+    block_type: BlockType,
 }
 
 impl HitBox {
-    pub fn new(pos: FRect, dmg: f32, block_stun: u32, hit_stun: u32, cancel_window: usize, block_type: BlockType) -> Self {
+    pub fn new(
+        pos: FRect,
+        dmg: f32,
+        block_stun: u32,
+        hit_stun: u32,
+        cancel_window: usize,
+        block_type: BlockType,
+    ) -> Self {
         Self {
             pos,
             dmg,

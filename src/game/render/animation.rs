@@ -1,4 +1,7 @@
-use sdl3::{render::{FRect, Texture, TextureCreator}, video::WindowContext};
+use sdl3::{
+    render::{FRect, Texture, TextureCreator},
+    video::WindowContext,
+};
 
 use crate::game::render::load_animation;
 
@@ -41,10 +44,15 @@ impl Animation {
             width,
             height,
             frames,
-            layout
+            layout,
         )?;
 
-        Ok(Self::new(texture_index, frames as usize, width as f32, height as f32))
+        Ok(Self::new(
+            texture_index,
+            frames as usize,
+            width as f32,
+            height as f32,
+        ))
     }
 
     // pub fn width(&self) -> f32 {

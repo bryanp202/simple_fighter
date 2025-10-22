@@ -1,4 +1,7 @@
-use crate::game::{scene::{gameplay::Gameplay, render_gameplay, Scene, Scenes}, GameContext, FRAME_RATE};
+use crate::game::{
+    FRAME_RATE, GameContext,
+    scene::{Scene, Scenes, gameplay::Gameplay, render_gameplay},
+};
 
 const PAUSE_DURATION: usize = FRAME_RATE * 3;
 
@@ -14,7 +17,7 @@ impl Scene for RoundStart {
         context.player1.reset();
         context.player2.reset();
     }
-    
+
     fn update(&mut self, context: &mut GameContext, _dt: f32) -> Option<super::Scenes> {
         context.player1.advance_frame();
         context.player2.advance_frame();
@@ -31,14 +34,12 @@ impl Scene for RoundStart {
         &self,
         context: &GameContext,
         canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
-        global_textures: &Vec<sdl3::render::Texture>
+        global_textures: &Vec<sdl3::render::Texture>,
     ) -> Result<(), sdl3::Error> {
         render_gameplay(context, canvas, global_textures, 0, self.score)
     }
 
-    fn exit(&mut self, _context: &mut GameContext) {
-        
-    }
+    fn exit(&mut self, _context: &mut GameContext) {}
 }
 
 impl RoundStart {

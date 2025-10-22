@@ -1,15 +1,28 @@
-use sdl3::{pixels::Color, render::{Canvas, FRect, Texture}, video::Window};
+use sdl3::{
+    pixels::Color,
+    render::{Canvas, FRect, Texture},
+    video::Window,
+};
 
-use crate::game::{render::animation::Animation, scene::{gameplay::Gameplay, main_menu::MainMenu, round_start::RoundStart}, GameContext, FRAME_RATE, SCORE_TO_WIN};
+use crate::game::{
+    FRAME_RATE, GameContext, SCORE_TO_WIN,
+    render::animation::Animation,
+    scene::{gameplay::Gameplay, main_menu::MainMenu, round_start::RoundStart},
+};
 
-mod main_menu;
 mod gameplay;
+mod main_menu;
 mod round_start;
 
 pub trait Scene {
     fn enter(&mut self, context: &mut GameContext);
     fn update(&mut self, context: &mut GameContext, dt: f32) -> Option<Scenes>;
-    fn render(&self, context: &GameContext, canvas: &mut Canvas<Window>, global_textures: &Vec<Texture>) -> Result<(), sdl3::Error>;
+    fn render(
+        &self,
+        context: &GameContext,
+        canvas: &mut Canvas<Window>,
+        global_textures: &Vec<Texture>,
+    ) -> Result<(), sdl3::Error>;
     fn exit(&mut self, context: &mut GameContext);
 }
 
@@ -39,7 +52,12 @@ impl Scene for Scenes {
         }
     }
 
-    fn render(&self, context: &GameContext, canvas: &mut Canvas<Window>, global_textures: &Vec<Texture>) -> Result<(), sdl3::Error> {
+    fn render(
+        &self,
+        context: &GameContext,
+        canvas: &mut Canvas<Window>,
+        global_textures: &Vec<Texture>,
+    ) -> Result<(), sdl3::Error> {
         match self {
             Self::MainMenu(main_menu) => main_menu.render(context, canvas, global_textures),
             Self::RoundStart(round_start) => round_start.render(context, canvas, global_textures),
@@ -70,9 +88,11 @@ fn render_gameplay(
     score: (u32, u32),
 ) -> Result<(), sdl3::Error> {
     context.stage.render(canvas, global_textures)?;
-    context.player1
+    context
+        .player1
         .render(canvas, &context.camera, global_textures)?;
-    context.player2
+    context
+        .player2
         .render(canvas, &context.camera, global_textures)?;
 
     let player1_hp_per = context.player1.current_hp() / context.player1.max_hp();
@@ -88,7 +108,7 @@ fn render_timer(
     canvas: &mut Canvas<Window>,
     global_textures: &Vec<Texture>,
     timer_animation: &Animation,
-    time: usize
+    time: usize,
 ) -> Result<(), sdl3::Error> {
     let (screen_w, screen_h) = canvas.window().size();
     let frame = time / FRAME_RATE;
@@ -96,19 +116,11 @@ fn render_timer(
 
     let timer_w = screen_w as f32 / 10.0;
     let timer_h = screen_h as f32 / 5.625;
-    let dst = FRect::new(
-        screen_w as f32 * 0.5 - timer_w / 2.0,
-        0.0,
-        timer_w,
-        timer_h,
-    );
+    let dst = FRect::new(screen_w as f32 * 0.5 - timer_w / 2.0, 0.0, timer_w, timer_h);
     canvas.copy(texture, src, dst)
 }
 
-fn render_scores(
-    canvas: &mut Canvas<Window>,
-    score: (u32, u32),
-) -> Result<(), sdl3::Error> {
+fn render_scores(canvas: &mut Canvas<Window>, score: (u32, u32)) -> Result<(), sdl3::Error> {
     let (screen_w, screen_h) = canvas.window().size();
     let y = screen_h as f32 / 15.0;
     let score_w = screen_w as f32 / 40.0;
@@ -136,9 +148,12 @@ fn render_player1_score(
 
         if score > i {
             canvas.set_draw_color(Color::WHITE);
-            canvas.fill_rect(
-                FRect::new(x + 2.0 * i_f32 * w + w * 0.2, y + h * 0.2, w * 0.6, h * 0.6)
-            )?;
+            canvas.fill_rect(FRect::new(
+                x + 2.0 * i_f32 * w + w * 0.2,
+                y + h * 0.2,
+                w * 0.6,
+                h * 0.6,
+            ))?;
         }
     }
 
@@ -160,16 +175,23 @@ fn render_player2_score(
 
         if score >= SCORE_TO_WIN - i {
             canvas.set_draw_color(Color::WHITE);
-            canvas.fill_rect(
-                FRect::new(x + 2.0 * i_f32 * w + w * 0.2, y + h * 0.2, w * 0.6, h * 0.6)
-            )?;
+            canvas.fill_rect(FRect::new(
+                x + 2.0 * i_f32 * w + w * 0.2,
+                y + h * 0.2,
+                w * 0.6,
+                h * 0.6,
+            ))?;
         }
     }
 
     Ok(())
 }
 
-fn render_health_bars(canvas: &mut Canvas<Window>, player1_hp_per: f32, player2_hp_per: f32) -> Result<(), sdl3::Error> {
+fn render_health_bars(
+    canvas: &mut Canvas<Window>,
+    player1_hp_per: f32,
+    player2_hp_per: f32,
+) -> Result<(), sdl3::Error> {
     let (screen_w, screen_h) = canvas.window().size();
     let bar_h = screen_h as f32 / 20.0;
     let bar_width = screen_w as f32 * 0.4;
@@ -178,7 +200,12 @@ fn render_health_bars(canvas: &mut Canvas<Window>, player1_hp_per: f32, player2_
     Ok(())
 }
 
-fn render_player1_health(canvas: &mut Canvas<Window>, hp_per: f32, bar_h: f32, bar_width: f32) -> Result<(), sdl3::Error> {
+fn render_player1_health(
+    canvas: &mut Canvas<Window>,
+    hp_per: f32,
+    bar_h: f32,
+    bar_width: f32,
+) -> Result<(), sdl3::Error> {
     canvas.set_draw_color(Color::RED);
     canvas.fill_rect(FRect::new(0.0, 0.0, bar_width, bar_h))?;
     canvas.set_draw_color(Color::GREEN);
@@ -188,7 +215,13 @@ fn render_player1_health(canvas: &mut Canvas<Window>, hp_per: f32, bar_h: f32, b
     Ok(())
 }
 
-fn render_player2_health(canvas: &mut Canvas<Window>, hp_per: f32, screen_w: f32, bar_h: f32, bar_width: f32) -> Result<(), sdl3::Error> {
+fn render_player2_health(
+    canvas: &mut Canvas<Window>,
+    hp_per: f32,
+    screen_w: f32,
+    bar_h: f32,
+    bar_width: f32,
+) -> Result<(), sdl3::Error> {
     canvas.set_draw_color(Color::RED);
     canvas.fill_rect(FRect::new(
         screen_w as f32 - bar_width,

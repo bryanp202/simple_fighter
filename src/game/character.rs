@@ -2,10 +2,16 @@ mod deserialize;
 mod state;
 
 use crate::game::{
-    boxes::{BlockType, CollisionBox, HitBox, HurtBox}, character::{deserialize::deserialize, state::StateData}, input::Inputs, physics::{gravity_system, velocity_system}, projectile::Projectile, render::{
-        animation::Animation, draw_collision_box_system, draw_hit_boxes_system,
-        draw_hurt_boxes_system, Camera,
-    }, Side
+    Side,
+    boxes::{BlockType, CollisionBox, HitBox, HurtBox},
+    character::{deserialize::deserialize, state::StateData},
+    input::Inputs,
+    physics::{gravity_system, velocity_system},
+    projectile::Projectile,
+    render::{
+        Camera, animation::Animation, draw_collision_box_system, draw_hit_boxes_system,
+        draw_hurt_boxes_system,
+    },
 };
 use sdl3::{
     render::{Canvas, FPoint, Texture, TextureCreator},
@@ -70,16 +76,22 @@ impl Character {
                 self.state_data.update(
                     &self.states,
                     inputs.dir().on_left_side(),
-                    inputs.move_buf().iter().map(|(motion, buttons)| (motion.on_left_side(), *buttons))
+                    inputs
+                        .move_buf()
+                        .iter()
+                        .map(|(motion, buttons)| (motion.on_left_side(), *buttons)),
                 );
-            },
+            }
             Side::Right => {
                 self.state_data.update(
                     &self.states,
                     inputs.dir().on_right_side(),
-                    inputs.move_buf().iter().map(|(motion, buttons)| (motion.on_right_side(), *buttons))
+                    inputs
+                        .move_buf()
+                        .iter()
+                        .map(|(motion, buttons)| (motion.on_right_side(), *buttons)),
                 );
-            },
+            }
         }
     }
 
@@ -89,9 +101,9 @@ impl Character {
 
     pub fn movement_update(&mut self) {
         self.pos = velocity_system(&self.pos, &self.state_data.vel_rel());
-        
+
         self.state_data.update_friction();
-        
+
         if self.state_data.is_airborne(&self.states) {
             let (new_pos, new_vel, grounded) = gravity_system(
                 &self.pos,
@@ -115,7 +127,14 @@ impl Character {
         let current_state = self.state_data.current_state();
         let frame = self.state_data.current_frame();
         let animation = &self.animation_data[current_state];
-        camera.render_animation(canvas, global_textures, &self.pos, animation, frame, self.get_side())?;
+        camera.render_animation(
+            canvas,
+            global_textures,
+            &self.pos,
+            animation,
+            frame,
+            self.get_side(),
+        )?;
 
         if cfg!(feature = "debug") {
             canvas.set_blend_mode(sdl3::render::BlendMode::Blend);
@@ -189,7 +208,9 @@ impl Character {
             BlockType::High => self.state_data.is_blocking_high(&self.states),
         };
 
-        let dmg = self.state_data.on_hit_receive(&self.states, &self.pos, hit, blocking);
+        let dmg = self
+            .state_data
+            .on_hit_receive(&self.states, &self.pos, hit, blocking);
         self.current_hp = (self.current_hp - dmg).max(0.0);
 
         blocking

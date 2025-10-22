@@ -1,12 +1,17 @@
 use std::{collections::HashMap, ops::Range, usize};
 
 use crate::game::{
-    boxes::{BlockType, CollisionBox, HitBox, HurtBox}, character::{
-        state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States}, Character
-    }, input::{ButtonFlag, RelativeDirection, RelativeMotion}, render::{
+    Side,
+    boxes::{BlockType, CollisionBox, HitBox, HurtBox},
+    character::{
+        Character,
+        state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States},
+    },
+    input::{ButtonFlag, RelativeDirection, RelativeMotion},
+    render::{
         self,
         animation::{Animation, AnimationLayout},
-    }, Side
+    },
 };
 
 use sdl3::{

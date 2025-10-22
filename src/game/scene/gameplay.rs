@@ -1,6 +1,11 @@
 use std::cmp::Ordering;
 
-use crate::game::{character::Character, physics::{check_hit_collisions, movement_system, side_detection}, scene::{main_menu::MainMenu, render_gameplay, round_start::RoundStart, Scene, Scenes}, GameContext, FRAME_RATE, SCORE_TO_WIN};
+use crate::game::{
+    FRAME_RATE, GameContext, SCORE_TO_WIN,
+    character::Character,
+    physics::{check_hit_collisions, movement_system, side_detection},
+    scene::{Scene, Scenes, main_menu::MainMenu, render_gameplay, round_start::RoundStart},
+};
 
 const ROUND_LEN: usize = 99;
 
@@ -12,7 +17,11 @@ pub struct Gameplay {
 
 impl Gameplay {
     pub fn new(score: (u32, u32)) -> Self {
-        Self { hit_freeze: 0, score, time: 0 }
+        Self {
+            hit_freeze: 0,
+            score,
+            time: 0,
+        }
     }
 
     fn check_round_end(&mut self, context: &GameContext) -> Option<Scenes> {
@@ -47,7 +56,7 @@ impl Gameplay {
                     println!("Player1 wins!");
                 }
                 Some(Scenes::MainMenu(MainMenu::new()))
-            },
+            }
             (_, SCORE_TO_WIN) => {
                 if cfg!(feature = "debug") {
                     println!("Player2 wins!");
@@ -62,7 +71,11 @@ impl Gameplay {
 impl Scene for Gameplay {
     fn enter(&mut self, _context: &mut crate::game::GameContext) {}
 
-    fn update(&mut self, context: &mut crate::game::GameContext, _dt: f32) -> Option<super::Scenes> {
+    fn update(
+        &mut self,
+        context: &mut crate::game::GameContext,
+        _dt: f32,
+    ) -> Option<super::Scenes> {
         context.player1.update(&context.player1_inputs);
         context.player2.update(&context.player2_inputs);
 
@@ -84,7 +97,9 @@ impl Scene for Gameplay {
             context.player1.set_pos(player1_pos);
             context.player2.set_pos(player2_pos);
 
-            if let Some(player1_side) = side_detection(&context.player1.pos(), &context.player2.pos()) {
+            if let Some(player1_side) =
+                side_detection(&context.player1.pos(), &context.player2.pos())
+            {
                 context.player1.set_side(player1_side);
                 context.player2.set_side(player1_side.opposite());
             }
@@ -102,14 +117,12 @@ impl Scene for Gameplay {
         &self,
         context: &GameContext,
         canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
-        global_textures: &Vec<sdl3::render::Texture>
+        global_textures: &Vec<sdl3::render::Texture>,
     ) -> Result<(), sdl3::Error> {
         render_gameplay(context, canvas, global_textures, self.time, self.score)
     }
 
-    fn exit(&mut self, _context: &mut GameContext) {
-        
-    }
+    fn exit(&mut self, _context: &mut GameContext) {}
 }
 
 // Returns the amount of frames for hit freeze
@@ -156,7 +169,7 @@ fn handle_hit_boxes(player1: &mut Character, player2: &mut Character) -> usize {
             player1.successful_hit(&player1_hit, true);
             player2.successful_hit(&player2_hit, true);
             8
-        },
+        }
         _ => 0,
     }
 }
