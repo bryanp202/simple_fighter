@@ -46,6 +46,7 @@ impl Side {
 
 pub struct GameContext {
     main_menu_texture: usize,
+    round_start_animation: Animation,
     timer_animation: Animation,
     stage: Stage,
     player1: Character,
@@ -86,6 +87,16 @@ impl<'a> Game<'a> {
             "./resources/scenes/main_menu.png",
         )
         .expect("Invalid main menu texture");
+        let round_start_animation = Animation::load(
+            texture_creator,
+            &mut global_textures,
+            "./resources/scenes/round_start_text.png",
+            512,
+            128,
+            4,
+            render::animation::AnimationLayout::VERTICAL,
+        )
+        .expect("Invalid round start animation");
         let timer_animation = Animation::load(
             texture_creator,
             &mut global_textures,
@@ -100,6 +111,7 @@ impl<'a> Game<'a> {
         Self {
             context: GameContext {
                 main_menu_texture,
+                round_start_animation,
                 timer_animation,
                 stage: Stage::init(texture_creator, &mut global_textures),
                 player1: Character::from_config(

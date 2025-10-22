@@ -1,13 +1,17 @@
+use sdl3::render::FPoint;
+
 use crate::game::{
-    FRAME_RATE, GameContext,
-    scene::{Scene, Scenes, gameplay::Gameplay, render_gameplay},
+    scene::{gameplay::Gameplay, render_gameplay, Scene, Scenes}, GameContext, FRAME_RATE, SCORE_TO_WIN
 };
 
-const PAUSE_DURATION: usize = FRAME_RATE * 3;
+const PAUSE_DURATION: u32 = ROUND_DISPLAY_DURATION + FIGHT_DISPLAY_DURATION;
+const ROUND_DISPLAY_DURATION: u32 = (FRAME_RATE as f64 * 2.0) as u32;
+const FIGHT_DISPLAY_DURATION: u32 = (FRAME_RATE as f64 * 1.0) as u32;
 
 pub struct RoundStart {
     score: (u32, u32),
-    timer: usize,
+    round: u32,
+    timer: u32,
 }
 
 impl Scene for RoundStart {
@@ -36,7 +40,20 @@ impl Scene for RoundStart {
         canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
         global_textures: &Vec<sdl3::render::Texture>,
     ) -> Result<(), sdl3::Error> {
-        render_gameplay(context, canvas, global_textures, 0, self.score)
+        render_gameplay(context, canvas, global_textures, 0, self.score)?;
+
+        let text_frame = if self.timer < ROUND_DISPLAY_DURATION {
+            self.round as usize
+        } else {
+            context.round_start_animation.get_frame_count() - 1
+        };
+        context.camera.render_animation(
+            canvas,
+            global_textures,
+            &FPoint::new(0.0, 240.0),
+            &context.round_start_animation,
+            text_frame,
+        )
     }
 
     fn exit(&mut self, _context: &mut GameContext) {}
@@ -44,6 +61,7 @@ impl Scene for RoundStart {
 
 impl RoundStart {
     pub fn new(score: (u32, u32)) -> Self {
-        Self { timer: 0, score }
+        let round = (score.0 + score.1).min(SCORE_TO_WIN);
+        Self { timer: 0, score, round }
     }
 }

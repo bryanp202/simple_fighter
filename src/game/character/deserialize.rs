@@ -8,10 +8,7 @@ use crate::game::{
         state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States},
     },
     input::{ButtonFlag, RelativeDirection, RelativeMotion},
-    render::{
-        self,
-        animation::{Animation, AnimationLayout},
-    },
+    render::animation::{Animation, AnimationLayout},
 };
 
 use sdl3::{

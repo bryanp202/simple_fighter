@@ -63,9 +63,9 @@ impl Animation {
     //     self.frame_h
     // }
 
-    // pub fn get_frame_count(&self) -> usize {
-    //     self.frames
-    // }
+    pub fn get_frame_count(&self) -> usize {
+        self.frames
+    }
 
     pub fn get_frame<'r>(&self, frame: usize, textures: &'r [Texture]) -> (&'r Texture<'r>, FRect) {
         let frame = frame.min(self.frames - 1);

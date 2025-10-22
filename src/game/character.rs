@@ -127,7 +127,7 @@ impl Character {
         let current_state = self.state_data.current_state();
         let frame = self.state_data.current_frame();
         let animation = &self.animation_data[current_state];
-        camera.render_animation(
+        camera.render_animation_on_side(
             canvas,
             global_textures,
             &self.pos,

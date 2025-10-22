@@ -56,6 +56,29 @@ impl Camera {
         pos: &FPoint,
         animation: &Animation,
         frame: usize,
+    ) -> Result<(), sdl3::Error> {
+        let screen_pos = self.to_screen_pos(pos);
+
+        let (texture, src) = animation.get_frame(frame, global_textures);
+        // Animation is rendered with the pos in the center
+        let width = src.w * self.game_to_screen_ratio.x;
+        let height = src.h * self.game_to_screen_ratio.y;
+        let dst = FRect::new(
+            screen_pos.x - width / 2.0,
+            screen_pos.y - height / 2.0,
+            width,
+            height,
+        );
+        canvas.copy(texture, src, dst)
+    }
+
+    pub fn render_animation_on_side(
+        &self,
+        canvas: &mut Canvas<Window>,
+        global_textures: &Vec<Texture>,
+        pos: &FPoint,
+        animation: &Animation,
+        frame: usize,
         side: &Side,
     ) -> Result<(), sdl3::Error> {
         let screen_pos = self.to_screen_pos(pos);
