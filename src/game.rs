@@ -122,7 +122,7 @@ impl<'a> Game<'a> {
                     FPoint::new(-100.0, 0.0),
                     Side::Left,
                 )
-                .unwrap(),
+                .expect("Failed to load player1 config"),
                 player2: Character::from_config(
                     &texture_creator,
                     &mut global_textures,
@@ -130,7 +130,7 @@ impl<'a> Game<'a> {
                     FPoint::new(100.0, 0.0),
                     Side::Right,
                 )
-                .unwrap(),
+                .expect("Failed to load player2 config"),
 
                 camera: Camera::new(screen_dim),
                 player1_inputs: Inputs::new(PLAYER1_BUTTONS, PLAYER1_DIRECTIONS),
@@ -214,7 +214,7 @@ impl<'a> Game<'a> {
 
         self.scene
             .render(&self.context, &mut self.canvas, &self.global_textures)
-            .unwrap();
+            .expect("Failed to render scene");
 
         self.canvas.present();
     }

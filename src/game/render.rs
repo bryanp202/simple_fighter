@@ -180,9 +180,9 @@ fn open_img(file_path: &str) -> Result<DynamicImage, String> {
     let reader = std::io::BufReader::new(file);
     let img = image::ImageReader::new(reader)
         .with_guessed_format()
-        .unwrap()
+        .expect("Failed to guess img file format")
         .decode()
-        .unwrap();
+        .expect("Failed to decode img");
 
     if cfg!(feature = "debug") {
         println!("Loaded image: {}", file_path);
