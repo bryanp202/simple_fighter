@@ -27,9 +27,10 @@ pub fn deserialize<'a>(
     start_pos: FPoint,
     start_side: Side,
 ) -> Result<Character, String> {
-    let src = std::fs::read_to_string(config).map_err(|err| err.to_string())?;
-    let character_json: CharacterJson =
-        serde_json::from_str(&src).map_err(|err| err.to_string())?;
+    let src = std::fs::read_to_string(config)
+        .map_err(|err| format!("Failed to open: '{}': {}", config, err.to_string()))?;
+    let character_json: CharacterJson = serde_json::from_str(&src)
+        .map_err(|err| format!("Failed to parse: '{}': {}", config, err.to_string()))?;
 
     let mut animation_data = Vec::new();
     for mov in character_json.moves.iter() {
