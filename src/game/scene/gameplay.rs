@@ -105,11 +105,11 @@ impl Scene for Gameplay {
             }
 
             self.hit_freeze = handle_hit_boxes(&mut context.player1, &mut context.player2);
+            self.time += 1;
         } else {
             self.hit_freeze -= 1;
         }
 
-        self.time += 1;
         self.check_round_end(context)
     }
 
