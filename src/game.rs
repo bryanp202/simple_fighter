@@ -73,6 +73,7 @@ pub struct Game<'a> {
 }
 
 impl<'a> Game<'a> {
+    /// Maybe this could also be from a config file? ///
     pub fn init(
         texture_creator: &'a TextureCreator<WindowContext>,
         canvas: Canvas<Window>,
