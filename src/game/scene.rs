@@ -209,7 +209,7 @@ fn render_player1_health(
     canvas.set_draw_color(Color::RED);
     canvas.fill_rect(FRect::new(0.0, 0.0, bar_width, bar_h))?;
     canvas.set_draw_color(Color::GREEN);
-    let health_bar = hp_per * bar_width;
+    let health_bar = hp_per.powf(1.4) * bar_width;
     canvas.fill_rect(FRect::new(bar_width - health_bar, 0.0, health_bar, bar_h))?;
 
     Ok(())
@@ -230,7 +230,7 @@ fn render_player2_health(
         bar_h,
     ))?;
     canvas.set_draw_color(Color::GREEN);
-    let health_bar = hp_per * bar_width;
+    let health_bar = hp_per.powf(1.4) * bar_width;
     canvas.fill_rect(FRect::new(
         screen_w as f32 - bar_width,
         0.0,
