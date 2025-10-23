@@ -76,12 +76,7 @@ impl Scene for Gameplay {
         context: &mut crate::game::GameContext,
         _dt: f32,
     ) -> Option<super::Scenes> {
-        context.player1.update(&context.player1_inputs);
-        context.player2.update(&context.player2_inputs);
-
         if self.hit_freeze == 0 {
-            context.player1.advance_frame();
-            context.player2.advance_frame();
             context.player1.movement_update();
             context.player2.movement_update();
 
@@ -105,10 +100,17 @@ impl Scene for Gameplay {
             }
 
             self.hit_freeze = handle_hit_boxes(&mut context.player1, &mut context.player2);
+
+            context.player1.advance_frame();
+            context.player2.advance_frame();
+
             self.time += 1;
         } else {
             self.hit_freeze -= 1;
         }
+
+        context.player1.update(&context.player1_inputs);
+        context.player2.update(&context.player2_inputs);
 
         self.check_round_end(context)
     }
