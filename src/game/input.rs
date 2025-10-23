@@ -312,10 +312,10 @@ impl Motion {
 
     pub fn on_right_side(&self) -> RelativeMotion {
         let bits = self.bits();
-        let result = (bits & Motion::LEFTS.bits()) >> 1
+        let shifted = (bits & Motion::LEFTS.bits()) >> 1
             | (bits & Motion::RIGHTS.bits()) << 1
             | (bits & Motion::NEUTRALS.bits());
-        RelativeMotion::from_bits_retain(result)
+        RelativeMotion::from_bits_retain(shifted)
     }
 }
 
