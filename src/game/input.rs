@@ -284,6 +284,10 @@ bitflags! {
         const QcLeft     = 0b00010000;
         const DpRight    = 0b00100000;
         const DpLeft     = 0b01000000;
+
+        const LEFTS      = 0b01010100;
+        const RIGHTS     = 0b00101010;
+        const NEUTRALS   = 0b00000001;
     }
 }
 
@@ -298,7 +302,6 @@ bitflags! {
         const QcBack           = 0b00010000;
         const DpForward        = 0b00100000;
         const DpBack           = 0b01000000;
-        const Inverse          = 0b10000000;
     }
 }
 
@@ -308,7 +311,11 @@ impl Motion {
     }
 
     pub fn on_right_side(&self) -> RelativeMotion {
-        RelativeMotion::from_bits_retain(self.bits()) | RelativeMotion::Inverse
+        let bits = self.bits();
+        let result = (bits & Motion::LEFTS.bits()) >> 1 |
+        (bits & Motion::RIGHTS.bits()) << 1 |
+        (bits & Motion::NEUTRALS.bits());
+        RelativeMotion::from_bits_retain(result)
     }
 }
 
