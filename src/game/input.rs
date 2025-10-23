@@ -273,62 +273,42 @@ impl RelativeDirection {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Motion {
-    None,
-    DownDown,
-    LeftLeft,
-    RightRight,
-    QcRight,
-    QcLeft,
-    DpRight,
-    DpLeft,
+bitflags! {
+    #[derive(Copy, Clone, Debug, PartialEq)]
+    pub struct Motion: u32 {
+        const NONE       = 0b00000000;
+        const DownDown   = 0b00000001;
+        const RightRight = 0b00000010;
+        const LeftLeft   = 0b00000100;
+        const QcRight    = 0b00001000;
+        const QcLeft     = 0b00010000;
+        const DpRight    = 0b00100000;
+        const DpLeft     = 0b01000000;
+    }
+}
+
+bitflags! {
+    #[derive(Copy, Clone, Debug, PartialEq)]
+    pub struct RelativeMotion: u32 {
+        const NONE             = 0b00000000;
+        const DownDown         = 0b00000001;
+        const ForwardForward   = 0b00000010;
+        const BackBack         = 0b00000100;
+        const QcForward        = 0b00001000;
+        const QcBack           = 0b00010000;
+        const DpForward        = 0b00100000;
+        const DpBack           = 0b01000000;
+        const Inverse          = 0b10000000;
+    }
 }
 
 impl Motion {
     pub fn on_left_side(&self) -> RelativeMotion {
-        match self {
-            Motion::None => RelativeMotion::None,
-            Motion::DownDown => RelativeMotion::DownDown,
-            Motion::LeftLeft => RelativeMotion::BackBack,
-            Motion::RightRight => RelativeMotion::ForwardForward,
-            Motion::QcRight => RelativeMotion::QcForward,
-            Motion::QcLeft => RelativeMotion::QcBack,
-            Motion::DpRight => RelativeMotion::DpForward,
-            Motion::DpLeft => RelativeMotion::DpBack,
-        }
+        RelativeMotion::from_bits_retain(self.bits())
     }
 
     pub fn on_right_side(&self) -> RelativeMotion {
-        match self {
-            Motion::None => RelativeMotion::None,
-            Motion::DownDown => RelativeMotion::DownDown,
-            Motion::LeftLeft => RelativeMotion::ForwardForward,
-            Motion::RightRight => RelativeMotion::BackBack,
-            Motion::QcRight => RelativeMotion::QcBack,
-            Motion::QcLeft => RelativeMotion::QcForward,
-            Motion::DpRight => RelativeMotion::DpBack,
-            Motion::DpLeft => RelativeMotion::DpForward,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum RelativeMotion {
-    None,
-    DownDown,
-    ForwardForward,
-    BackBack,
-    QcForward,
-    QcBack,
-    DpForward,
-    DpBack,
-}
-
-impl RelativeMotion {
-    /// Returns true if self and other match, or if self is none
-    pub fn matches_or_is_none(&self, other: &RelativeMotion) -> bool {
-        *self == *other || *self == RelativeMotion::None
+        RelativeMotion::from_bits_retain(self.bits()) | RelativeMotion::Inverse
     }
 }
 
@@ -372,7 +352,7 @@ impl InputHistory {
     fn new() -> Self {
         Self {
             buf: std::array::from_fn(|_| (Direction::Neutral, ButtonFlag::NONE, 1)),
-            motion_buf: std::array::from_fn(|_| (Motion::None, ButtonFlag::NONE)),
+            motion_buf: std::array::from_fn(|_| (Motion::NONE, ButtonFlag::NONE)),
             current_index: 0,
         }
     }
@@ -388,7 +368,7 @@ impl InputHistory {
     }
 
     fn shift_motion_buf(&mut self, just_pressed_buttons: ButtonFlag) {
-        let mut new_buf: MoveBuffer = std::array::from_fn(|_| (Motion::None, ButtonFlag::NONE));
+        let mut new_buf: MoveBuffer = std::array::from_fn(|_| (Motion::NONE, ButtonFlag::NONE));
         new_buf[1..].copy_from_slice(&self.motion_buf[0..Self::MOTION_BUF_SIZE - 1]);
         new_buf[0] = (self.parse_motion(), just_pressed_buttons);
         self.motion_buf = new_buf;
@@ -406,6 +386,8 @@ impl InputHistory {
 
     /// Returns the most recent and most valuable motion stored
     fn parse_motion(&self) -> Motion {
+        let mut result = Motion::NONE;
+
         let mut ordered_frames = [Direction::Neutral; Self::HISTORY_FRAME_LEN];
         let mut frame_count = 0;
         let mut i = 0;
@@ -426,54 +408,56 @@ impl InputHistory {
 
         let right_dp = Self::find_dir_sequence(motion_slice, Self::DP_RIGHT_INVERSE);
         let left_dp = Self::find_dir_sequence(motion_slice, Self::DP_LEFT_INVERSE);
-        match (right_dp, left_dp) {
-            (Some(_), None) => return Motion::DpRight,
-            (None, Some(_)) => return Motion::DpLeft,
+        result |= match (right_dp, left_dp) {
+            (Some(_), None) => Motion::DpRight,
+            (None, Some(_)) => Motion::DpLeft,
             (Some(right), Some(left)) => {
-                return if right <= left {
+                if right <= left {
                     Motion::DpRight
                 } else {
                     Motion::DpLeft
-                };
+                }
             }
-            _ => {}
-        }
+            _ => Motion::NONE,
+        };
 
         let right_qc = Self::find_dir_sequence(motion_slice, Self::QC_RIGHT_INVERSE);
         let left_qc = Self::find_dir_sequence(motion_slice, Self::QC_LEFT_INVERSE);
-        match (right_qc, left_qc) {
-            (Some(_), None) => return Motion::QcRight,
-            (None, Some(_)) => return Motion::QcLeft,
+        result |= match (right_qc, left_qc) {
+            (Some(_), None) => Motion::QcRight,
+            (None, Some(_)) => Motion::QcLeft,
             (Some(right), Some(left)) => {
-                return if right <= left {
+                if right <= left {
                     Motion::QcRight
                 } else {
                     Motion::QcLeft
-                };
+                }
             }
-            _ => {}
-        }
+            _ => Motion::NONE,
+        };
 
         let right_right = Self::find_dir_sequence(dash_slice, Self::RIGHT_RIGHT_INVERSE);
         let left_left = Self::find_dir_sequence(dash_slice, Self::LEFT_LEFT_INVERSE);
-        match (right_right, left_left) {
-            (Some(_), None) => return Motion::RightRight,
-            (None, Some(_)) => return Motion::LeftLeft,
+        result |= match (right_right, left_left) {
+            (Some(_), None) => Motion::RightRight,
+            (None, Some(_)) => Motion::LeftLeft,
             (Some(right), Some(left)) => {
-                return if right <= left {
+                if right <= left {
                     Motion::RightRight
                 } else {
                     Motion::LeftLeft
-                };
+                }
             }
-            _ => {}
-        }
+            _ => Motion::NONE,
+        };
 
-        if let Some(_) = Self::find_dir_sequence(motion_slice, Self::DOWN_DOWN_INVERSE) {
+        result |= if let Some(_) = Self::find_dir_sequence(motion_slice, Self::DOWN_DOWN_INVERSE) {
             Motion::DownDown
         } else {
-            Motion::None
-        }
+            Motion::NONE
+        };
+
+        result
     }
 
     fn find_dir_sequence(haystack: &[Direction], seq: &[Direction]) -> Option<usize> {

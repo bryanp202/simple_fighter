@@ -1,7 +1,8 @@
 use sdl3::render::FPoint;
 
 use crate::game::{
-    scene::{gameplay::Gameplay, render_gameplay, Scene, Scenes}, GameContext, FRAME_RATE, SCORE_TO_WIN
+    FRAME_RATE, GameContext, SCORE_TO_WIN,
+    scene::{Scene, Scenes, gameplay::Gameplay, render_gameplay},
 };
 
 const PAUSE_DURATION: u32 = ROUND_DISPLAY_DURATION + FIGHT_DISPLAY_DURATION;
@@ -62,6 +63,10 @@ impl Scene for RoundStart {
 impl RoundStart {
     pub fn new(score: (u32, u32)) -> Self {
         let round = (score.0 + score.1).min(SCORE_TO_WIN);
-        Self { timer: 0, score, round }
+        Self {
+            timer: 0,
+            score,
+            round,
+        }
     }
 }

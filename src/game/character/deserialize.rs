@@ -451,7 +451,7 @@ impl InputJson {
         match self {
             Self::Direction { dir, button } => MoveInput::new(
                 button.to_button_flag(),
-                RelativeMotion::None,
+                RelativeMotion::NONE,
                 dir.to_relative_direction(),
             ),
             Self::Motion { motion, button } => MoveInput::new(

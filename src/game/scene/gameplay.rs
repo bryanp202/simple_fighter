@@ -77,9 +77,7 @@ impl Scene for Gameplay {
         _dt: f32,
     ) -> Option<super::Scenes> {
         // Side check first to prevent flickering
-        if let Some(player1_side) =
-            side_detection(&context.player1.pos(), &context.player2.pos())
-        {
+        if let Some(player1_side) = side_detection(&context.player1.pos(), &context.player2.pos()) {
             context.player1.set_side(player1_side);
             context.player2.set_side(player1_side.opposite());
         }

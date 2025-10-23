@@ -193,7 +193,7 @@ impl StateData {
             }
 
             let maybe_index = move_iter.clone().position(|(buf_motion, buf_buttons)| {
-                cancel_option.motion.matches_or_is_none(&buf_motion)
+                buf_motion.contains(cancel_option.motion)
                     && buf_buttons.contains(cancel_option.button)
             });
 
