@@ -76,6 +76,16 @@ impl Scene for Gameplay {
         context: &mut crate::game::GameContext,
         _dt: f32,
     ) -> Option<super::Scenes> {
+        // Side check first to prevent flickering
+        if let Some(player1_side) =
+            side_detection(&context.player1.pos(), &context.player2.pos())
+        {
+            context.player1.set_side(player1_side);
+            context.player2.set_side(player1_side.opposite());
+        }
+        context.player1.update(&context.player1_inputs);
+        context.player2.update(&context.player2_inputs);
+
         if self.hit_freeze == 0 {
             context.player1.movement_update();
             context.player2.movement_update();
@@ -92,13 +102,6 @@ impl Scene for Gameplay {
             context.player1.set_pos(player1_pos);
             context.player2.set_pos(player2_pos);
 
-            if let Some(player1_side) =
-                side_detection(&context.player1.pos(), &context.player2.pos())
-            {
-                context.player1.set_side(player1_side);
-                context.player2.set_side(player1_side.opposite());
-            }
-
             self.hit_freeze = handle_hit_boxes(&mut context.player1, &mut context.player2);
 
             context.player1.advance_frame();
@@ -108,9 +111,6 @@ impl Scene for Gameplay {
         } else {
             self.hit_freeze -= 1;
         }
-
-        context.player1.update(&context.player1_inputs);
-        context.player2.update(&context.player2_inputs);
 
         self.check_round_end(context)
     }

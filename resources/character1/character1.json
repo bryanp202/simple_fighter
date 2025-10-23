@@ -490,7 +490,7 @@
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
       "start_behavior": {"type" : "SetVel", "x": 0, "y": 0},
-      "flags": [],
+      "flags": [{"type": "LockSide"}],
       "end_behavior": { "type" : "OnFrameXToStateY", "x" : 16, "y" : "neutral"},
       
       "cancel_window": {"start": 7, "end": 10},
@@ -581,7 +581,7 @@
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
       "start_behavior": {"type" : "SetVel", "x": 0, "y": 0},
-      "flags": [],
+      "flags": [{"type": "LockSide"}],
       "end_behavior": { "type" : "OnFrameXToStateY", "x" : 30, "y" : "neutral"},
       
       "cancel_window": {"start": 10, "end": 22},
@@ -621,7 +621,7 @@
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
       "start_behavior": {"type" : "SetVel", "x": 0, "y": 0},
-      "flags": [],
+      "flags": [{"type": "LockSide"}],
       "end_behavior": { "type" : "OnFrameXToStateY", "x" : 20, "y" : "neutral"},
       
       "cancel_window": {"start": 10, "end": 14},
