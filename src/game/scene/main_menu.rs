@@ -1,5 +1,5 @@
 use crate::game::{
-    GameContext,
+    GameContext, GameState,
     input::ButtonFlag,
     scene::{Scene, Scenes, round_start::RoundStart},
 };
@@ -9,10 +9,15 @@ pub struct MainMenu {
 }
 
 impl Scene for MainMenu {
-    fn enter(&mut self, _context: &mut GameContext) {}
+    fn enter(&mut self, _context: &GameContext, _state: &mut GameState) {}
 
-    fn update(&mut self, context: &mut GameContext, _dt: f32) -> Option<super::Scenes> {
-        let light_pressed = context
+    fn update(
+        &mut self,
+        _context: &GameContext,
+        state: &mut GameState,
+        _dt: f32,
+    ) -> Option<super::Scenes> {
+        let light_pressed = state
             .player1_inputs
             .held_buttons()
             .intersects(ButtonFlag::L);
@@ -26,14 +31,15 @@ impl Scene for MainMenu {
 
     fn render(
         &self,
-        context: &GameContext,
         canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
         global_textures: &Vec<sdl3::render::Texture>,
+        context: &GameContext,
+        _state: &GameState,
     ) -> Result<(), sdl3::Error> {
         canvas.copy(&global_textures[context.main_menu_texture], None, None)
     }
 
-    fn exit(&mut self, _context: &mut GameContext) {}
+    fn exit(&mut self, _context: &GameContext, _state: &mut GameState) {}
 }
 
 impl MainMenu {

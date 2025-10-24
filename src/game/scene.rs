@@ -5,7 +5,7 @@ use sdl3::{
 };
 
 use crate::game::{
-    FRAME_RATE, GameContext, SCORE_TO_WIN,
+    FRAME_RATE, GameContext, GameState, SCORE_TO_WIN,
     render::animation::Animation,
     scene::{gameplay::Gameplay, main_menu::MainMenu, round_start::RoundStart},
 };
@@ -15,15 +15,16 @@ mod main_menu;
 mod round_start;
 
 pub trait Scene {
-    fn enter(&mut self, context: &mut GameContext);
-    fn update(&mut self, context: &mut GameContext, dt: f32) -> Option<Scenes>;
+    fn enter(&mut self, context: &GameContext, state: &mut GameState);
+    fn update(&mut self, context: &GameContext, state: &mut GameState, dt: f32) -> Option<Scenes>;
     fn render(
         &self,
-        context: &GameContext,
         canvas: &mut Canvas<Window>,
         global_textures: &Vec<Texture>,
+        context: &GameContext,
+        state: &GameState,
     ) -> Result<(), sdl3::Error>;
-    fn exit(&mut self, context: &mut GameContext);
+    fn exit(&mut self, context: &GameContext, state: &mut GameState);
 }
 
 pub enum Scenes {
@@ -36,40 +37,43 @@ pub enum Scenes {
 }
 
 impl Scene for Scenes {
-    fn enter(&mut self, context: &mut GameContext) -> () {
+    fn enter(&mut self, context: &GameContext, state: &mut GameState) -> () {
         match self {
-            Self::MainMenu(main_menu) => main_menu.enter(context),
-            Self::RoundStart(round_start) => round_start.enter(context),
-            Self::Gameplay(gameplay) => gameplay.enter(context),
+            Self::MainMenu(main_menu) => main_menu.enter(context, state),
+            Self::RoundStart(round_start) => round_start.enter(context, state),
+            Self::Gameplay(gameplay) => gameplay.enter(context, state),
         }
     }
 
-    fn update(&mut self, context: &mut GameContext, dt: f32) -> Option<Scenes> {
+    fn update(&mut self, context: &GameContext, state: &mut GameState, dt: f32) -> Option<Scenes> {
         match self {
-            Self::MainMenu(main_menu) => main_menu.update(context, dt),
-            Self::RoundStart(round_start) => round_start.update(context, dt),
-            Self::Gameplay(gameplay) => gameplay.update(context, dt),
+            Self::MainMenu(main_menu) => main_menu.update(context, state, dt),
+            Self::RoundStart(round_start) => round_start.update(context, state, dt),
+            Self::Gameplay(gameplay) => gameplay.update(context, state, dt),
         }
     }
 
     fn render(
         &self,
-        context: &GameContext,
         canvas: &mut Canvas<Window>,
         global_textures: &Vec<Texture>,
+        context: &GameContext,
+        state: &GameState,
     ) -> Result<(), sdl3::Error> {
         match self {
-            Self::MainMenu(main_menu) => main_menu.render(context, canvas, global_textures),
-            Self::RoundStart(round_start) => round_start.render(context, canvas, global_textures),
-            Self::Gameplay(gameplay) => gameplay.render(context, canvas, global_textures),
+            Self::MainMenu(main_menu) => main_menu.render(canvas, global_textures, context, state),
+            Self::RoundStart(round_start) => {
+                round_start.render(canvas, global_textures, context, state)
+            }
+            Self::Gameplay(gameplay) => gameplay.render(canvas, global_textures, context, state),
         }
     }
 
-    fn exit(&mut self, context: &mut GameContext) {
+    fn exit(&mut self, context: &GameContext, state: &mut GameState) {
         match self {
-            Self::MainMenu(main_menu) => main_menu.exit(context),
-            Self::RoundStart(round_start) => round_start.exit(context),
-            Self::Gameplay(gameplay) => gameplay.exit(context),
+            Self::MainMenu(main_menu) => main_menu.exit(context, state),
+            Self::RoundStart(round_start) => round_start.exit(context, state),
+            Self::Gameplay(gameplay) => gameplay.exit(context, state),
         }
     }
 }
@@ -81,22 +85,23 @@ impl Scenes {
 }
 
 fn render_gameplay(
-    context: &GameContext,
     canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
     global_textures: &Vec<sdl3::render::Texture>,
+    context: &GameContext,
+    state: &GameState,
     time: usize,
     score: (u32, u32),
 ) -> Result<(), sdl3::Error> {
     context.stage.render(canvas, global_textures)?;
-    context
+    state
         .player1
-        .render(canvas, &context.camera, global_textures)?;
-    context
+        .render(canvas, &context.camera, global_textures, &context.player1)?;
+    state
         .player2
-        .render(canvas, &context.camera, global_textures)?;
+        .render(canvas, &context.camera, global_textures, &context.player2)?;
 
-    let player1_hp_per = context.player1.current_hp() / context.player1.max_hp();
-    let player2_hp_per = context.player2.current_hp() / context.player2.max_hp();
+    let player1_hp_per = state.player1.hp_per(&context.player1);
+    let player2_hp_per = state.player2.hp_per(&context.player2);
     render_health_bars(canvas, player1_hp_per, player2_hp_per)?;
     render_timer(canvas, global_textures, &context.timer_animation, time)?;
     render_scores(canvas, score)?;

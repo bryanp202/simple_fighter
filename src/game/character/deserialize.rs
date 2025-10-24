@@ -3,10 +3,7 @@ use std::{collections::HashMap, ops::Range, usize};
 use crate::game::{
     Side,
     boxes::{BlockType, CollisionBox, HitBox, HurtBox},
-    character::{
-        Character,
-        state::{EndBehavior, MoveInput, StartBehavior, StateData, StateFlags, States},
-    },
+    character::{self, EndBehavior, MoveInput, StartBehavior, StateData, StateFlags},
     input::{ButtonFlag, RelativeDirection, RelativeMotion},
     render::animation::{Animation, AnimationLayout},
 };
@@ -23,7 +20,7 @@ pub fn deserialize<'a>(
     config: &str,
     start_pos: FPoint,
     start_side: Side,
-) -> Result<Character, String> {
+) -> Result<(character::Context, character::State), String> {
     let src = std::fs::read_to_string(config)
         .map_err(|err| format!("Failed to open: '{}': {}", config, err.to_string()))?;
     let character_json: CharacterJson = serde_json::from_str(&src)
@@ -139,38 +136,35 @@ pub fn deserialize<'a>(
         ));
     };
 
-    let states = States::init(
-        inputs,
-        cancel_windows,
-        cancel_options,
-        hit_boxes_start,
-        hurt_boxes_start,
-        flags,
-        start_behaviors,
-        end_behaviors,
-        run_length_hit_boxes,
-        run_length_hurt_boxes,
-        run_length_cancel_options,
+    let context = character::Context {
+        name: character_json.name,
+        max_hp: character_json.hp as f32,
+        start_pos,
+        start_side,
         block_stun_state,
         ground_hit_state,
         launch_hit_state,
-    );
+        states: StateData {
+            inputs,
+            cancel_windows,
+            cancel_options,
+            hit_boxes_start,
+            hurt_boxes_start,
+            flags,
+            start_behaviors,
+            end_behaviors,
+            run_length_hit_boxes,
+            run_length_hurt_boxes,
+            run_length_cancel_options,
+            hit_box_data,
+            hurt_box_data,
+            collision_box_data,
+            animation_data,
+        },
+    };
+    let state = character::State::new(character_json.hp as f32, start_pos, start_side);
 
-    Ok(Character {
-        name: character_json.name,
-        max_hp: character_json.hp as f32,
-        start_side,
-        start_pos,
-        current_hp: character_json.hp as f32,
-        pos: start_pos,
-        states,
-        projectiles: Vec::new(),
-        hit_box_data,
-        hurt_box_data,
-        collision_box_data,
-        animation_data,
-        state_data: StateData::new(start_side),
-    })
+    Ok((context, state))
 }
 
 fn append_hit_box_data(

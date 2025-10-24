@@ -1,7 +1,7 @@
 use sdl3::render::FPoint;
 
 use crate::game::{
-    FRAME_RATE, GameContext, SCORE_TO_WIN,
+    FRAME_RATE, GameContext, GameState, SCORE_TO_WIN,
     scene::{Scene, Scenes, gameplay::Gameplay, render_gameplay},
 };
 
@@ -16,16 +16,21 @@ pub struct RoundStart {
 }
 
 impl Scene for RoundStart {
-    fn enter(&mut self, context: &mut GameContext) {
-        context.player1_inputs.reset();
-        context.player2_inputs.reset();
-        context.player1.reset();
-        context.player2.reset();
+    fn enter(&mut self, context: &GameContext, state: &mut GameState) {
+        state.player1_inputs.reset();
+        state.player2_inputs.reset();
+        state.player1.reset(&context.player1);
+        state.player2.reset(&context.player2);
     }
 
-    fn update(&mut self, context: &mut GameContext, _dt: f32) -> Option<super::Scenes> {
-        context.player1.advance_frame();
-        context.player2.advance_frame();
+    fn update(
+        &mut self,
+        _context: &GameContext,
+        state: &mut GameState,
+        _dt: f32,
+    ) -> Option<super::Scenes> {
+        state.player1.advance_frame();
+        state.player2.advance_frame();
 
         self.timer += 1;
         if self.timer == PAUSE_DURATION {
@@ -37,11 +42,12 @@ impl Scene for RoundStart {
 
     fn render(
         &self,
-        context: &GameContext,
         canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
         global_textures: &Vec<sdl3::render::Texture>,
+        context: &GameContext,
+        state: &GameState,
     ) -> Result<(), sdl3::Error> {
-        render_gameplay(context, canvas, global_textures, 0, self.score)?;
+        render_gameplay(canvas, global_textures, context, state, 0, self.score)?;
 
         let text_frame = if self.timer < ROUND_DISPLAY_DURATION {
             self.round as usize
@@ -57,7 +63,7 @@ impl Scene for RoundStart {
         )
     }
 
-    fn exit(&mut self, _context: &mut GameContext) {}
+    fn exit(&mut self, _context: &GameContext, _state: &mut GameState) {}
 }
 
 impl RoundStart {

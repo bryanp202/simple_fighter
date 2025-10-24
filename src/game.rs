@@ -9,7 +9,6 @@ mod stage;
 
 use std::time::{Duration, Instant};
 
-use character::Character;
 use sdl3::{
     EventPump,
     event::{Event, WindowEvent},
@@ -49,17 +48,23 @@ pub struct GameContext {
     round_start_animation: Animation,
     timer_animation: Animation,
     stage: Stage,
-    player1: Character,
-    player2: Character,
+    player1: character::Context,
+    player2: character::Context,
 
     // Resources
+    camera: Camera,
+}
+
+pub struct GameState {
     player1_inputs: Inputs,
     player2_inputs: Inputs,
-    camera: Camera,
+    player1: character::State,
+    player2: character::State,
 }
 
 pub struct Game<'a> {
     context: GameContext,
+    state: GameState,
     scene: Scenes,
 
     // Resources
@@ -109,30 +114,36 @@ impl<'a> Game<'a> {
         )
         .expect("Invalid timer animation");
 
+        let (player1_context, player1_state) = character::from_config(
+            &texture_creator,
+            &mut global_textures,
+            "./resources/character1/character1.json",
+            FPoint::new(-100.0, 0.0),
+            Side::Left,
+        )
+        .expect("Failed to load player1 config");
+        let (player2_context, player2_state) = character::from_config(
+            &texture_creator,
+            &mut global_textures,
+            "./resources/character1/character2.json",
+            FPoint::new(100.0, 0.0),
+            Side::Right,
+        )
+        .expect("Failed to load player2 config");
+
         Self {
             context: GameContext {
                 main_menu_texture,
                 round_start_animation,
                 timer_animation,
                 stage: Stage::init(texture_creator, &mut global_textures),
-                player1: Character::from_config(
-                    &texture_creator,
-                    &mut global_textures,
-                    "./resources/character1/character1.json",
-                    FPoint::new(-100.0, 0.0),
-                    Side::Left,
-                )
-                .expect("Failed to load player1 config"),
-                player2: Character::from_config(
-                    &texture_creator,
-                    &mut global_textures,
-                    "./resources/character1/character2.json",
-                    FPoint::new(100.0, 0.0),
-                    Side::Right,
-                )
-                .expect("Failed to load player2 config"),
-
+                player1: player1_context,
+                player2: player2_context,
                 camera: Camera::new(screen_dim),
+            },
+            state: GameState {
+                player1: player1_state,
+                player2: player2_state,
                 player1_inputs: Inputs::new(PLAYER1_BUTTONS, PLAYER1_DIRECTIONS),
                 player2_inputs: Inputs::new(PLAYER2_BUTTONS, PLAYER2_DIRECTIONS),
             },
@@ -182,16 +193,16 @@ impl<'a> Game<'a> {
                     repeat: false,
                     ..
                 } => {
-                    self.context.player1_inputs.handle_keypress(keycode);
-                    self.context.player2_inputs.handle_keypress(keycode);
+                    self.state.player1_inputs.handle_keypress(keycode);
+                    self.state.player2_inputs.handle_keypress(keycode);
                 }
                 Event::KeyUp {
                     keycode: Some(keycode),
                     repeat: false,
                     ..
                 } => {
-                    self.context.player1_inputs.handle_keyrelease(keycode);
-                    self.context.player2_inputs.handle_keyrelease(keycode);
+                    self.state.player1_inputs.handle_keyrelease(keycode);
+                    self.state.player2_inputs.handle_keyrelease(keycode);
                 }
                 _ => {}
             }
@@ -199,11 +210,11 @@ impl<'a> Game<'a> {
     }
 
     fn update(&mut self, dt: f32) {
-        self.context.player1_inputs.update();
-        self.context.player2_inputs.update();
-        if let Some(mut new_scene) = self.scene.update(&mut self.context, dt) {
-            self.scene.exit(&mut self.context);
-            new_scene.enter(&mut self.context);
+        self.state.player1_inputs.update();
+        self.state.player2_inputs.update();
+        if let Some(mut new_scene) = self.scene.update(&self.context, &mut self.state, dt) {
+            self.scene.exit(&self.context, &mut self.state);
+            new_scene.enter(&self.context, &mut self.state);
             self.scene = new_scene;
         }
     }
@@ -213,7 +224,12 @@ impl<'a> Game<'a> {
         self.canvas.clear();
 
         self.scene
-            .render(&self.context, &mut self.canvas, &self.global_textures)
+            .render(
+                &mut self.canvas,
+                &self.global_textures,
+                &self.context,
+                &self.state,
+            )
             .expect("Failed to render scene");
 
         self.canvas.present();
