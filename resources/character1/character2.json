@@ -610,6 +610,14 @@
               "hit_stun": null,
               "cancel_window": 10,
               "block_type": {"type": "Mid"}
+            },
+            {
+              "rect": {"x": 50, "y": 90, "w": 100, "h": 30},
+              "dmg": 100,
+              "block_stun": 20,
+              "hit_stun": null,
+              "cancel_window": 10,
+              "block_type": {"type": "Mid"}
             }
           ]
         },
