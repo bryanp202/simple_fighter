@@ -328,8 +328,9 @@ struct InputHistory {
 }
 
 impl InputHistory {
-    const HISTORY_FRAME_LEN: usize = 32;
-    const DASH_HISTORY_LEN: usize = Self::HISTORY_FRAME_LEN / 2;
+    const HISTORY_FRAME_LEN: usize = 64;
+    const PARSE_LEN: usize = 32;
+    const DASH_HISTORY_LEN: usize = Self::PARSE_LEN / 2;
     const MOTION_BUF_SIZE: usize = 4;
 
     // Most Valuable
@@ -377,7 +378,7 @@ impl InputHistory {
     fn shift_motion_buf(&mut self, just_pressed_buttons: ButtonFlag) {
         let mut new_buf: MoveBuffer = std::array::from_fn(|_| (Motion::NONE, ButtonFlag::NONE));
         new_buf[1..].copy_from_slice(&self.motion_buf[0..Self::MOTION_BUF_SIZE - 1]);
-        new_buf[0] = (self.parse_motion(), just_pressed_buttons);
+        new_buf[0] = (self.parse_history(0));
         self.motion_buf = new_buf;
     }
 
@@ -391,20 +392,79 @@ impl InputHistory {
         }
     }
 
-    /// Returns the most recent and most valuable motion stored
-    fn parse_motion(&self) -> Motion {
+    /// Insert a data point index_from_head places back from the current index
+    /// ie. if index_from_head == 3 then insert 3 places in the past
+    /// 
+    /// Expects index_from_head to be <= SIZE
+    /// 
+    /// Returns if inserted data caused shift in running length encoding
+    /// 
+    /// This will never increment a runs length, so do not use to change shap, just to split runs
+    pub fn insert_input(&mut self, index: usize, input_dir: Direction, input_buttons: ButtonFlag) -> bool {
+        let (run_index, overlap) = self.get_index_and_overlap(index);
+        let (dir, buttons, frames) = &mut self.buf[run_index];
+        if *dir == input_dir && *buttons == input_buttons {
+            return false;
+        }
+        *frames -= overlap;
+
+        // Shift all data points newer than inserted one
+        for i in 0..index {
+            let src_index = (Self::HISTORY_FRAME_LEN + self.current_index - i) % Self::HISTORY_FRAME_LEN;
+            let dst_index = (src_index + 1) % Self::HISTORY_FRAME_LEN;
+            self.buf[dst_index] = self.buf[src_index].clone();
+
+        }
+        let split_index = (run_index + 1) % Self::HISTORY_FRAME_LEN;
+        self.buf[split_index] = (input_dir, input_buttons, overlap);
+
+        true
+    }
+
+    /// Returns the index that the run (index spaces back) is and how much overlap there is
+    fn get_index_and_overlap(&self, mut frame: usize) -> (usize, usize) {
+        let mut current_index = self.current_index; 
+        frame += 1;
+
+        loop {
+            let (_, _, frames) = &self.buf[current_index];
+            if frame <= *frames {
+                return (current_index, frame);
+            }
+            frame -= frames;
+            current_index = (Self::HISTORY_FRAME_LEN + current_index - 1) % Self::HISTORY_FRAME_LEN;
+        }
+    }
+
+    /// Expects delay to be <= HISTORY_FRAME_LEN + PARSE_LEN
+    fn parse_history(&self, delay: usize) -> (Motion, ButtonFlag) {
         let mut result = Motion::NONE;
 
         let mut ordered_frames = [Direction::Neutral; Self::HISTORY_FRAME_LEN];
         let mut frame_count = 0;
         let mut i = 0;
         let mut dash_buffer_end = None;
-        while frame_count < Self::HISTORY_FRAME_LEN {
+
+        let (overlap_index, overlap) = self.get_index_and_overlap(delay);
+
+        let just_pressed_buttons = {
+            if self.buf[overlap_index].2 == overlap {
+                let index_before = (Self::HISTORY_FRAME_LEN + overlap_index - 1) % Self::HISTORY_FRAME_LEN;
+                (self.buf[index_before].1 ^ self.buf[overlap_index].1) & !self.buf[index_before].1
+            } else {
+                ButtonFlag::NONE
+            }
+        };
+
+        frame_count += self.buf[overlap_index].2 - overlap;
+        ordered_frames[i] = self.buf[overlap_index].0;
+        i += 1;
+
+        while frame_count < Self::PARSE_LEN {
             if dash_buffer_end.is_none() && frame_count >= Self::DASH_HISTORY_LEN {
                 dash_buffer_end = Some(i);
             }
-            let current_index =
-                (Self::HISTORY_FRAME_LEN + self.current_index - i) % Self::HISTORY_FRAME_LEN;
+            let current_index = (Self::HISTORY_FRAME_LEN + self.current_index - i) % Self::HISTORY_FRAME_LEN;
             let (dir, _, frames) = &self.buf[current_index];
             ordered_frames[i] = *dir;
             frame_count += *frames;
@@ -464,7 +524,7 @@ impl InputHistory {
             Motion::NONE
         };
 
-        result
+        (result, just_pressed_buttons)
     }
 
     fn find_dir_sequence(haystack: &[Direction], seq: &[Direction]) -> Option<usize> {

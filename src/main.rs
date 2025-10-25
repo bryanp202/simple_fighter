@@ -1,4 +1,5 @@
 mod game;
+mod ring_buf;
 
 use crate::game::Game;
 

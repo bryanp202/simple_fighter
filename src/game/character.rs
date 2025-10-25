@@ -90,7 +90,7 @@ impl Context {
 
         loop {
             let (frames, range) = &self.states.run_length_hit_boxes[run_start];
-            if current_frame < *frames {
+            if current_frame <= *frames {
                 return &self.states.hit_box_data[range.clone()];
             }
             current_frame -= frames;
@@ -107,7 +107,7 @@ impl Context {
 
         loop {
             let (frames, range) = &self.states.run_length_hurt_boxes[run_start];
-            if current_frame < *frames {
+            if current_frame <= *frames {
                 return &self.states.hurt_box_data[range.clone()];
             }
             current_frame -= frames;

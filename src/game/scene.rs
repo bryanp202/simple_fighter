@@ -27,6 +27,7 @@ pub trait Scene {
     fn exit(&mut self, context: &GameContext, state: &mut GameState);
 }
 
+#[derive(Clone)]
 pub enum Scenes {
     MainMenu(MainMenu),
     RoundStart(RoundStart),
