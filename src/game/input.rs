@@ -26,12 +26,10 @@ const DP_LEFT_INVERSE: &[Direction] = &[
     Direction::Left,
 ];
 // Second Most valuable
-const QC_RIGHT_INVERSE: &[Direction] =
-    &[Direction::Right, Direction::DownRight, Direction::Down];
+const QC_RIGHT_INVERSE: &[Direction] = &[Direction::Right, Direction::DownRight, Direction::Down];
 const QC_LEFT_INVERSE: &[Direction] = &[Direction::Left, Direction::DownLeft, Direction::Down];
 // Least Valuable Motion Input
-const RIGHT_RIGHT_INVERSE: &[Direction] =
-    &[Direction::Right, Direction::Neutral, Direction::Right];
+const RIGHT_RIGHT_INVERSE: &[Direction] = &[Direction::Right, Direction::Neutral, Direction::Right];
 const LEFT_LEFT_INVERSE: &[Direction] = &[Direction::Left, Direction::Neutral, Direction::Left];
 // Second Least Valuable Motion Input
 const DOWN_DOWN_INVERSE: &[Direction] = &[Direction::Down, Direction::Neutral, Direction::Down];
@@ -62,7 +60,10 @@ pub const PLAYER2_DIRECTIONS: KeyToDirections = [
 type MoveBuffer = [(Motion, ButtonFlag); MOTION_BUF_SIZE];
 
 // Returns an input history and state component for a players input
-pub fn new_inputs(key_to_button: KeyToButtons, key_to_direction: KeyToDirections) -> (InputHistory, Inputs) {
+pub fn new_inputs(
+    key_to_button: KeyToButtons,
+    key_to_direction: KeyToDirections,
+) -> (InputHistory, Inputs) {
     let inputs = Inputs::new();
     let input_history = InputHistory::new(key_to_button, key_to_direction, 0);
     (input_history, inputs)
@@ -249,13 +250,18 @@ impl InputHistory {
 
     /// Insert a data point index_from_head places back from the current index
     /// ie. if index_from_head == 3 then insert 3 places in the past
-    /// 
+    ///
     /// Expects index_from_head to be <= SIZE
-    /// 
+    ///
     /// Returns if inserted data caused shift in running length encoding
-    /// 
+    ///
     /// This will never increment a runs length, so do not use to change shap, just to split runs
-    pub fn insert_input(&mut self, rollback: usize, input_dir: Direction, input_buttons: ButtonFlag) -> bool {
+    pub fn insert_input(
+        &mut self,
+        rollback: usize,
+        input_dir: Direction,
+        input_buttons: ButtonFlag,
+    ) -> bool {
         let (run_index, overlap) = self.get_index_and_overlap(rollback);
         let (dir, buttons, frames) = &mut self.buf[run_index];
         if *dir == input_dir && *buttons == input_buttons {
@@ -274,7 +280,6 @@ impl InputHistory {
             let src_index = (run_index + i) % HISTORY_FRAME_LEN;
             let dst_index = (src_index + 1) % HISTORY_FRAME_LEN;
             self.buf[dst_index] = self.buf[src_index].clone();
-
         }
         let split_index = (run_index + 1) % HISTORY_FRAME_LEN;
         self.buf[split_index] = (input_dir, input_buttons, overlap);
@@ -284,7 +289,7 @@ impl InputHistory {
 
     /// Returns the index that the run (index spaces back) is and how much overlap there is
     fn get_index_and_overlap(&self, mut frame: usize) -> (usize, usize) {
-        let mut current_index = self.current_index; 
+        let mut current_index = self.current_index;
         frame += 1;
 
         loop {
@@ -329,7 +334,12 @@ impl InputHistory {
         (dir, result, just_pressed_buttons)
     }
 
-    fn order_frames(&self, buf: &mut [Direction; HISTORY_FRAME_LEN], overlap_index: usize, overlap: usize) -> (usize, usize) {
+    fn order_frames(
+        &self,
+        buf: &mut [Direction; HISTORY_FRAME_LEN],
+        overlap_index: usize,
+        overlap: usize,
+    ) -> (usize, usize) {
         let mut dash_buffer_end = None;
         let mut frame_count = self.buf[overlap_index].2 - overlap;
         buf[0] = self.buf[overlap_index].0;

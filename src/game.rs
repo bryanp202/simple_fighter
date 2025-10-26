@@ -10,15 +10,26 @@ mod stage;
 use std::time::{Duration, Instant};
 
 use sdl3::{
-    event::{Event, WindowEvent}, keyboard::Keycode, pixels::Color, render::{Canvas, FPoint, Texture, TextureCreator}, video::{Window, WindowContext}, EventPump
+    EventPump,
+    event::{Event, WindowEvent},
+    keyboard::Keycode,
+    pixels::Color,
+    render::{Canvas, FPoint, Texture, TextureCreator},
+    video::{Window, WindowContext},
 };
 
-use crate::{game::{
-    input::{InputHistory, Inputs, PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, PLAYER2_BUTTONS, PLAYER2_DIRECTIONS},
-    render::{animation::Animation, load_texture, Camera},
-    scene::{Scene, Scenes},
-    stage::Stage,
-}, ring_buf::RingBuf};
+use crate::{
+    game::{
+        input::{
+            InputHistory, Inputs, PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, PLAYER2_BUTTONS,
+            PLAYER2_DIRECTIONS,
+        },
+        render::{Camera, animation::Animation, load_texture},
+        scene::{Scene, Scenes},
+        stage::Stage,
+    },
+    ring_buf::RingBuf,
+};
 
 const FRAME_RATE: usize = 60;
 const FRAME_DURATION: f32 = 1.0 / FRAME_RATE as f32;
@@ -207,8 +218,10 @@ impl<'a> Game<'a> {
                 } => {
                     self.game_world.context.camera.resize((x as u32, y as u32));
                 }
-                Event::KeyDown { keycode: Some(keycode), ..}
-                if keycode == Keycode::Space => {
+                Event::KeyDown {
+                    keycode: Some(keycode),
+                    ..
+                } if keycode == Keycode::Space => {
                     self.game_world.rollback(3);
                 }
                 Event::KeyDown {
@@ -216,16 +229,24 @@ impl<'a> Game<'a> {
                     repeat: false,
                     ..
                 } => {
-                    self.game_world.player1_input_history.handle_keypress(keycode);
-                    self.game_world.player2_input_history.handle_keypress(keycode);
+                    self.game_world
+                        .player1_input_history
+                        .handle_keypress(keycode);
+                    self.game_world
+                        .player2_input_history
+                        .handle_keypress(keycode);
                 }
                 Event::KeyUp {
                     keycode: Some(keycode),
                     repeat: false,
                     ..
                 } => {
-                    self.game_world.player1_input_history.handle_keyrelease(keycode);
-                    self.game_world.player2_input_history.handle_keyrelease(keycode);
+                    self.game_world
+                        .player1_input_history
+                        .handle_keyrelease(keycode);
+                    self.game_world
+                        .player2_input_history
+                        .handle_keyrelease(keycode);
                 }
                 _ => {}
             }
@@ -236,23 +257,38 @@ impl<'a> Game<'a> {
         // Handle inputs
         self.game_world.player1_input_history.update();
         self.game_world.player2_input_history.update();
-        self.game_world.state.player1_inputs.update(self.game_world.player1_input_history.parse_history());
-        self.game_world.state.player2_inputs.update(self.game_world.player2_input_history.parse_history());
+        self.game_world
+            .state
+            .player1_inputs
+            .update(self.game_world.player1_input_history.parse_history());
+        self.game_world
+            .state
+            .player2_inputs
+            .update(self.game_world.player2_input_history.parse_history());
 
-        if let Some(mut new_scene) = self.game_world.scene.update(&self.game_world.context, &mut self.game_world.state, dt) {
-            self.game_world.scene.exit(&self.game_world.context, &mut self.game_world.state);
+        if let Some(mut new_scene) =
+            self.game_world
+                .scene
+                .update(&self.game_world.context, &mut self.game_world.state, dt)
+        {
+            self.game_world
+                .scene
+                .exit(&self.game_world.context, &mut self.game_world.state);
             new_scene.enter(&self.game_world.context, &mut self.game_world.state);
             self.game_world.scene = new_scene;
         }
 
-        self.game_world.game_state_history.append((self.game_world.scene.clone(), self.game_world.state.clone()));
+        self.game_world
+            .game_state_history
+            .append((self.game_world.scene.clone(), self.game_world.state.clone()));
     }
 
     fn render(&mut self) {
         self.canvas.set_draw_color(Color::BLACK);
         self.canvas.clear();
 
-        self.game_world.scene
+        self.game_world
+            .scene
             .render(
                 &mut self.canvas,
                 &self.global_textures,
@@ -276,16 +312,24 @@ impl GameWorld {
 
     fn fast_simulate(&mut self, frames: usize) {
         for frame in 0..frames {
-            self.state.player1_inputs.update(self.player1_input_history.parse_history_at(frames - frame));
-            self.state.player2_inputs.update(self.player2_input_history.parse_history_at(frames - frame));
+            self.state
+                .player1_inputs
+                .update(self.player1_input_history.parse_history_at(frames - frame));
+            self.state
+                .player2_inputs
+                .update(self.player2_input_history.parse_history_at(frames - frame));
 
-            if let Some(mut new_scene) = self.scene.update(&self.context, &mut self.state, FRAME_DURATION) {
+            if let Some(mut new_scene) =
+                self.scene
+                    .update(&self.context, &mut self.state, FRAME_DURATION)
+            {
                 self.scene.exit(&self.context, &mut self.state);
                 new_scene.enter(&self.context, &mut self.state);
                 self.scene = new_scene;
             }
 
-            self.game_state_history.append((self.scene.clone(), self.state.clone()));
+            self.game_state_history
+                .append((self.scene.clone(), self.state.clone()));
         }
     }
 }

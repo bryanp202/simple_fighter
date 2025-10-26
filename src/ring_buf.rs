@@ -5,9 +5,12 @@ pub struct RingBuf<T: Clone, const SIZE: usize> {
     index: usize,
 }
 
-impl <T: Clone, const SIZE: usize> RingBuf<T, SIZE> {
+impl<T: Clone, const SIZE: usize> RingBuf<T, SIZE> {
     pub fn new(start_state: T) -> Self {
-        Self {buf: std::array::from_fn(|_| MaybeUninit::new(start_state.clone())), index: 0}
+        Self {
+            buf: std::array::from_fn(|_| MaybeUninit::new(start_state.clone())),
+            index: 0,
+        }
     }
 
     pub fn append(&mut self, new_data: T) {
@@ -18,5 +21,5 @@ impl <T: Clone, const SIZE: usize> RingBuf<T, SIZE> {
     pub fn rewind(&mut self, indices: usize) -> T {
         self.index = (SIZE + self.index - indices) % SIZE;
         unsafe { self.buf[self.index].assume_init_read() }
-    } 
+    }
 }
