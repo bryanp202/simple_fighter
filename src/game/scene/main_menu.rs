@@ -20,7 +20,7 @@ impl Scene for MainMenu {
     ) -> Option<super::Scenes> {
         let light_pressed = state
             .player1_inputs
-            .held_buttons()
+            .active_buttons()
             .intersects(ButtonFlag::L);
         if self.button_pressed && !light_pressed {
             Some(Scenes::RoundStart(RoundStart::new((0, 0))))

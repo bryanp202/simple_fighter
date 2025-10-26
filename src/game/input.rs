@@ -1,9 +1,40 @@
 use bitflags::bitflags;
 use sdl3::keyboard::Keycode;
 
+use crate::game::MAX_ROLLBACK_FRAMES;
+
 const DIRECTION_COUNT: usize = 4;
 const BUTTON_COUNT: usize = 3;
 const INPUT_VARIANTS: usize = 1;
+const MOTION_BUF_SIZE: usize = 4;
+
+const HISTORY_FRAME_LEN: usize = MAX_ROLLBACK_FRAMES + 64;
+const HISTORY_PARSE_FRAMES: usize = 32;
+const DASH_HISTORY_LEN: usize = HISTORY_PARSE_FRAMES / 2;
+
+// Most Valuable
+const DP_RIGHT_INVERSE: &[Direction] = &[
+    Direction::DownRight,
+    Direction::Down,
+    Direction::Neutral,
+    Direction::Right,
+];
+const DP_LEFT_INVERSE: &[Direction] = &[
+    Direction::DownLeft,
+    Direction::Down,
+    Direction::Neutral,
+    Direction::Left,
+];
+// Second Most valuable
+const QC_RIGHT_INVERSE: &[Direction] =
+    &[Direction::Right, Direction::DownRight, Direction::Down];
+const QC_LEFT_INVERSE: &[Direction] = &[Direction::Left, Direction::DownLeft, Direction::Down];
+// Least Valuable Motion Input
+const RIGHT_RIGHT_INVERSE: &[Direction] =
+    &[Direction::Right, Direction::Neutral, Direction::Right];
+const LEFT_LEFT_INVERSE: &[Direction] = &[Direction::Left, Direction::Neutral, Direction::Left];
+// Second Least Valuable Motion Input
+const DOWN_DOWN_INVERSE: &[Direction] = &[Direction::Down, Direction::Neutral, Direction::Down];
 
 pub const PLAYER1_BUTTONS: KeyToButtons = [
     (Keycode::G, ButtonFlag::L),
@@ -28,63 +59,63 @@ pub const PLAYER2_DIRECTIONS: KeyToDirections = [
     (Keycode::Right, DirectionFlag::Right),
 ];
 
+type MoveBuffer = [(Motion, ButtonFlag); MOTION_BUF_SIZE];
+
+// Returns an input history and state component for a players input
+pub fn new_inputs(key_to_button: KeyToButtons, key_to_direction: KeyToDirections) -> (InputHistory, Inputs) {
+    let inputs = Inputs::new();
+    let input_history = InputHistory::new(key_to_button, key_to_direction, 0);
+    (input_history, inputs)
+}
+
+#[derive(Clone)]
 pub struct Inputs {
-    state: InputState,
-    input_history: InputHistory,
+    dir: Direction,
+    buttons: ButtonFlag,
+    buf: MoveBuffer,
 }
 
 impl Inputs {
-    pub fn new(key_to_button: KeyToButtons, key_to_direction: KeyToDirections) -> Self {
+    fn new() -> Self {
         Self {
-            state: InputState::new(key_to_button, key_to_direction),
-            input_history: InputHistory::new(),
+            dir: Direction::Neutral,
+            buttons: ButtonFlag::NONE,
+            buf: std::array::from_fn(|_| (Motion::NONE, ButtonFlag::NONE)),
         }
     }
 
-    pub fn reset(&mut self) {
-        self.input_history = InputHistory::new();
-    }
-
-    pub fn held_buttons(&self) -> ButtonFlag {
-        self.state.buttons_pressed
-    }
-
-    pub fn just_pressed_buttons(&self) -> ButtonFlag {
-        self.state.buttons_just_pressed
+    pub fn active_buttons(&self) -> ButtonFlag {
+        self.buttons
     }
 
     pub fn dir(&self) -> Direction {
-        self.state.dir
+        self.dir
     }
 
     pub fn move_buf(&self) -> MoveBuffer {
-        self.input_history.motion_buf
+        self.buf
     }
 
-    pub fn handle_keypress(&mut self, keycode: Keycode) {
-        self.state.handle_keypress(keycode);
-    }
+    pub fn update(&mut self, parsed_input: (Direction, Motion, ButtonFlag)) {
+        let mut new_buf: MoveBuffer = std::array::from_fn(|_| (Motion::NONE, ButtonFlag::NONE));
+        new_buf[1..].copy_from_slice(&self.buf[0..MOTION_BUF_SIZE - 1]);
 
-    pub fn handle_keyrelease(&mut self, keycode: Keycode) {
-        self.state.handle_keyrelease(keycode);
-    }
-
-    pub fn update(&mut self) {
-        self.state.update();
-        self.input_history
-            .update(self.dir(), self.held_buttons(), self.just_pressed_buttons());
+        let (dir, motion, buttons) = parsed_input;
+        new_buf[0] = (motion, buttons);
+        self.buf = new_buf;
+        self.dir = dir;
+        self.buttons = buttons;
     }
 }
 
 type KeyToButtons = [(Keycode, ButtonFlag); BUTTON_COUNT * INPUT_VARIANTS];
 type KeyToDirections = [(Keycode, DirectionFlag); DIRECTION_COUNT * INPUT_VARIANTS];
 struct InputState {
-    dir: Direction,
-    held_dir: DirectionFlag,
+    active_dir: DirectionFlag,
+    release_next_dir: DirectionFlag,
 
-    buttons_pressed: ButtonFlag,
-    buttons_just_pressed_temp: ButtonFlag,
-    buttons_just_pressed: ButtonFlag,
+    active_buttons: ButtonFlag,
+    release_next_buttons: ButtonFlag,
 
     key_to_button: KeyToButtons,
     key_to_direction: KeyToDirections,
@@ -93,11 +124,10 @@ struct InputState {
 impl InputState {
     pub fn new(key_to_button: KeyToButtons, key_to_direction: KeyToDirections) -> Self {
         Self {
-            dir: Direction::Neutral,
-            held_dir: DirectionFlag::Neutral,
-            buttons_pressed: ButtonFlag::NONE,
-            buttons_just_pressed_temp: ButtonFlag::NONE,
-            buttons_just_pressed: ButtonFlag::NONE,
+            active_buttons: ButtonFlag::NONE,
+            active_dir: DirectionFlag::Neutral,
+            release_next_buttons: ButtonFlag::NONE,
+            release_next_dir: DirectionFlag::Neutral,
             key_to_button,
             key_to_direction,
         }
@@ -113,8 +143,8 @@ impl InputState {
         });
 
         if let Some(pressed_button) = pairing {
-            self.buttons_pressed |= pressed_button;
-            self.buttons_just_pressed_temp |= pressed_button;
+            self.active_buttons |= pressed_button;
+            self.release_next_buttons &= !pressed_button;
         } else {
             let dir_pairing = self.key_to_direction.iter().find_map(|pair| {
                 if pair.0 == keycode {
@@ -125,7 +155,8 @@ impl InputState {
             });
 
             if let Some(pressed_direction) = dir_pairing {
-                self.held_dir |= pressed_direction;
+                self.active_dir |= pressed_direction;
+                self.release_next_dir &= !pressed_direction;
             }
         }
     }
@@ -140,7 +171,7 @@ impl InputState {
         });
 
         if let Some(pressed_button) = pairing {
-            self.buttons_pressed ^= pressed_button;
+            self.release_next_buttons |= pressed_button;
         } else {
             let dir_pairing = self.key_to_direction.iter().find_map(|pair| {
                 if pair.0 == keycode {
@@ -151,13 +182,13 @@ impl InputState {
             });
 
             if let Some(pressed_direction) = dir_pairing {
-                self.held_dir ^= pressed_direction;
+                self.release_next_dir |= pressed_direction;
             }
         }
     }
 
-    fn update(&mut self) {
-        self.dir = match self.held_dir {
+    fn update(&mut self) -> (Direction, ButtonFlag) {
+        let dir = match self.active_dir {
             DirectionFlag::Right | DirectionFlag::_RightAlt => Direction::Right,
             DirectionFlag::Left | DirectionFlag::_LeftAlt => Direction::Left,
             DirectionFlag::Up | DirectionFlag::_UpAlt => Direction::Up,
@@ -168,9 +199,175 @@ impl InputState {
             DirectionFlag::DownLeft => Direction::DownLeft,
             _ => Direction::Neutral,
         };
+        let buttons = self.active_buttons;
 
-        self.buttons_just_pressed = self.buttons_just_pressed_temp;
-        self.buttons_just_pressed_temp = ButtonFlag::NONE;
+        self.active_buttons ^= self.release_next_buttons;
+        self.release_next_buttons = ButtonFlag::NONE;
+        self.active_dir ^= self.release_next_dir;
+        self.release_next_dir = DirectionFlag::Neutral;
+
+        (dir, buttons)
+    }
+}
+
+pub struct InputHistory {
+    input: InputState,
+    buf: [(Direction, ButtonFlag, usize); HISTORY_FRAME_LEN],
+    current_index: usize,
+    delay: usize,
+}
+
+impl InputHistory {
+    fn new(key_to_button: KeyToButtons, key_to_direction: KeyToDirections, delay: usize) -> Self {
+        Self {
+            input: InputState::new(key_to_button, key_to_direction),
+            buf: std::array::from_fn(|_| (Direction::Neutral, ButtonFlag::NONE, 1)),
+            current_index: 0,
+            delay,
+        }
+    }
+
+    pub fn handle_keypress(&mut self, keycode: Keycode) {
+        self.input.handle_keypress(keycode);
+    }
+
+    pub fn handle_keyrelease(&mut self, keycode: Keycode) {
+        self.input.handle_keyrelease(keycode);
+    }
+
+    pub fn update(&mut self) {
+        let (input_dir, input_buttons) = self.input.update();
+
+        let (dir, buttons, frames) = &mut self.buf[self.current_index];
+        if *dir == input_dir && *buttons == input_buttons {
+            *frames += 1;
+        } else {
+            self.current_index = (self.current_index + 1) % HISTORY_FRAME_LEN;
+            self.buf[self.current_index] = (input_dir, input_buttons, 1);
+        }
+    }
+
+    /// Insert a data point index_from_head places back from the current index
+    /// ie. if index_from_head == 3 then insert 3 places in the past
+    /// 
+    /// Expects index_from_head to be <= SIZE
+    /// 
+    /// Returns if inserted data caused shift in running length encoding
+    /// 
+    /// This will never increment a runs length, so do not use to change shap, just to split runs
+    pub fn insert_input(&mut self, rollback: usize, input_dir: Direction, input_buttons: ButtonFlag) -> bool {
+        let (run_index, overlap) = self.get_index_and_overlap(rollback);
+        let (dir, buttons, frames) = &mut self.buf[run_index];
+        if *dir == input_dir && *buttons == input_buttons {
+            return false;
+        }
+
+        if *frames == overlap {
+            self.buf[run_index] = (input_dir, input_buttons, overlap);
+            return true;
+        }
+
+        *frames -= overlap;
+
+        // Shift all data points newer than inserted one
+        for i in (1..=(self.current_index.abs_diff(run_index))).rev() {
+            let src_index = (run_index + i) % HISTORY_FRAME_LEN;
+            let dst_index = (src_index + 1) % HISTORY_FRAME_LEN;
+            self.buf[dst_index] = self.buf[src_index].clone();
+
+        }
+        let split_index = (run_index + 1) % HISTORY_FRAME_LEN;
+        self.buf[split_index] = (input_dir, input_buttons, overlap);
+
+        true
+    }
+
+    /// Returns the index that the run (index spaces back) is and how much overlap there is
+    fn get_index_and_overlap(&self, mut frame: usize) -> (usize, usize) {
+        let mut current_index = self.current_index; 
+        frame += 1;
+
+        loop {
+            let (_, _, frames) = &self.buf[current_index];
+            if frame <= *frames {
+                return (current_index, frame);
+            }
+            frame -= frames;
+            current_index = (HISTORY_FRAME_LEN + current_index - 1) % HISTORY_FRAME_LEN;
+        }
+    }
+
+    pub fn parse_history(&self) -> (Direction, Motion, ButtonFlag) {
+        self.parse_history_at(0)
+    }
+
+    /// Expects delay to be <= HISTORY_FRAME_LEN + PARSE_LEN
+    pub fn parse_history_at(&self, rollback: usize) -> (Direction, Motion, ButtonFlag) {
+        let mut result = Motion::NONE;
+
+        let (overlap_index, overlap) = self.get_index_and_overlap(self.delay + rollback);
+
+        let just_pressed_buttons = self.get_buttons_pressed(overlap_index, overlap);
+
+        let mut ordered_frames = [Direction::Neutral; HISTORY_FRAME_LEN];
+        let (motion_end, dash_end) = self.order_frames(&mut ordered_frames, overlap_index, overlap);
+        let motion_slice = &ordered_frames[0..motion_end];
+        let dash_slice = &ordered_frames[0..dash_end];
+
+        result |= Self::find_dir_sequence(motion_slice, DP_RIGHT_INVERSE, Motion::DpRight);
+        result |= Self::find_dir_sequence(motion_slice, DP_LEFT_INVERSE, Motion::DpLeft);
+
+        result |= Self::find_dir_sequence(motion_slice, QC_RIGHT_INVERSE, Motion::QcRight);
+        result |= Self::find_dir_sequence(motion_slice, QC_LEFT_INVERSE, Motion::QcLeft);
+
+        result |= Self::find_dir_sequence(dash_slice, RIGHT_RIGHT_INVERSE, Motion::RightRight);
+        result |= Self::find_dir_sequence(dash_slice, LEFT_LEFT_INVERSE, Motion::LeftLeft);
+
+        result |= Self::find_dir_sequence(motion_slice, DOWN_DOWN_INVERSE, Motion::DownDown);
+
+        let dir = ordered_frames[0];
+        (dir, result, just_pressed_buttons)
+    }
+
+    fn order_frames(&self, buf: &mut [Direction; HISTORY_FRAME_LEN], overlap_index: usize, overlap: usize) -> (usize, usize) {
+        let mut dash_buffer_end = None;
+        let mut frame_count = self.buf[overlap_index].2 - overlap;
+        buf[0] = self.buf[overlap_index].0;
+        let mut write_i = 1;
+        let mut read_i = 1;
+
+        while frame_count < HISTORY_PARSE_FRAMES {
+            if dash_buffer_end.is_none() && frame_count >= DASH_HISTORY_LEN {
+                dash_buffer_end = Some(write_i);
+            }
+            let current_index = (HISTORY_FRAME_LEN + overlap_index - read_i) % HISTORY_FRAME_LEN;
+            let (dir, _, frames) = &self.buf[current_index];
+            if buf[write_i - 1] != *dir {
+                buf[write_i] = *dir;
+                write_i += 1;
+            }
+            read_i += 1;
+            frame_count += *frames;
+        }
+
+        (write_i, dash_buffer_end.unwrap_or(write_i))
+    }
+
+    fn get_buttons_pressed(&self, overlap_index: usize, overlap: usize) -> ButtonFlag {
+        if self.buf[overlap_index].2 == overlap {
+            let index_before = (HISTORY_FRAME_LEN + overlap_index - 1) % HISTORY_FRAME_LEN;
+            (self.buf[index_before].1 ^ self.buf[overlap_index].1) & !self.buf[index_before].1
+        } else {
+            ButtonFlag::NONE
+        }
+    }
+
+    fn find_dir_sequence(haystack: &[Direction], seq: &[Direction], motion: Motion) -> Motion {
+        if let Some(_) = haystack.windows(seq.len()).position(|window| window == seq) {
+            motion
+        } else {
+            Motion::NONE
+        }
     }
 }
 
@@ -316,218 +513,5 @@ impl Motion {
             | (bits & Motion::RIGHTS.bits()) << 1
             | (bits & Motion::NEUTRALS.bits());
         RelativeMotion::from_bits_retain(shifted)
-    }
-}
-
-type MoveBuffer = [(Motion, ButtonFlag); InputHistory::MOTION_BUF_SIZE];
-
-struct InputHistory {
-    buf: [(Direction, ButtonFlag, usize); Self::HISTORY_FRAME_LEN],
-    motion_buf: MoveBuffer,
-    current_index: usize,
-}
-
-impl InputHistory {
-    const HISTORY_FRAME_LEN: usize = 64;
-    const PARSE_LEN: usize = 32;
-    const DASH_HISTORY_LEN: usize = Self::PARSE_LEN / 2;
-    const MOTION_BUF_SIZE: usize = 4;
-
-    // Most Valuable
-    const DP_RIGHT_INVERSE: &[Direction] = &[
-        Direction::DownRight,
-        Direction::Down,
-        Direction::Neutral,
-        Direction::Right,
-    ];
-    const DP_LEFT_INVERSE: &[Direction] = &[
-        Direction::DownLeft,
-        Direction::Down,
-        Direction::Neutral,
-        Direction::Left,
-    ];
-    // Second Most valuable
-    const QC_RIGHT_INVERSE: &[Direction] =
-        &[Direction::Right, Direction::DownRight, Direction::Down];
-    const QC_LEFT_INVERSE: &[Direction] = &[Direction::Left, Direction::DownLeft, Direction::Down];
-    // Least Valuable Motion Input
-    const RIGHT_RIGHT_INVERSE: &[Direction] =
-        &[Direction::Right, Direction::Neutral, Direction::Right];
-    const LEFT_LEFT_INVERSE: &[Direction] = &[Direction::Left, Direction::Neutral, Direction::Left];
-    // Second Least Valuable Motion Input
-    const DOWN_DOWN_INVERSE: &[Direction] = &[Direction::Down, Direction::Neutral, Direction::Down];
-
-    fn new() -> Self {
-        Self {
-            buf: std::array::from_fn(|_| (Direction::Neutral, ButtonFlag::NONE, 1)),
-            motion_buf: std::array::from_fn(|_| (Motion::NONE, ButtonFlag::NONE)),
-            current_index: 0,
-        }
-    }
-
-    fn update(
-        &mut self,
-        dir: Direction,
-        held_buttons: ButtonFlag,
-        just_pressed_buttons: ButtonFlag,
-    ) {
-        self.append_input(dir, held_buttons);
-        self.shift_motion_buf(just_pressed_buttons);
-    }
-
-    fn shift_motion_buf(&mut self, just_pressed_buttons: ButtonFlag) {
-        let mut new_buf: MoveBuffer = std::array::from_fn(|_| (Motion::NONE, ButtonFlag::NONE));
-        new_buf[1..].copy_from_slice(&self.motion_buf[0..Self::MOTION_BUF_SIZE - 1]);
-        new_buf[0] = (self.parse_history(0));
-        self.motion_buf = new_buf;
-    }
-
-    fn append_input(&mut self, input_dir: Direction, input_buttons: ButtonFlag) {
-        let (dir, buttons, frames) = &mut self.buf[self.current_index];
-        if *dir == input_dir && *buttons == input_buttons {
-            *frames += 1;
-        } else {
-            self.current_index = (self.current_index + 1) % Self::HISTORY_FRAME_LEN;
-            self.buf[self.current_index] = (input_dir, input_buttons, 1);
-        }
-    }
-
-    /// Insert a data point index_from_head places back from the current index
-    /// ie. if index_from_head == 3 then insert 3 places in the past
-    /// 
-    /// Expects index_from_head to be <= SIZE
-    /// 
-    /// Returns if inserted data caused shift in running length encoding
-    /// 
-    /// This will never increment a runs length, so do not use to change shap, just to split runs
-    pub fn insert_input(&mut self, index: usize, input_dir: Direction, input_buttons: ButtonFlag) -> bool {
-        let (run_index, overlap) = self.get_index_and_overlap(index);
-        let (dir, buttons, frames) = &mut self.buf[run_index];
-        if *dir == input_dir && *buttons == input_buttons {
-            return false;
-        }
-        *frames -= overlap;
-
-        // Shift all data points newer than inserted one
-        for i in 0..index {
-            let src_index = (Self::HISTORY_FRAME_LEN + self.current_index - i) % Self::HISTORY_FRAME_LEN;
-            let dst_index = (src_index + 1) % Self::HISTORY_FRAME_LEN;
-            self.buf[dst_index] = self.buf[src_index].clone();
-
-        }
-        let split_index = (run_index + 1) % Self::HISTORY_FRAME_LEN;
-        self.buf[split_index] = (input_dir, input_buttons, overlap);
-
-        true
-    }
-
-    /// Returns the index that the run (index spaces back) is and how much overlap there is
-    fn get_index_and_overlap(&self, mut frame: usize) -> (usize, usize) {
-        let mut current_index = self.current_index; 
-        frame += 1;
-
-        loop {
-            let (_, _, frames) = &self.buf[current_index];
-            if frame <= *frames {
-                return (current_index, frame);
-            }
-            frame -= frames;
-            current_index = (Self::HISTORY_FRAME_LEN + current_index - 1) % Self::HISTORY_FRAME_LEN;
-        }
-    }
-
-    /// Expects delay to be <= HISTORY_FRAME_LEN + PARSE_LEN
-    fn parse_history(&self, delay: usize) -> (Motion, ButtonFlag) {
-        let mut result = Motion::NONE;
-
-        let mut ordered_frames = [Direction::Neutral; Self::HISTORY_FRAME_LEN];
-        let mut frame_count = 0;
-        let mut i = 0;
-        let mut dash_buffer_end = None;
-
-        let (overlap_index, overlap) = self.get_index_and_overlap(delay);
-
-        let just_pressed_buttons = {
-            if self.buf[overlap_index].2 == overlap {
-                let index_before = (Self::HISTORY_FRAME_LEN + overlap_index - 1) % Self::HISTORY_FRAME_LEN;
-                (self.buf[index_before].1 ^ self.buf[overlap_index].1) & !self.buf[index_before].1
-            } else {
-                ButtonFlag::NONE
-            }
-        };
-
-        frame_count += self.buf[overlap_index].2 - overlap;
-        ordered_frames[i] = self.buf[overlap_index].0;
-        i += 1;
-
-        while frame_count < Self::PARSE_LEN {
-            if dash_buffer_end.is_none() && frame_count >= Self::DASH_HISTORY_LEN {
-                dash_buffer_end = Some(i);
-            }
-            let current_index = (Self::HISTORY_FRAME_LEN + self.current_index - i) % Self::HISTORY_FRAME_LEN;
-            let (dir, _, frames) = &self.buf[current_index];
-            ordered_frames[i] = *dir;
-            frame_count += *frames;
-            i += 1;
-        }
-        let motion_slice = &ordered_frames[0..i];
-        let dash_slice = &ordered_frames[0..dash_buffer_end.unwrap_or(i)];
-
-        let right_dp = Self::find_dir_sequence(motion_slice, Self::DP_RIGHT_INVERSE);
-        let left_dp = Self::find_dir_sequence(motion_slice, Self::DP_LEFT_INVERSE);
-        result |= match (right_dp, left_dp) {
-            (Some(_), None) => Motion::DpRight,
-            (None, Some(_)) => Motion::DpLeft,
-            (Some(right), Some(left)) => {
-                if right <= left {
-                    Motion::DpRight
-                } else {
-                    Motion::DpLeft
-                }
-            }
-            _ => Motion::NONE,
-        };
-
-        let right_qc = Self::find_dir_sequence(motion_slice, Self::QC_RIGHT_INVERSE);
-        let left_qc = Self::find_dir_sequence(motion_slice, Self::QC_LEFT_INVERSE);
-        result |= match (right_qc, left_qc) {
-            (Some(_), None) => Motion::QcRight,
-            (None, Some(_)) => Motion::QcLeft,
-            (Some(right), Some(left)) => {
-                if right <= left {
-                    Motion::QcRight
-                } else {
-                    Motion::QcLeft
-                }
-            }
-            _ => Motion::NONE,
-        };
-
-        let right_right = Self::find_dir_sequence(dash_slice, Self::RIGHT_RIGHT_INVERSE);
-        let left_left = Self::find_dir_sequence(dash_slice, Self::LEFT_LEFT_INVERSE);
-        result |= match (right_right, left_left) {
-            (Some(_), None) => Motion::RightRight,
-            (None, Some(_)) => Motion::LeftLeft,
-            (Some(right), Some(left)) => {
-                if right <= left {
-                    Motion::RightRight
-                } else {
-                    Motion::LeftLeft
-                }
-            }
-            _ => Motion::NONE,
-        };
-
-        result |= if let Some(_) = Self::find_dir_sequence(motion_slice, Self::DOWN_DOWN_INVERSE) {
-            Motion::DownDown
-        } else {
-            Motion::NONE
-        };
-
-        (result, just_pressed_buttons)
-    }
-
-    fn find_dir_sequence(haystack: &[Direction], seq: &[Direction]) -> Option<usize> {
-        haystack.windows(seq.len()).position(|window| window == seq)
     }
 }

@@ -10,23 +10,20 @@ mod stage;
 use std::time::{Duration, Instant};
 
 use sdl3::{
-    EventPump,
-    event::{Event, WindowEvent},
-    pixels::Color,
-    render::{Canvas, FPoint, Texture, TextureCreator},
-    video::{Window, WindowContext},
+    event::{Event, WindowEvent}, keyboard::Keycode, pixels::Color, render::{Canvas, FPoint, Texture, TextureCreator}, video::{Window, WindowContext}, EventPump
 };
 
-use crate::game::{
-    input::{Inputs, PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, PLAYER2_BUTTONS, PLAYER2_DIRECTIONS},
-    render::{Camera, animation::Animation, load_texture},
+use crate::{game::{
+    input::{InputHistory, Inputs, PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, PLAYER2_BUTTONS, PLAYER2_DIRECTIONS},
+    render::{animation::Animation, load_texture, Camera},
     scene::{Scene, Scenes},
     stage::Stage,
-};
+}, ring_buf::RingBuf};
 
 const FRAME_RATE: usize = 60;
 const FRAME_DURATION: f32 = 1.0 / FRAME_RATE as f32;
 const SCORE_TO_WIN: u32 = 2;
+const MAX_ROLLBACK_FRAMES: usize = 64;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Side {
@@ -55,6 +52,7 @@ pub struct GameContext {
     camera: Camera,
 }
 
+#[derive(Clone)]
 pub struct GameState {
     player1_inputs: Inputs,
     player2_inputs: Inputs,
@@ -62,15 +60,22 @@ pub struct GameState {
     player2: character::State,
 }
 
-pub struct Game<'a> {
+struct GameWorld {
     context: GameContext,
     state: GameState,
     scene: Scenes,
 
     // Resources
-    global_textures: Vec<Texture<'a>>,
+    player1_input_history: InputHistory,
+    player2_input_history: InputHistory,
+    game_state_history: RingBuf<(Scenes, GameState), MAX_ROLLBACK_FRAMES>,
+}
 
-    // Window management
+pub struct Game<'a> {
+    game_world: GameWorld,
+
+    // Window management / render
+    global_textures: Vec<Texture<'a>>,
     canvas: Canvas<Window>,
     events: EventPump,
     _texture_creator: &'a TextureCreator<WindowContext>,
@@ -131,28 +136,42 @@ impl<'a> Game<'a> {
         )
         .expect("Failed to load player2 config");
 
-        Self {
-            context: GameContext {
-                main_menu_texture,
-                round_start_animation,
-                timer_animation,
-                stage: Stage::init(texture_creator, &mut global_textures),
-                player1: player1_context,
-                player2: player2_context,
-                camera: Camera::new(screen_dim),
-            },
-            state: GameState {
-                player1: player1_state,
-                player2: player2_state,
-                player1_inputs: Inputs::new(PLAYER1_BUTTONS, PLAYER1_DIRECTIONS),
-                player2_inputs: Inputs::new(PLAYER2_BUTTONS, PLAYER2_DIRECTIONS),
-            },
-            scene: Scenes::new(),
+        let (player1_input_history, player1_inputs) =
+            input::new_inputs(PLAYER1_BUTTONS, PLAYER1_DIRECTIONS);
+        let (player2_input_history, player2_inputs) =
+            input::new_inputs(PLAYER2_BUTTONS, PLAYER2_DIRECTIONS);
 
-            global_textures,
+        let state = GameState {
+            player1: player1_state,
+            player2: player2_state,
+            player1_inputs,
+            player2_inputs,
+        };
+        let scene = Scenes::new();
+        let game_state_history = RingBuf::new((scene.clone(), state.clone()));
+
+        Self {
+            game_world: GameWorld {
+                context: GameContext {
+                    main_menu_texture,
+                    round_start_animation,
+                    timer_animation,
+                    stage: Stage::init(texture_creator, &mut global_textures),
+                    player1: player1_context,
+                    player2: player2_context,
+                    camera: Camera::new(screen_dim),
+                },
+                state,
+                scene,
+
+                player1_input_history,
+                player2_input_history,
+                game_state_history,
+            },
 
             canvas,
             events,
+            global_textures,
             _texture_creator: texture_creator,
             should_quit: false,
         }
@@ -186,23 +205,27 @@ impl<'a> Game<'a> {
                     win_event: WindowEvent::Resized(x, y),
                     ..
                 } => {
-                    self.context.camera.resize((x as u32, y as u32));
+                    self.game_world.context.camera.resize((x as u32, y as u32));
+                }
+                Event::KeyDown { keycode: Some(keycode), ..}
+                if keycode == Keycode::Space => {
+                    self.game_world.rollback(3);
                 }
                 Event::KeyDown {
                     keycode: Some(keycode),
                     repeat: false,
                     ..
                 } => {
-                    self.state.player1_inputs.handle_keypress(keycode);
-                    self.state.player2_inputs.handle_keypress(keycode);
+                    self.game_world.player1_input_history.handle_keypress(keycode);
+                    self.game_world.player2_input_history.handle_keypress(keycode);
                 }
                 Event::KeyUp {
                     keycode: Some(keycode),
                     repeat: false,
                     ..
                 } => {
-                    self.state.player1_inputs.handle_keyrelease(keycode);
-                    self.state.player2_inputs.handle_keyrelease(keycode);
+                    self.game_world.player1_input_history.handle_keyrelease(keycode);
+                    self.game_world.player2_input_history.handle_keyrelease(keycode);
                 }
                 _ => {}
             }
@@ -210,28 +233,59 @@ impl<'a> Game<'a> {
     }
 
     fn update(&mut self, dt: f32) {
-        self.state.player1_inputs.update();
-        self.state.player2_inputs.update();
-        if let Some(mut new_scene) = self.scene.update(&self.context, &mut self.state, dt) {
-            self.scene.exit(&self.context, &mut self.state);
-            new_scene.enter(&self.context, &mut self.state);
-            self.scene = new_scene;
+        // Handle inputs
+        self.game_world.player1_input_history.update();
+        self.game_world.player2_input_history.update();
+        self.game_world.state.player1_inputs.update(self.game_world.player1_input_history.parse_history());
+        self.game_world.state.player2_inputs.update(self.game_world.player2_input_history.parse_history());
+
+        if let Some(mut new_scene) = self.game_world.scene.update(&self.game_world.context, &mut self.game_world.state, dt) {
+            self.game_world.scene.exit(&self.game_world.context, &mut self.game_world.state);
+            new_scene.enter(&self.game_world.context, &mut self.game_world.state);
+            self.game_world.scene = new_scene;
         }
+
+        self.game_world.game_state_history.append((self.game_world.scene.clone(), self.game_world.state.clone()));
     }
 
     fn render(&mut self) {
         self.canvas.set_draw_color(Color::BLACK);
         self.canvas.clear();
 
-        self.scene
+        self.game_world.scene
             .render(
                 &mut self.canvas,
                 &self.global_textures,
-                &self.context,
-                &self.state,
+                &self.game_world.context,
+                &self.game_world.state,
             )
             .expect("Failed to render scene");
 
         self.canvas.present();
+    }
+}
+
+impl GameWorld {
+    fn rollback(&mut self, frames: usize) {
+        let (scene, state) = self.game_state_history.rewind(frames);
+        self.scene = scene;
+        self.state = state;
+
+        self.fast_simulate(frames);
+    }
+
+    fn fast_simulate(&mut self, frames: usize) {
+        for frame in 0..frames {
+            self.state.player1_inputs.update(self.player1_input_history.parse_history_at(frames - frame));
+            self.state.player2_inputs.update(self.player2_input_history.parse_history_at(frames - frame));
+
+            if let Some(mut new_scene) = self.scene.update(&self.context, &mut self.state, FRAME_DURATION) {
+                self.scene.exit(&self.context, &mut self.state);
+                new_scene.enter(&self.context, &mut self.state);
+                self.scene = new_scene;
+            }
+
+            self.game_state_history.append((self.scene.clone(), self.state.clone()));
+        }
     }
 }

@@ -1,20 +1,22 @@
-pub struct RingBuf<T: Clone + Default, const SIZE: usize> {
-    buf: [T; SIZE],
+use std::mem::MaybeUninit;
+
+pub struct RingBuf<T: Clone, const SIZE: usize> {
+    buf: [MaybeUninit<T>; SIZE],
     index: usize,
 }
 
-impl <T: Clone + Default, const SIZE: usize> RingBuf<T, SIZE> {
-    pub fn new() -> Self {
-        Self {buf: std::array::from_fn(|_| T::default()), index: 0}
+impl <T: Clone, const SIZE: usize> RingBuf<T, SIZE> {
+    pub fn new(start_state: T) -> Self {
+        Self {buf: std::array::from_fn(|_| MaybeUninit::new(start_state.clone())), index: 0}
     }
 
-    pub fn append(&mut self, new_data: &T) {
+    pub fn append(&mut self, new_data: T) {
         self.index = (self.index + 1) % SIZE;
-        self.buf[self.index] = new_data.clone();
+        self.buf[self.index] = MaybeUninit::new(new_data.clone());
     }
 
     pub fn rewind(&mut self, indices: usize) -> T {
         self.index = (SIZE + self.index - indices) % SIZE;
-        self.buf[self.index].clone()
+        unsafe { self.buf[self.index].assume_init_read() }
     } 
 }
