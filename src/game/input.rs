@@ -69,7 +69,7 @@ pub fn new_inputs(
     (input_history, inputs)
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Inputs {
     dir: Direction,
     buttons: ButtonFlag,

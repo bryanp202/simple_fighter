@@ -4,7 +4,7 @@ use crate::game::{
     scene::{Scene, Scenes, round_start::RoundStart},
 };
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct MainMenu {
     button_pressed: bool,
 }

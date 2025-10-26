@@ -9,7 +9,7 @@ const PAUSE_DURATION: u32 = ROUND_DISPLAY_DURATION + FIGHT_DISPLAY_DURATION;
 const ROUND_DISPLAY_DURATION: u32 = (FRAME_RATE as f64 * 2.0) as u32;
 const FIGHT_DISPLAY_DURATION: u32 = (FRAME_RATE as f64 * 1.0) as u32;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct RoundStart {
     score: (u32, u32),
     round: u32,

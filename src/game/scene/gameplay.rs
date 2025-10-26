@@ -8,7 +8,7 @@ use crate::game::{
 
 const ROUND_LEN: usize = 99;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Gameplay {
     hit_freeze: usize,
     score: (u32, u32),

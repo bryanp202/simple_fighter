@@ -116,7 +116,7 @@ impl Context {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct State {
     current_state: StateIndex,
     current_frame: usize,

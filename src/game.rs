@@ -36,7 +36,7 @@ const FRAME_DURATION: f32 = 1.0 / FRAME_RATE as f32;
 const SCORE_TO_WIN: u32 = 2;
 const MAX_ROLLBACK_FRAMES: usize = 64;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Side {
     Left,
     Right,
@@ -63,7 +63,7 @@ pub struct GameContext {
     camera: Camera,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct GameState {
     player1_inputs: Inputs,
     player2_inputs: Inputs,
@@ -222,7 +222,7 @@ impl<'a> Game<'a> {
                     keycode: Some(keycode),
                     ..
                 } if keycode == Keycode::Space => {
-                    self.game_world.rollback(3);
+                    self.game_world.rollback(30);
                 }
                 Event::KeyDown {
                     keycode: Some(keycode),
@@ -311,13 +311,13 @@ impl GameWorld {
     }
 
     fn fast_simulate(&mut self, frames: usize) {
-        for frame in 0..frames {
+        for frame in (0..frames).rev() {
             self.state
                 .player1_inputs
-                .update(self.player1_input_history.parse_history_at(frames - frame));
+                .update(self.player1_input_history.parse_history_at(frame));
             self.state
                 .player2_inputs
-                .update(self.player2_input_history.parse_history_at(frames - frame));
+                .update(self.player2_input_history.parse_history_at(frame));
 
             if let Some(mut new_scene) =
                 self.scene
