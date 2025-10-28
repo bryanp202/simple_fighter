@@ -176,6 +176,7 @@ impl State {
             self.pos = new_pos;
             self.vel = new_vel;
             if grounded {
+                self.friction_vel.y = 0.0;
                 self.ground(context);
             }
         }
