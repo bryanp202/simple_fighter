@@ -1,3 +1,4 @@
+use bincode::{BorrowDecode, Encode};
 use bitflags::bitflags;
 use sdl3::keyboard::Keycode;
 
@@ -228,12 +229,35 @@ impl InputHistory {
         }
     }
 
+    pub fn set_mappings(&mut self, key_to_button: KeyToButtons, key_to_direction: KeyToDirections) {
+        self.input.key_to_button = key_to_button;
+        self.input.key_to_direction = key_to_direction;
+    }
+
+    pub fn set_delay(&mut self, delay: usize) {
+        self.delay = delay;
+    }
+
+    pub fn get_inputs(&self) -> Option<(Direction, ButtonFlag)> {
+        let (dir, buttons, frames) = &self.buf[self.current_index];
+        if *frames == 1 {
+            Some((*dir, *buttons))
+        } else {
+            None
+        }
+    }
+
     pub fn handle_keypress(&mut self, keycode: Keycode) {
         self.input.handle_keypress(keycode);
     }
 
     pub fn handle_keyrelease(&mut self, keycode: Keycode) {
         self.input.handle_keyrelease(keycode);
+    }
+
+    pub fn skip(&mut self) {
+        // Increment running frame length
+        self.buf[self.current_index].2 += 1;
     }
 
     pub fn update(&mut self) {
@@ -283,6 +307,7 @@ impl InputHistory {
         }
         let split_index = (run_index + 1) % HISTORY_FRAME_LEN;
         self.buf[split_index] = (input_dir, input_buttons, overlap);
+        self.current_index = (self.current_index + 1) % HISTORY_FRAME_LEN;
 
         true
     }
@@ -383,7 +408,7 @@ impl InputHistory {
 
 bitflags! {
     #[derive(Copy, Clone, Debug, PartialEq)]
-    pub struct ButtonFlag: u32 {
+    pub struct ButtonFlag: u8 {
         const NONE = 0;
         const L = 0b00000001;
         const M = 0b00000010;
@@ -416,7 +441,7 @@ bitflags! {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, BorrowDecode, Encode)]
 pub enum Direction {
     Neutral,
     Up,
@@ -427,6 +452,38 @@ pub enum Direction {
     DownLeft,
     UpRight,
     DownRight,
+}
+
+impl From<u8> for Direction {
+    fn from(value: u8) -> Self {
+        match value {
+            1 => Direction::Up,
+            2 => Direction::Down,
+            3 => Direction::Left,
+            4 => Direction::Right,
+            5 => Direction::UpLeft,
+            6 => Direction::DownLeft,
+            7 => Direction::UpRight,
+            8 => Direction::DownRight,
+            _ => Direction::Neutral,
+        }
+    }
+}
+
+impl Into<u8> for Direction {
+    fn into(self) -> u8 {
+        match self {
+            Direction::Neutral => 0,
+            Direction::Up => 1,
+            Direction::Down => 2,
+            Direction::Left => 3,
+            Direction::Right => 4,
+            Direction::UpLeft => 5,
+            Direction::DownLeft => 6,
+            Direction::UpRight => 7,
+            Direction::DownRight => 8,
+        }
+    }
 }
 
 impl Direction {
@@ -455,6 +512,21 @@ impl Direction {
             Direction::UpRight => RelativeDirection::UpBack,
             Direction::DownRight => RelativeDirection::DownBack,
             Direction::Up => RelativeDirection::Up,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn inverse(&self) -> Direction {
+        match self {
+            Direction::Down => Direction::Down,
+            Direction::DownLeft => Direction::DownRight,
+            Direction::UpLeft => Direction::UpRight,
+            Direction::Left => Direction::Right,
+            Direction::Right => Direction::Left,
+            Direction::Neutral => Direction::Neutral,
+            Direction::UpRight => Direction::UpLeft,
+            Direction::DownRight => Direction::DownLeft,
+            Direction::Up => Direction::Up,
         }
     }
 }
@@ -524,4 +596,26 @@ impl Motion {
             | (bits & Motion::NEUTRALS.bits());
         RelativeMotion::from_bits_retain(shifted)
     }
+}
+
+#[test]
+fn test_insert_input() {
+    let mut history = InputHistory::new(PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, 0);
+
+    history.handle_keypress(Keycode::W);
+    history.update();
+    history.update();
+    history.handle_keyrelease(Keycode::W);
+    history.update();
+    history.update();
+
+    history.insert_input(0, Direction::Down, ButtonFlag::L);
+
+    assert_eq!(
+        [
+            (Direction::Up, ButtonFlag::NONE, 3),
+            (Direction::Down, ButtonFlag::L, 1)
+        ],
+        history.buf[1..3]
+    );
 }

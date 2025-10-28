@@ -1,6 +1,7 @@
 mod boxes;
 mod character;
 mod input;
+mod net;
 mod physics;
 mod projectile;
 mod render;
@@ -12,23 +13,19 @@ use std::time::{Duration, Instant};
 use sdl3::{
     EventPump,
     event::{Event, WindowEvent},
-    keyboard::Keycode,
     pixels::Color,
     render::{Canvas, FPoint, Texture, TextureCreator},
     video::{Window, WindowContext},
 };
 
-use crate::{
-    game::{
-        input::{
-            InputHistory, Inputs, PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, PLAYER2_BUTTONS,
-            PLAYER2_DIRECTIONS,
-        },
-        render::{Camera, animation::Animation, load_texture},
-        scene::{Scene, Scenes},
-        stage::Stage,
+use crate::game::{
+    input::{
+        InputHistory, Inputs, PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, PLAYER2_BUTTONS,
+        PLAYER2_DIRECTIONS,
     },
-    ring_buf::RingBuf,
+    render::{Camera, animation::Animation, load_texture},
+    scene::{Scene, Scenes},
+    stage::Stage,
 };
 
 const FRAME_RATE: usize = 60;
@@ -71,19 +68,50 @@ pub struct GameState {
     player2: character::State,
 }
 
-struct GameWorld {
+pub struct PlayerInputs {
+    player1: InputHistory,
+    player2: InputHistory,
+}
+
+impl PlayerInputs {
+    pub fn update_player1(&mut self) {
+        self.player1.update();
+    }
+
+    pub fn update_player2(&mut self) {
+        self.player2.update();
+    }
+
+    pub fn skip_player1(&mut self) {
+        self.player1.skip();
+    }
+
+    pub fn skip_player2(&mut self) {
+        self.player2.skip();
+    }
+
+    pub fn online_key_mapping(&mut self) {
+        self.player2
+            .set_mappings(PLAYER1_BUTTONS, PLAYER1_DIRECTIONS);
+    }
+
+    pub fn local_key_mapping(&mut self) {
+        self.player2
+            .set_mappings(PLAYER2_BUTTONS, PLAYER2_DIRECTIONS);
+    }
+
+    pub fn set_delay(&mut self, delay: usize) {
+        self.player1.set_delay(delay);
+        self.player2.set_delay(delay);
+    }
+}
+
+pub struct Game<'a> {
     context: GameContext,
     state: GameState,
     scene: Scenes,
 
-    // Resources
-    player1_input_history: InputHistory,
-    player2_input_history: InputHistory,
-    game_state_history: RingBuf<(Scenes, GameState), MAX_ROLLBACK_FRAMES>,
-}
-
-pub struct Game<'a> {
-    game_world: GameWorld,
+    inputs: PlayerInputs,
 
     // Window management / render
     global_textures: Vec<Texture<'a>>,
@@ -158,28 +186,26 @@ impl<'a> Game<'a> {
             player1_inputs,
             player2_inputs,
         };
-        let scene = Scenes::new();
-        let game_state_history = RingBuf::new((scene.clone(), state.clone()));
 
         Self {
-            game_world: GameWorld {
-                context: GameContext {
-                    main_menu_texture,
-                    round_start_animation,
-                    timer_animation,
-                    stage: Stage::init(texture_creator, &mut global_textures),
-                    player1: player1_context,
-                    player2: player2_context,
-                    camera: Camera::new(screen_dim),
-                },
-                state,
-                scene,
+            context: GameContext {
+                main_menu_texture,
+                round_start_animation,
+                timer_animation,
+                stage: Stage::init(texture_creator, &mut global_textures),
+                player1: player1_context,
+                player2: player2_context,
+                camera: Camera::new(screen_dim),
+            },
+            state,
+            scene: Scenes::new(),
 
-                player1_input_history,
-                player2_input_history,
-                game_state_history,
+            inputs: PlayerInputs {
+                player1: player1_input_history,
+                player2: player2_input_history,
             },
 
+            // Window management
             canvas,
             events,
             global_textures,
@@ -202,7 +228,7 @@ impl<'a> Game<'a> {
             self.render();
 
             last_frame = frame_start;
-            std::thread::sleep(
+            spin_sleep::sleep(
                 Duration::from_secs_f32(FRAME_DURATION).saturating_sub(frame_start.elapsed()),
             );
         }
@@ -216,37 +242,23 @@ impl<'a> Game<'a> {
                     win_event: WindowEvent::Resized(x, y),
                     ..
                 } => {
-                    self.game_world.context.camera.resize((x as u32, y as u32));
-                }
-                Event::KeyDown {
-                    keycode: Some(keycode),
-                    ..
-                } if keycode == Keycode::Space => {
-                    self.game_world.rollback(30);
+                    self.context.camera.resize((x as u32, y as u32));
                 }
                 Event::KeyDown {
                     keycode: Some(keycode),
                     repeat: false,
                     ..
                 } => {
-                    self.game_world
-                        .player1_input_history
-                        .handle_keypress(keycode);
-                    self.game_world
-                        .player2_input_history
-                        .handle_keypress(keycode);
+                    self.inputs.player1.handle_keypress(keycode);
+                    self.inputs.player2.handle_keypress(keycode);
                 }
                 Event::KeyUp {
                     keycode: Some(keycode),
                     repeat: false,
                     ..
                 } => {
-                    self.game_world
-                        .player1_input_history
-                        .handle_keyrelease(keycode);
-                    self.game_world
-                        .player2_input_history
-                        .handle_keyrelease(keycode);
+                    self.inputs.player1.handle_keyrelease(keycode);
+                    self.inputs.player2.handle_keyrelease(keycode);
                 }
                 _ => {}
             }
@@ -255,81 +267,38 @@ impl<'a> Game<'a> {
 
     fn update(&mut self, dt: f32) {
         // Handle inputs
-        self.game_world.player1_input_history.update();
-        self.game_world.player2_input_history.update();
-        self.game_world
-            .state
+        self.scene
+            .handle_input(&self.context, &mut self.inputs, &mut self.state)
+            .expect("Failed to handle user inputs");
+
+        self.state
             .player1_inputs
-            .update(self.game_world.player1_input_history.parse_history());
-        self.game_world
-            .state
+            .update(self.inputs.player1.parse_history());
+        self.state
             .player2_inputs
-            .update(self.game_world.player2_input_history.parse_history());
+            .update(self.inputs.player2.parse_history());
 
-        if let Some(mut new_scene) =
-            self.game_world
-                .scene
-                .update(&self.game_world.context, &mut self.game_world.state, dt)
-        {
-            self.game_world
-                .scene
-                .exit(&self.game_world.context, &mut self.game_world.state);
-            new_scene.enter(&self.game_world.context, &mut self.game_world.state);
-            self.game_world.scene = new_scene;
+        if let Some(mut new_scene) = self.scene.update(&self.context, &mut self.state, dt) {
+            self.scene
+                .exit(&self.context, &mut self.inputs, &mut self.state);
+            new_scene.enter(&self.context, &mut self.inputs, &mut self.state);
+            self.scene = new_scene;
         }
-
-        self.game_world
-            .game_state_history
-            .append((self.game_world.scene.clone(), self.game_world.state.clone()));
     }
 
     fn render(&mut self) {
         self.canvas.set_draw_color(Color::BLACK);
         self.canvas.clear();
 
-        self.game_world
-            .scene
+        self.scene
             .render(
                 &mut self.canvas,
                 &self.global_textures,
-                &self.game_world.context,
-                &self.game_world.state,
+                &self.context,
+                &self.state,
             )
             .expect("Failed to render scene");
 
         self.canvas.present();
-    }
-}
-
-impl GameWorld {
-    fn rollback(&mut self, frames: usize) {
-        let (scene, state) = self.game_state_history.rewind(frames);
-        self.scene = scene;
-        self.state = state;
-
-        self.fast_simulate(frames);
-    }
-
-    fn fast_simulate(&mut self, frames: usize) {
-        for frame in (0..frames).rev() {
-            self.state
-                .player1_inputs
-                .update(self.player1_input_history.parse_history_at(frame));
-            self.state
-                .player2_inputs
-                .update(self.player2_input_history.parse_history_at(frame));
-
-            if let Some(mut new_scene) =
-                self.scene
-                    .update(&self.context, &mut self.state, FRAME_DURATION)
-            {
-                self.scene.exit(&self.context, &mut self.state);
-                new_scene.enter(&self.context, &mut self.state);
-                self.scene = new_scene;
-            }
-
-            self.game_state_history
-                .append((self.scene.clone(), self.state.clone()));
-        }
     }
 }

@@ -2,7 +2,7 @@ use sdl3::render::FPoint;
 
 use crate::game::{
     FRAME_RATE, GameContext, GameState, SCORE_TO_WIN,
-    scene::{Scene, Scenes, gameplay::Gameplay, render_gameplay},
+    scene::gameplay::{GameplayScene, GameplayScenes, during_round::DuringRound, render_gameplay},
 };
 
 const PAUSE_DURATION: u32 = ROUND_DISPLAY_DURATION + FIGHT_DISPLAY_DURATION;
@@ -16,7 +16,7 @@ pub struct RoundStart {
     timer: u32,
 }
 
-impl Scene for RoundStart {
+impl GameplayScene for RoundStart {
     fn enter(&mut self, context: &GameContext, state: &mut GameState) {
         state.player1.reset(&context.player1);
         state.player2.reset(&context.player2);
@@ -27,13 +27,13 @@ impl Scene for RoundStart {
         _context: &GameContext,
         state: &mut GameState,
         _dt: f32,
-    ) -> Option<super::Scenes> {
+    ) -> Option<super::GameplayScenes> {
         state.player1.advance_frame();
         state.player2.advance_frame();
 
         self.timer += 1;
         if self.timer == PAUSE_DURATION {
-            Some(Scenes::Gameplay(Gameplay::new(self.score)))
+            Some(GameplayScenes::DuringRound(DuringRound::new(self.score)))
         } else {
             None
         }

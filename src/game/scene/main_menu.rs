@@ -1,16 +1,34 @@
 use crate::game::{
-    GameContext, GameState,
+    GameContext, GameState, PlayerInputs,
     input::ButtonFlag,
-    scene::{Scene, Scenes, round_start::RoundStart},
+    scene::{Scene, Scenes, hosting::Hosting, local_play::LocalPlay, matching::Matching},
 };
 
-#[derive(Clone, PartialEq)]
 pub struct MainMenu {
-    button_pressed: bool,
+    l_button_pressed: bool,
+    m_button_pressed: bool,
+    h_button_pressed: bool,
 }
 
 impl Scene for MainMenu {
-    fn enter(&mut self, _context: &GameContext, _state: &mut GameState) {}
+    fn enter(
+        &mut self,
+        _context: &GameContext,
+        _inputs: &mut PlayerInputs,
+        _state: &mut GameState,
+    ) {
+    }
+
+    fn handle_input(
+        &mut self,
+        _context: &GameContext,
+        inputs: &mut crate::game::PlayerInputs,
+        _state: &mut GameState,
+    ) -> std::io::Result<()> {
+        inputs.update_player1();
+        inputs.skip_player2();
+        Ok(())
+    }
 
     fn update(
         &mut self,
@@ -18,16 +36,27 @@ impl Scene for MainMenu {
         state: &mut GameState,
         _dt: f32,
     ) -> Option<super::Scenes> {
-        let light_pressed = state
-            .player1_inputs
-            .active_buttons()
-            .intersects(ButtonFlag::L);
-        if self.button_pressed && !light_pressed {
-            Some(Scenes::RoundStart(RoundStart::new((0, 0))))
+        let buttons = state.player1_inputs.active_buttons();
+
+        if self.l_button_pressed && !buttons.intersects(ButtonFlag::L) {
+            return Some(Scenes::LocalPlay(LocalPlay::new()));
         } else {
-            self.button_pressed = light_pressed;
-            None
+            self.l_button_pressed = buttons.intersects(ButtonFlag::L);
         }
+
+        if self.m_button_pressed && !buttons.intersects(ButtonFlag::M) {
+            return Some(Scenes::Hosting(Hosting::new()));
+        } else {
+            self.m_button_pressed = buttons.intersects(ButtonFlag::M);
+        }
+
+        if self.h_button_pressed && !buttons.intersects(ButtonFlag::H) {
+            return Some(Scenes::Matching(Matching::new()));
+        } else {
+            self.h_button_pressed = buttons.intersects(ButtonFlag::H);
+        }
+
+        None
     }
 
     fn render(
@@ -40,13 +69,16 @@ impl Scene for MainMenu {
         canvas.copy(&global_textures[context.main_menu_texture], None, None)
     }
 
-    fn exit(&mut self, _context: &GameContext, _state: &mut GameState) {}
+    fn exit(&mut self, _context: &GameContext, _inputs: &mut PlayerInputs, _state: &mut GameState) {
+    }
 }
 
 impl MainMenu {
     pub fn new() -> Self {
         Self {
-            button_pressed: false,
+            l_button_pressed: false,
+            m_button_pressed: false,
+            h_button_pressed: false,
         }
     }
 }

@@ -1,198 +1,266 @@
-use std::cmp::Ordering;
+mod during_round;
+mod round_start;
+
+use sdl3::{
+    pixels::Color,
+    render::{Canvas, FRect, Texture},
+    video::Window,
+};
 
 use crate::game::{
     FRAME_RATE, GameContext, GameState, SCORE_TO_WIN,
-    physics::{check_hit_collisions, movement_system, side_detection},
-    scene::{Scene, Scenes, main_menu::MainMenu, render_gameplay, round_start::RoundStart},
+    render::animation::Animation,
+    scene::gameplay::{during_round::DuringRound, round_start::RoundStart},
 };
 
 const ROUND_LEN: usize = 99;
 
+pub trait GameplayScene {
+    fn enter(&mut self, context: &GameContext, state: &mut GameState);
+    fn update(
+        &mut self,
+        context: &GameContext,
+        state: &mut GameState,
+        dt: f32,
+    ) -> Option<GameplayScenes>;
+    fn render(
+        &self,
+        canvas: &mut Canvas<Window>,
+        global_textures: &Vec<Texture>,
+        context: &GameContext,
+        state: &GameState,
+    ) -> Result<(), sdl3::Error>;
+    fn exit(&mut self, context: &GameContext, state: &mut GameState);
+}
+
 #[derive(Clone, PartialEq)]
-pub struct Gameplay {
-    hit_freeze: usize,
-    score: (u32, u32),
-    time: usize,
+pub enum GameplayScenes {
+    RoundStart(RoundStart),
+    DuringRound(DuringRound),
+    Exit,
 }
 
-impl Gameplay {
-    pub fn new(score: (u32, u32)) -> Self {
-        Self {
-            hit_freeze: 0,
-            score,
-            time: 0,
-        }
-    }
-
-    fn check_round_end(&mut self, context: &GameContext, state: &GameState) -> Option<Scenes> {
-        let player1_hp_ratio = state.player1.hp_per(&context.player1);
-        let player2_hp_ratio = state.player2.hp_per(&context.player2);
-        match (player1_hp_ratio, player2_hp_ratio) {
-            (0.0, 0.0) => self.score = (self.score.0 + 1, self.score.1 + 1),
-            (0.0, _) => self.score.1 += 1,
-            (_, 0.0) => self.score.0 += 1,
-            _ => {
-                if self.time == ROUND_LEN * FRAME_RATE {
-                    match player1_hp_ratio.partial_cmp(&player2_hp_ratio) {
-                        Some(Ordering::Less) => self.score.1 += 1,
-                        Some(Ordering::Equal) => self.score = (self.score.0 + 1, self.score.1 + 1),
-                        Some(Ordering::Greater) => self.score.0 += 1,
-                        None => self.score = (self.score.0 + 1, self.score.1 + 1),
-                    }
-                } else {
-                    // Timer not over so should return no scene transition
-                    return None;
-                }
-            }
-        }
-
-        match self.score {
-            (SCORE_TO_WIN, SCORE_TO_WIN) => {
-                self.score = (SCORE_TO_WIN - 1, SCORE_TO_WIN - 1);
-                Some(Scenes::RoundStart(RoundStart::new(self.score)))
-            }
-            (SCORE_TO_WIN, _) => {
-                if cfg!(feature = "debug") {
-                    println!("Player1 wins!");
-                }
-                Some(Scenes::MainMenu(MainMenu::new()))
-            }
-            (_, SCORE_TO_WIN) => {
-                if cfg!(feature = "debug") {
-                    println!("Player2 wins!");
-                }
-                Some(Scenes::MainMenu(MainMenu::new()))
-            }
-            _ => Some(Scenes::RoundStart(RoundStart::new(self.score))),
-        }
+impl GameplayScenes {
+    pub fn new_round_start(score: (u32, u32)) -> GameplayScenes {
+        Self::RoundStart(RoundStart::new(score))
     }
 }
 
-impl Scene for Gameplay {
-    fn enter(&mut self, _context: &GameContext, _state: &mut GameState) {}
+impl GameplayScene for GameplayScenes {
+    fn enter(&mut self, context: &GameContext, state: &mut GameState) {
+        match self {
+            Self::DuringRound(during_round) => during_round.enter(context, state),
+            Self::RoundStart(round_start) => round_start.enter(context, state),
+            Self::Exit => {}
+        }
+    }
 
     fn update(
         &mut self,
         context: &GameContext,
         state: &mut GameState,
-        _dt: f32,
-    ) -> Option<super::Scenes> {
-        // Side check first to prevent flickering
-        if let Some(player1_side) = side_detection(&state.player1.pos(), &state.player2.pos()) {
-            state.player1.set_side(&context.player1, player1_side);
-            state
-                .player2
-                .set_side(&context.player2, player1_side.opposite());
+        dt: f32,
+    ) -> Option<GameplayScenes> {
+        match self {
+            Self::DuringRound(during_round) => during_round.update(context, state, dt),
+            Self::RoundStart(round_start) => round_start.update(context, state, dt),
+            Self::Exit => None,
         }
-        state
-            .player1
-            .state_update(&state.player1_inputs, &context.player1);
-        state
-            .player2
-            .state_update(&state.player2_inputs, &context.player2);
-
-        if self.hit_freeze == 0 {
-            state.player1.movement_update(&context.player1);
-            state.player2.movement_update(&context.player2);
-
-            let (player1_pos, player2_pos) = movement_system(
-                &state.player1.side(),
-                &state.player1.pos(),
-                &state.player1.get_collision_box(&context.player1),
-                &state.player2.side(),
-                &state.player2.pos(),
-                &state.player2.get_collision_box(&context.player2),
-                &context.stage,
-            );
-            state.player1.set_pos(player1_pos);
-            state.player2.set_pos(player2_pos);
-
-            self.hit_freeze = handle_hit_boxes(state, context);
-
-            state.player1.advance_frame();
-            state.player2.advance_frame();
-
-            self.time += 1;
-        } else {
-            self.hit_freeze -= 1;
-        }
-
-        self.check_round_end(context, state)
     }
 
     fn render(
         &self,
-        canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
-        global_textures: &Vec<sdl3::render::Texture>,
+        canvas: &mut Canvas<Window>,
+        global_textures: &Vec<Texture>,
         context: &GameContext,
         state: &GameState,
     ) -> Result<(), sdl3::Error> {
-        render_gameplay(
-            canvas,
-            global_textures,
-            context,
-            state,
-            self.time,
-            self.score,
-        )
+        match self {
+            Self::DuringRound(during_round) => {
+                during_round.render(canvas, global_textures, context, state)
+            }
+            Self::RoundStart(round_start) => {
+                round_start.render(canvas, global_textures, context, state)
+            }
+            Self::Exit => Ok(()),
+        }
     }
 
-    fn exit(&mut self, _context: &GameContext, _state: &mut GameState) {}
+    fn exit(&mut self, context: &GameContext, state: &mut GameState) {
+        match self {
+            Self::DuringRound(during_round) => during_round.exit(context, state),
+            Self::RoundStart(round_start) => round_start.exit(context, state),
+            Self::Exit => {}
+        }
+    }
 }
 
-// Returns the amount of frames for hit freeze
-fn handle_hit_boxes(state: &mut GameState, context: &GameContext) -> usize {
-    let player1_pos = state.player1.pos();
-    let player1_side = state.player1.side();
-    let player2_pos = state.player2.pos();
-    let player2_side = state.player2.side();
+// impl GameplayScene for GameplayScenes {
+//     fn enter(&mut self, context: &GameContext, state: &mut GameState) {
+//         match self {
+//             Self::RoundStart(round_start) => round_start.enter()
+//         }
+//     }
+// }
 
-    let player1_hit_boxes = state.player1.get_hit_boxes(&context.player1);
-    let player2_hurt_boxes = state.player2.get_hurt_boxes(&context.player2);
-    let player1_hit = check_hit_collisions(
-        &player1_side,
-        player1_pos,
-        player1_hit_boxes,
-        &player2_side,
-        player2_pos,
-        player2_hurt_boxes,
-    );
+fn render_gameplay(
+    canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
+    global_textures: &Vec<sdl3::render::Texture>,
+    context: &GameContext,
+    state: &GameState,
+    time: usize,
+    score: (u32, u32),
+) -> Result<(), sdl3::Error> {
+    context.stage.render(canvas, global_textures)?;
+    state
+        .player1
+        .render(canvas, &context.camera, global_textures, &context.player1)?;
+    state
+        .player2
+        .render(canvas, &context.camera, global_textures, &context.player2)?;
 
-    let player2_hit_boxes = state.player2.get_hit_boxes(&context.player2);
-    let player1_hurt_boxes = state.player1.get_hurt_boxes(&context.player1);
-    let player2_hit = check_hit_collisions(
-        &player2_side,
-        player2_pos,
-        player2_hit_boxes,
-        &player1_side,
-        player1_pos,
-        player1_hurt_boxes,
-    );
+    let player1_hp_per = state.player1.hp_per(&context.player1);
+    let player2_hp_per = state.player2.hp_per(&context.player2);
+    render_health_bars(canvas, player1_hp_per, player2_hp_per)?;
+    render_timer(canvas, global_textures, &context.timer_animation, time)?;
+    render_scores(canvas, score)?;
 
-    match (player1_hit, player2_hit) {
-        (Some(player1_hit), None) => {
-            let blocked = state.player2.receive_hit(&context.player1, &player1_hit);
-            state
-                .player1
-                .successful_hit(&context.player1, &player1_hit, blocked);
-            4
+    Ok(())
+}
+
+fn render_timer(
+    canvas: &mut Canvas<Window>,
+    global_textures: &Vec<Texture>,
+    timer_animation: &Animation,
+    time: usize,
+) -> Result<(), sdl3::Error> {
+    let (screen_w, screen_h) = canvas.window().size();
+    let frame = time / FRAME_RATE;
+    let (texture, src) = timer_animation.get_frame(frame, global_textures);
+
+    let timer_w = screen_w as f32 / 10.0;
+    let timer_h = screen_h as f32 / 5.625;
+    let dst = FRect::new(screen_w as f32 * 0.5 - timer_w / 2.0, 0.0, timer_w, timer_h);
+    canvas.copy(texture, src, dst)
+}
+
+fn render_scores(canvas: &mut Canvas<Window>, score: (u32, u32)) -> Result<(), sdl3::Error> {
+    let (screen_w, screen_h) = canvas.window().size();
+    let y = screen_h as f32 / 15.0;
+    let score_w = screen_w as f32 / 40.0;
+    let score_h = screen_h as f32 / 22.5;
+
+    let player1_offset = screen_w as f32 * 0.5 - score_w * (2 * SCORE_TO_WIN + 3) as f32;
+    let player2_offset = screen_w as f32 * 0.5 + score_w * 4.0;
+    render_player1_score(canvas, score.0, y, score_w, score_h, player1_offset)?;
+    render_player2_score(canvas, score.1, y, score_w, score_h, player2_offset)?;
+    Ok(())
+}
+
+fn render_player1_score(
+    canvas: &mut Canvas<Window>,
+    score: u32,
+    y: f32,
+    w: f32,
+    h: f32,
+    x: f32,
+) -> Result<(), sdl3::Error> {
+    for i in 0..SCORE_TO_WIN {
+        let i_f32 = i as f32;
+        canvas.set_draw_color(Color::BLACK);
+        canvas.fill_rect(FRect::new(x + 2.0 * i_f32 * w, y, w, h))?;
+
+        if score > i {
+            canvas.set_draw_color(Color::WHITE);
+            canvas.fill_rect(FRect::new(
+                x + 2.0 * i_f32 * w + w * 0.2,
+                y + h * 0.2,
+                w * 0.6,
+                h * 0.6,
+            ))?;
         }
-        (None, Some(player2_hit)) => {
-            let blocked = state.player1.receive_hit(&context.player1, &player2_hit);
-            state
-                .player2
-                .successful_hit(&context.player2, &player2_hit, blocked);
-            4
-        }
-        (Some(player1_hit), Some(player2_hit)) => {
-            state
-                .player1
-                .successful_hit(&context.player1, &player1_hit, true);
-            state
-                .player2
-                .successful_hit(&context.player2, &player2_hit, true);
-            8
-        }
-        _ => 0,
     }
+
+    Ok(())
+}
+
+fn render_player2_score(
+    canvas: &mut Canvas<Window>,
+    score: u32,
+    y: f32,
+    w: f32,
+    h: f32,
+    x: f32,
+) -> Result<(), sdl3::Error> {
+    for i in 0..SCORE_TO_WIN {
+        let i_f32 = i as f32;
+        canvas.set_draw_color(Color::BLACK);
+        canvas.fill_rect(FRect::new(x + 2.0 * i_f32 * w, y, w, h))?;
+
+        if score >= SCORE_TO_WIN - i {
+            canvas.set_draw_color(Color::WHITE);
+            canvas.fill_rect(FRect::new(
+                x + 2.0 * i_f32 * w + w * 0.2,
+                y + h * 0.2,
+                w * 0.6,
+                h * 0.6,
+            ))?;
+        }
+    }
+
+    Ok(())
+}
+
+fn render_health_bars(
+    canvas: &mut Canvas<Window>,
+    player1_hp_per: f32,
+    player2_hp_per: f32,
+) -> Result<(), sdl3::Error> {
+    let (screen_w, screen_h) = canvas.window().size();
+    let bar_h = screen_h as f32 / 20.0;
+    let bar_width = screen_w as f32 * 0.4;
+    render_player1_health(canvas, player1_hp_per, bar_h, bar_width)?;
+    render_player2_health(canvas, player2_hp_per, screen_w as f32, bar_h, bar_width)?;
+    Ok(())
+}
+
+fn render_player1_health(
+    canvas: &mut Canvas<Window>,
+    hp_per: f32,
+    bar_h: f32,
+    bar_width: f32,
+) -> Result<(), sdl3::Error> {
+    canvas.set_draw_color(Color::RED);
+    canvas.fill_rect(FRect::new(0.0, 0.0, bar_width, bar_h))?;
+    canvas.set_draw_color(Color::GREEN);
+    let health_bar = hp_per.powf(1.4) * bar_width;
+    canvas.fill_rect(FRect::new(bar_width - health_bar, 0.0, health_bar, bar_h))?;
+
+    Ok(())
+}
+
+fn render_player2_health(
+    canvas: &mut Canvas<Window>,
+    hp_per: f32,
+    screen_w: f32,
+    bar_h: f32,
+    bar_width: f32,
+) -> Result<(), sdl3::Error> {
+    canvas.set_draw_color(Color::RED);
+    canvas.fill_rect(FRect::new(
+        screen_w as f32 - bar_width,
+        0.0,
+        bar_width,
+        bar_h,
+    ))?;
+    canvas.set_draw_color(Color::GREEN);
+    let health_bar = hp_per.powf(1.4) * bar_width;
+    canvas.fill_rect(FRect::new(
+        screen_w as f32 - bar_width,
+        0.0,
+        health_bar,
+        bar_h,
+    ))?;
+
+    Ok(())
 }
