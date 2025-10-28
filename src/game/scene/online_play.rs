@@ -123,7 +123,10 @@ impl OnlinePlay {
             return;
         }
         let frames = frames - self.delay;
-        println!("rolling back: {}", frames);
+
+        if cfg!(feature = "debug") {
+            println!("rolling back: {}", frames);
+        }
 
         let (old_scene, old_state) = self.game_state_history.rewind(frames);
         self.scene = old_scene;
