@@ -40,21 +40,17 @@ impl Scene for MainMenu {
 
         if self.l_button_pressed && !buttons.intersects(ButtonFlag::L) {
             return Some(Scenes::LocalPlay(LocalPlay::new()));
-        } else {
-            self.l_button_pressed = buttons.intersects(ButtonFlag::L);
         }
-
         if self.m_button_pressed && !buttons.intersects(ButtonFlag::M) {
             return Some(Scenes::Hosting(Hosting::new()));
-        } else {
-            self.m_button_pressed = buttons.intersects(ButtonFlag::M);
-        }
-
+        }  
         if self.h_button_pressed && !buttons.intersects(ButtonFlag::H) {
             return Some(Scenes::Matching(Matching::new()));
-        } else {
-            self.h_button_pressed = buttons.intersects(ButtonFlag::H);
         }
+        
+        self.l_button_pressed = buttons.intersects(ButtonFlag::L);
+        self.m_button_pressed = buttons.intersects(ButtonFlag::M);
+        self.h_button_pressed = buttons.intersects(ButtonFlag::H);
 
         None
     }
@@ -62,7 +58,7 @@ impl Scene for MainMenu {
     fn render(
         &self,
         canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
-        global_textures: &Vec<sdl3::render::Texture>,
+        global_textures: &[sdl3::render::Texture],
         context: &GameContext,
         _state: &GameState,
     ) -> Result<(), sdl3::Error> {

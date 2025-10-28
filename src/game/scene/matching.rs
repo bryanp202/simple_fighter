@@ -51,7 +51,7 @@ impl Scene for Matching {
     fn render(
         &self,
         _canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
-        _global_textures: &Vec<sdl3::render::Texture>,
+        _global_textures: &[sdl3::render::Texture],
         _context: &GameContext,
         _state: &GameState,
     ) -> Result<(), sdl3::Error> {

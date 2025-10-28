@@ -52,8 +52,8 @@ impl Camera {
     pub fn render_animation(
         &self,
         canvas: &mut Canvas<Window>,
-        global_textures: &Vec<Texture>,
-        pos: &FPoint,
+        global_textures: &[Texture],
+        pos: FPoint,
         animation: &Animation,
         frame: usize,
     ) -> Result<(), sdl3::Error> {
@@ -75,11 +75,11 @@ impl Camera {
     pub fn render_animation_on_side(
         &self,
         canvas: &mut Canvas<Window>,
-        global_textures: &Vec<Texture>,
-        pos: &FPoint,
+        global_textures: &[Texture],
+        pos: FPoint,
         animation: &Animation,
         frame: usize,
-        side: &Side,
+        side: Side,
     ) -> Result<(), sdl3::Error> {
         let screen_pos = self.to_screen_pos(pos);
         let flip_horz = match side {
@@ -100,14 +100,14 @@ impl Camera {
         canvas.copy_ex(texture, src, dst, 0.0, None, flip_horz, false)
     }
 
-    fn to_screen_pos(&self, pos: &FPoint) -> FPoint {
+    fn to_screen_pos(&self, pos: FPoint) -> FPoint {
         FPoint::new(
             self.game_center.x + (pos.x - self.offset.x) * self.game_to_screen_ratio.x,
             self.game_center.y - (pos.y + self.offset.y) * self.game_to_screen_ratio.y,
         )
     }
 
-    fn to_screen_rect(&self, rect: &FRect) -> FRect {
+    fn to_screen_rect(&self, rect: FRect) -> FRect {
         FRect::new(
             self.game_center.x + (rect.x - self.offset.x) * self.game_to_screen_ratio.x,
             self.game_center.y - (rect.y + self.offset.y) * self.game_to_screen_ratio.y,
@@ -131,14 +131,14 @@ impl Camera {
 pub fn draw_hit_boxes_system(
     canvas: &mut Canvas<Window>,
     camera: &Camera,
-    side: &Side,
+    side: Side,
     offset: FPoint,
     hitboxes: &[HitBox],
 ) -> Result<(), sdl3::Error> {
     canvas.set_draw_color(FColor::RGBA(1.0, 0.0, 0.0, 0.5));
     for hitbox in hitboxes {
         let on_side_hitbox = hitbox.on_side(side, offset);
-        let on_screen_rect = camera.to_screen_rect(&on_side_hitbox);
+        let on_screen_rect = camera.to_screen_rect(on_side_hitbox);
         canvas.fill_rect(on_screen_rect)?;
     }
     Ok(())
@@ -147,14 +147,14 @@ pub fn draw_hit_boxes_system(
 pub fn draw_hurt_boxes_system(
     canvas: &mut Canvas<Window>,
     camera: &Camera,
-    side: &Side,
+    side: Side,
     offset: FPoint,
     hurtboxes: &[HurtBox],
 ) -> Result<(), sdl3::Error> {
     canvas.set_draw_color(FColor::RGBA(0.0, 1.0, 0.0, 0.5));
     for hurtbox in hurtboxes {
         let on_side_hitbox = hurtbox.on_side(side, offset);
-        let on_screen_rect = camera.to_screen_rect(&on_side_hitbox);
+        let on_screen_rect = camera.to_screen_rect(on_side_hitbox);
         canvas.fill_rect(on_screen_rect)?;
     }
     Ok(())
@@ -163,20 +163,20 @@ pub fn draw_hurt_boxes_system(
 pub fn draw_collision_box_system(
     canvas: &mut Canvas<Window>,
     camera: &Camera,
-    side: &Side,
+    side: Side,
     offset: FPoint,
     collision_box: &CollisionBox,
 ) -> Result<(), sdl3::Error> {
     canvas.set_draw_color(FColor::RGBA(1.0, 1.0, 1.0, 0.5));
     let on_side_hitbox = collision_box.on_side(side, offset);
-    let on_screen_rect = camera.to_screen_rect(&on_side_hitbox);
+    let on_screen_rect = camera.to_screen_rect(on_side_hitbox);
     canvas.fill_rect(on_screen_rect)?;
     Ok(())
 }
 
 fn open_img(file_path: &str) -> Result<DynamicImage, String> {
     let file = std::fs::File::open(file_path)
-        .map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
+        .map_err(|err| format!("File: '{file_path}': {err}"))?;
     let reader = std::io::BufReader::new(file);
     let img = image::ImageReader::new(reader)
         .with_guessed_format()
@@ -185,7 +185,7 @@ fn open_img(file_path: &str) -> Result<DynamicImage, String> {
         .expect("Failed to decode img");
 
     if cfg!(feature = "debug") {
-        println!("Loaded image: {}", file_path);
+        println!("Loaded image: {file_path}");
     }
 
     Ok(img)
@@ -204,11 +204,11 @@ pub fn load_texture<'a>(
             img.width(),
             img.height(),
         )
-        .map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
+        .map_err(|err| format!("File: '{file_path}': {err}"))?;
 
     texture
         .update(None, &img.to_rgba8(), 4 * img.width() as usize)
-        .map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
+        .map_err(|err| format!("File: '{file_path}': {err}"))?;
 
     global_textures.push(texture);
 
@@ -232,10 +232,10 @@ pub fn load_animation<'a>(
             width,
             height * frames,
         )
-        .map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
+        .map_err(|err| format!("File: '{file_path}': {err}"))?;
 
     match layout {
-        AnimationLayout::VERTICAL => {
+        AnimationLayout::Vertical => {
             let frames_rect = Rect::new(0, 0, width, height * frames);
             let frames = img.crop_imm(
                 frames_rect.x as u32,
@@ -245,9 +245,9 @@ pub fn load_animation<'a>(
             );
             texture
                 .update(frames_rect, &frames.to_rgba8(), 4 * frames.width() as usize)
-                .map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
+                .map_err(|err| format!("File: '{file_path}': {err}"))?;
         }
-        AnimationLayout::HORIZONTAL => {
+        AnimationLayout::Horizontal => {
             for frame in 0..frames {
                 let frame_rect = Rect::new((frame * width) as i32, 0, width, height);
                 let frame = img.crop_imm(
@@ -264,7 +264,7 @@ pub fn load_animation<'a>(
                 );
                 texture
                     .update(texture_frame, &frame.to_rgba8(), 4 * frame.width() as usize)
-                    .map_err(|err| format!("File: '{}': {}", file_path, err.to_string()))?;
+                    .map_err(|err| format!("File: '{file_path}': {err}"))?;
             }
         }
     }

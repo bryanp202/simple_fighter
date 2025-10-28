@@ -32,5 +32,5 @@ fn main() {
         println!("Video driver: {:?}", video_subsystem.current_video_driver());
     }
 
-    game.run()
+    game.run();
 }

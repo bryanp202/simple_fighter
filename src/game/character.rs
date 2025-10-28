@@ -81,11 +81,11 @@ pub struct Context {
 }
 
 impl Context {
-    fn active_hit_boxes<'a>(
-        &'a self,
+    fn active_hit_boxes(
+        &self,
         current_state: StateIndex,
         mut current_frame: usize,
-    ) -> &'a [HitBox] {
+    ) -> &[HitBox] {
         let mut run_start = self.states.hit_boxes_start[current_state];
 
         loop {
@@ -98,11 +98,11 @@ impl Context {
         }
     }
 
-    fn active_hurt_boxes<'a>(
-        &'a self,
+    fn active_hurt_boxes(
+        &self,
         current_state: StateIndex,
         mut current_frame: usize,
-    ) -> &'a [HurtBox] {
+    ) -> &[HurtBox] {
         let mut run_start = self.states.hurt_boxes_start[current_state];
 
         loop {
@@ -174,13 +174,13 @@ impl State {
     }
 
     pub fn movement_update(&mut self, context: &Context) {
-        self.pos = velocity_system(&self.pos, &self.vel_on_side());
+        self.pos = velocity_system(self.pos, self.vel_on_side());
 
-        self.friction_vel = friction_system(&self.friction_vel);
+        self.friction_vel = friction_system(self.friction_vel);
 
         if context.states.flags[self.current_state].contains(StateFlags::Airborne) {
             let (new_pos, new_vel, grounded) =
-                gravity_system(&self.pos, &self.vel, self.gravity_mult);
+                gravity_system(self.pos, self.vel, self.gravity_mult);
             self.pos = new_pos;
             self.vel = new_vel;
             if grounded {
@@ -193,29 +193,29 @@ impl State {
         &self,
         canvas: &mut Canvas<Window>,
         camera: &Camera,
-        global_textures: &Vec<Texture>,
+        global_textures: &[Texture],
         context: &Context,
     ) -> Result<(), sdl3::Error> {
         let animation = &context.states.animation_data[self.current_state];
         camera.render_animation_on_side(
             canvas,
             global_textures,
-            &self.pos,
+            self.pos,
             animation,
             self.current_frame,
-            &self.side,
+            self.side,
         )?;
 
         if cfg!(feature = "debug") {
             canvas.set_blend_mode(sdl3::render::BlendMode::Blend);
             let collision_box = self.get_collision_box(context);
-            draw_collision_box_system(canvas, camera, &self.side, self.pos, collision_box)?;
+            draw_collision_box_system(canvas, camera, self.side, self.pos, collision_box)?;
 
             let hitboxes = context.active_hit_boxes(self.current_state, self.current_frame);
-            draw_hit_boxes_system(canvas, camera, &self.side, self.pos, hitboxes)?;
+            draw_hit_boxes_system(canvas, camera, self.side, self.pos, hitboxes)?;
 
             let hurtboxes = self.get_hurt_boxes(context);
-            draw_hurt_boxes_system(canvas, camera, &self.side, self.pos, hurtboxes)?;
+            draw_hurt_boxes_system(canvas, camera, self.side, self.pos, hurtboxes)?;
 
             canvas.set_blend_mode(sdl3::render::BlendMode::None);
         }
@@ -351,9 +351,9 @@ impl State {
 
         let cancel_options_range = context.states.cancel_options[self.current_state].clone();
         let cancel_options = &context.states.run_length_cancel_options[cancel_options_range];
-        for i in cancel_options.iter() {
+        for i in cancel_options {
             let cancel_option = &context.states.inputs[*i];
-            if !cancel_option.dir.matches_or_is_none(&dir) {
+            if !cancel_option.dir.matches_or_is_none(dir) {
                 continue;
             }
 
@@ -362,7 +362,7 @@ impl State {
                     && buf_buttons.contains(cancel_option.button)
             });
 
-            if let Some(_) = maybe_index {
+            if maybe_index.is_some() {
                 self.enter_state(context, *i);
                 break;
             }
@@ -469,10 +469,10 @@ bitflags! {
     #[derive(Copy, Clone, Debug, PartialEq)]
     pub struct StateFlags: u32 {
         const NONE = 0;
-        const Airborne =      0b00000001;
-        const CancelOnWhiff = 0b00000010;
-        const LockSide =      0b00000100;
-        const LowBlock =      0b00001000;
-        const HighBlock =     0b00010000;
+        const Airborne =      0b0000_0001;
+        const CancelOnWhiff = 0b0000_0010;
+        const LockSide =      0b0000_0100;
+        const LowBlock =      0b0000_1000;
+        const HighBlock =     0b0001_0000;
     }
 }

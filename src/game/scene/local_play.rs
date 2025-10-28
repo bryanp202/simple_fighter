@@ -49,7 +49,7 @@ impl Scene for LocalPlay {
     fn render(
         &self,
         canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
-        global_textures: &Vec<sdl3::render::Texture>,
+        global_textures: &[sdl3::render::Texture],
         context: &GameContext,
         state: &GameState,
     ) -> Result<(), sdl3::Error> {

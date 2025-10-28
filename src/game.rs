@@ -40,7 +40,7 @@ pub enum Side {
 }
 
 impl Side {
-    pub fn opposite(&self) -> Side {
+    pub fn opposite(self) -> Side {
         match self {
             Self::Left => Self::Right,
             Self::Right => Self::Left,
@@ -144,7 +144,7 @@ impl<'a> Game<'a> {
             512,
             128,
             4,
-            render::animation::AnimationLayout::VERTICAL,
+            render::animation::AnimationLayout::Vertical,
         )
         .expect("Invalid round start animation");
         let timer_animation = Animation::load(
@@ -154,12 +154,12 @@ impl<'a> Game<'a> {
             128,
             128,
             100,
-            render::animation::AnimationLayout::VERTICAL,
+            render::animation::AnimationLayout::Vertical,
         )
         .expect("Invalid timer animation");
 
         let (player1_context, player1_state) = character::from_config(
-            &texture_creator,
+            texture_creator,
             &mut global_textures,
             "./resources/character1/character1.json",
             FPoint::new(-100.0, 0.0),
@@ -167,7 +167,7 @@ impl<'a> Game<'a> {
         )
         .expect("Failed to load player1 config");
         let (player2_context, player2_state) = character::from_config(
-            &texture_creator,
+            texture_creator,
             &mut global_textures,
             "./resources/character1/character2.json",
             FPoint::new(100.0, 0.0),

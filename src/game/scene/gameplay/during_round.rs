@@ -82,7 +82,7 @@ impl GameplayScene for DuringRound {
         _dt: f32,
     ) -> Option<GameplayScenes> {
         // Side check first to prevent flickering
-        if let Some(player1_side) = side_detection(&state.player1.pos(), &state.player2.pos()) {
+        if let Some(player1_side) = side_detection(state.player1.pos(), state.player2.pos()) {
             state.player1.set_side(&context.player1, player1_side);
             state
                 .player2
@@ -100,12 +100,12 @@ impl GameplayScene for DuringRound {
             state.player2.movement_update(&context.player2);
 
             let (player1_pos, player2_pos) = movement_system(
-                &state.player1.side(),
-                &state.player1.pos(),
-                &state.player1.get_collision_box(&context.player1),
-                &state.player2.side(),
-                &state.player2.pos(),
-                &state.player2.get_collision_box(&context.player2),
+                state.player1.side(),
+                state.player1.pos(),
+                state.player1.get_collision_box(&context.player1),
+                state.player2.side(),
+                state.player2.pos(),
+                state.player2.get_collision_box(&context.player2),
                 &context.stage,
             );
             state.player1.set_pos(player1_pos);
@@ -127,7 +127,7 @@ impl GameplayScene for DuringRound {
     fn render(
         &self,
         canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
-        global_textures: &Vec<sdl3::render::Texture>,
+        global_textures: &[sdl3::render::Texture],
         context: &GameContext,
         state: &GameState,
     ) -> Result<(), sdl3::Error> {
@@ -154,10 +154,10 @@ fn handle_hit_boxes(state: &mut GameState, context: &GameContext) -> usize {
     let player1_hit_boxes = state.player1.get_hit_boxes(&context.player1);
     let player2_hurt_boxes = state.player2.get_hurt_boxes(&context.player2);
     let player1_hit = check_hit_collisions(
-        &player1_side,
+        player1_side,
         player1_pos,
         player1_hit_boxes,
-        &player2_side,
+        player2_side,
         player2_pos,
         player2_hurt_boxes,
     );
@@ -165,10 +165,10 @@ fn handle_hit_boxes(state: &mut GameState, context: &GameContext) -> usize {
     let player2_hit_boxes = state.player2.get_hit_boxes(&context.player2);
     let player1_hurt_boxes = state.player1.get_hurt_boxes(&context.player1);
     let player2_hit = check_hit_collisions(
-        &player2_side,
+        player2_side,
         player2_pos,
         player2_hit_boxes,
-        &player1_side,
+        player1_side,
         player1_pos,
         player1_hurt_boxes,
     );

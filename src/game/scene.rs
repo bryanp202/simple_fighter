@@ -30,7 +30,7 @@ pub trait Scene {
     fn render(
         &self,
         canvas: &mut Canvas<Window>,
-        global_textures: &Vec<Texture>,
+        global_textures: &[Texture],
         context: &GameContext,
         state: &GameState,
     ) -> Result<(), sdl3::Error>;
@@ -54,7 +54,7 @@ impl Scene for Scenes {
         context: &GameContext,
         inputs: &mut PlayerInputs,
         state: &mut GameState,
-    ) -> () {
+    ) {
         match self {
             Self::MainMenu(main_menu) => main_menu.enter(context, inputs, state),
             Self::LocalPlay(local_play) => local_play.enter(context, inputs, state),
@@ -93,7 +93,7 @@ impl Scene for Scenes {
     fn render(
         &self,
         canvas: &mut Canvas<Window>,
-        global_textures: &Vec<Texture>,
+        global_textures: &[Texture],
         context: &GameContext,
         state: &GameState,
     ) -> Result<(), sdl3::Error> {

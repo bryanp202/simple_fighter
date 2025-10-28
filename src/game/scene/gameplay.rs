@@ -26,7 +26,7 @@ pub trait GameplayScene {
     fn render(
         &self,
         canvas: &mut Canvas<Window>,
-        global_textures: &Vec<Texture>,
+        global_textures: &[Texture],
         context: &GameContext,
         state: &GameState,
     ) -> Result<(), sdl3::Error>;
@@ -71,7 +71,7 @@ impl GameplayScene for GameplayScenes {
     fn render(
         &self,
         canvas: &mut Canvas<Window>,
-        global_textures: &Vec<Texture>,
+        global_textures: &[Texture],
         context: &GameContext,
         state: &GameState,
     ) -> Result<(), sdl3::Error> {
@@ -105,7 +105,7 @@ impl GameplayScene for GameplayScenes {
 
 fn render_gameplay(
     canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
-    global_textures: &Vec<sdl3::render::Texture>,
+    global_textures: &[sdl3::render::Texture],
     context: &GameContext,
     state: &GameState,
     time: usize,
@@ -130,7 +130,7 @@ fn render_gameplay(
 
 fn render_timer(
     canvas: &mut Canvas<Window>,
-    global_textures: &Vec<Texture>,
+    global_textures: &[Texture],
     timer_animation: &Animation,
     time: usize,
 ) -> Result<(), sdl3::Error> {
@@ -248,7 +248,7 @@ fn render_player2_health(
 ) -> Result<(), sdl3::Error> {
     canvas.set_draw_color(Color::RED);
     canvas.fill_rect(FRect::new(
-        screen_w as f32 - bar_width,
+        screen_w - bar_width,
         0.0,
         bar_width,
         bar_h,
@@ -256,7 +256,7 @@ fn render_player2_health(
     canvas.set_draw_color(Color::GREEN);
     let health_bar = hp_per.powf(1.4) * bar_width;
     canvas.fill_rect(FRect::new(
-        screen_w as f32 - bar_width,
+        screen_w - bar_width,
         0.0,
         health_bar,
         bar_h,

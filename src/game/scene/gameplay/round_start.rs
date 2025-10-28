@@ -42,7 +42,7 @@ impl GameplayScene for RoundStart {
     fn render(
         &self,
         canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
-        global_textures: &Vec<sdl3::render::Texture>,
+        global_textures: &[sdl3::render::Texture],
         context: &GameContext,
         state: &GameState,
     ) -> Result<(), sdl3::Error> {
@@ -56,7 +56,7 @@ impl GameplayScene for RoundStart {
         context.camera.render_animation(
             canvas,
             global_textures,
-            &FPoint::new(0.0, 240.0),
+            FPoint::new(0.0, 240.0),
             &context.round_start_animation,
             text_frame,
         )

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ops::Range, usize};
+use std::{collections::HashMap, ops::Range};
 
 use crate::game::{
     Side,
@@ -22,12 +22,12 @@ pub fn deserialize<'a>(
     start_side: Side,
 ) -> Result<(character::Context, character::State), String> {
     let src = std::fs::read_to_string(config)
-        .map_err(|err| format!("Failed to open: '{}': {}", config, err.to_string()))?;
+        .map_err(|err| format!("Failed to open: '{config}': {err}"))?;
     let character_json: CharacterJson = serde_json::from_str(&src)
-        .map_err(|err| format!("Failed to parse: '{}': {}", config, err.to_string()))?;
+        .map_err(|err| format!("Failed to parse: '{config}': {err}"))?;
 
     let mut animation_data = Vec::new();
-    for mov in character_json.moves.iter() {
+    for mov in &character_json.moves {
         let new_animation = Animation::load(
             texture_creator,
             global_textures,
@@ -68,7 +68,7 @@ pub fn deserialize<'a>(
     let mut hit_box_offset = 0usize;
     let mut hurt_box_offset = 0usize;
     let mut cancel_options_offset = 0usize;
-    for mov in character_json.moves.iter() {
+    for mov in &character_json.moves {
         append_hit_box_data(
             mov,
             &mut hit_box_data,
@@ -183,7 +183,7 @@ fn append_hit_box_data(
             format!(
                 "'{}': {}",
                 mov.name,
-                "Run length encoding required for hitbox frames".to_string()
+                "Run length encoding required for hitbox frames"
             )
         })?;
         let range = *offset..*offset + first.boxes.len();
@@ -222,7 +222,7 @@ fn append_hurt_box_data(
             format!(
                 "'{}': {}",
                 mov.name,
-                "Run length encoding required for hurtbox frames".to_string()
+                "Run length encoding required for hurtbox frames"
             )
         })?;
         let range = *offset..*offset + first.boxes.len();
@@ -256,10 +256,10 @@ fn append_cancel_options_data(
     *offset += mov.cancel_options.len();
     cancel_options.push(range);
 
-    for cancel_option in mov.cancel_options.iter() {
+    for cancel_option in &mov.cancel_options {
         let index = map
             .get(cancel_option.as_str())
-            .ok_or_else(|| format!("Could not find a move named: {}", cancel_option))?;
+            .ok_or_else(|| format!("Could not find a move named: {cancel_option}"))?;
         run_length_cancel_options.push(*index);
     }
     Ok(())
@@ -302,11 +302,11 @@ enum StartBehaviorJson {
 }
 
 impl StartBehaviorJson {
-    fn to_start_behavior(&self) -> StartBehavior {
+    fn to_start_behavior(self) -> StartBehavior {
         match self {
-            &StartBehaviorJson::None => StartBehavior::None,
-            &StartBehaviorJson::SetVel { x, y } => StartBehavior::SetVel { x, y },
-            &StartBehaviorJson::AddFrictionVel { x, y } => StartBehavior::AddFrictionVel { x, y },
+            StartBehaviorJson::None => StartBehavior::None,
+            StartBehaviorJson::SetVel { x, y } => StartBehavior::SetVel { x, y },
+            StartBehaviorJson::AddFrictionVel { x, y } => StartBehavior::AddFrictionVel { x, y },
         }
     }
 }
@@ -345,7 +345,7 @@ struct CancelWindowJson {
 }
 
 impl CancelWindowJson {
-    fn to_range(&self) -> Range<usize> {
+    fn to_range(self) -> Range<usize> {
         self.start.unwrap_or(usize::MAX)..self.end.unwrap_or(usize::MAX)
     }
 }
@@ -441,7 +441,7 @@ enum InputJson {
 }
 
 impl InputJson {
-    fn to_move_input(&self) -> MoveInput {
+    fn to_move_input(self) -> MoveInput {
         match self {
             Self::Direction { dir, button } => MoveInput::new(
                 button.to_button_flag(),
@@ -472,7 +472,7 @@ enum BlockTypeJson {
 }
 
 impl BlockTypeJson {
-    fn to_block_type(&self) -> BlockType {
+    fn to_block_type(self) -> BlockType {
         match self {
             Self::Low => BlockType::Low,
             Self::Mid => BlockType::Mid,
@@ -559,8 +559,8 @@ pub enum AnimationLayoutJson {
 impl AnimationLayoutJson {
     fn to_animation_layout(&self) -> AnimationLayout {
         match self {
-            AnimationLayoutJson::Horz => AnimationLayout::HORIZONTAL,
-            AnimationLayoutJson::Vert => AnimationLayout::VERTICAL,
+            AnimationLayoutJson::Horz => AnimationLayout::Horizontal,
+            AnimationLayoutJson::Vert => AnimationLayout::Vertical,
         }
     }
 }

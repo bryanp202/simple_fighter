@@ -80,7 +80,7 @@ impl Scene for OnlinePlay {
     fn render(
         &self,
         canvas: &mut sdl3::render::Canvas<sdl3::video::Window>,
-        global_textures: &Vec<sdl3::render::Texture>,
+        global_textures: &[sdl3::render::Texture],
         context: &GameContext,
         state: &GameState,
     ) -> Result<(), sdl3::Error> {
@@ -125,7 +125,7 @@ impl OnlinePlay {
         let frames = frames - self.delay;
 
         if cfg!(feature = "debug") {
-            println!("rolling back: {}", frames);
+            println!("rolling back: {frames}");
         }
 
         let (old_scene, old_state) = self.game_state_history.rewind(frames);
@@ -167,11 +167,10 @@ impl OnlinePlay {
         state: &mut GameState,
         frames: usize,
     ) {
-        if cfg!(feature = "debug") {
-            if frames > 0 {
-                println!("fastforwarding: {}", frames);
+        if cfg!(feature = "debug")
+            && frames > 0 {
+                println!("fastforwarding: {frames}");
             }
-        }
 
         for _ in 0..frames {
             state.player1_inputs.update(inputs.player1.parse_history());

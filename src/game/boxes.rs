@@ -38,7 +38,7 @@ impl HitBox {
         }
     }
 
-    pub fn on_side(&self, side: &Side, offset: FPoint) -> FRect {
+    pub fn on_side(&self, side: Side, offset: FPoint) -> FRect {
         match side {
             Side::Left => FRect {
                 x: self.pos.x + offset.x,
@@ -85,7 +85,7 @@ impl HurtBox {
         Self { pos }
     }
 
-    pub fn on_side(&self, side: &Side, offset: FPoint) -> FRect {
+    pub fn on_side(&self, side: Side, offset: FPoint) -> FRect {
         match side {
             Side::Left => FRect {
                 x: self.pos.x + offset.x,
@@ -112,7 +112,7 @@ impl CollisionBox {
         Self { pos }
     }
 
-    pub fn on_side(&self, side: &Side, offset: FPoint) -> FRect {
+    pub fn on_side(&self, side: Side, offset: FPoint) -> FRect {
         match side {
             Side::Left => FRect {
                 x: self.pos.x + offset.x,

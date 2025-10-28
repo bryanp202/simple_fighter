@@ -5,9 +5,10 @@ use sdl3::{
 
 use crate::game::render::load_animation;
 
+#[derive(Clone, Copy)]
 pub enum AnimationLayout {
-    HORIZONTAL,
-    VERTICAL,
+    Horizontal,
+    Vertical,
 }
 
 /// Animation frames are stored vertically

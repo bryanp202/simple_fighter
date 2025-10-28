@@ -1,7 +1,6 @@
 use std::{
     collections::VecDeque,
     net::{SocketAddr, ToSocketAddrs, UdpSocket},
-    usize,
 };
 
 use bincode::{BorrowDecode, Encode, config};
@@ -70,7 +69,7 @@ impl UdpListener {
         while let Some((msg, src_addr)) = self.recv_msg() {
             match msg.content {
                 MessageContent::Syn => {
-                    if let None = potential_peer {
+                    if potential_peer.is_none() {
                         peer_time_out = current_frame + PEER_TIME_OUT;
                         potential_peer = Some(src_addr);
                         self.send_msg(src_addr, current_frame, MessageContent::SynAck)?;
@@ -109,7 +108,7 @@ impl UdpListener {
         )
     }
 
-    fn recv_msg<'a>(&'a mut self) -> Option<(GameMessage<'a>, SocketAddr)> {
+    fn recv_msg(&mut self) -> Option<(GameMessage, SocketAddr)> {
         recv_msg(&self.socket, &mut self.recv_buf)
     }
 
@@ -124,7 +123,7 @@ impl UdpListener {
 
         if cfg!(feature = "debug") {
             println!("Connection established");
-            println!("peer_frame_offset: {}", peer_frame_offset);
+            println!("peer_frame_offset: {peer_frame_offset}");
         }
 
         Ok(UdpStream {
@@ -199,15 +198,13 @@ impl UdpClient {
         )
     }
 
-    fn recv_msg<'a>(&'a mut self) -> Option<GameMessage<'a>> {
-        let Some((msg, src_addr)) = recv_msg(&self.socket, &mut self.recv_buf) else {
-            return None;
-        };
+    fn recv_msg(&mut self) -> Option<GameMessage> {
+        let (msg, src_addr) = recv_msg(&self.socket, &mut self.recv_buf)?;
 
-        if src_addr != self.target_addr {
-            None
-        } else {
+        if src_addr == self.target_addr {
             Some(msg)
+        } else {
+            None
         }
     }
 
@@ -221,7 +218,7 @@ impl UdpClient {
 
         if cfg!(feature = "debug") {
             println!("Connection established");
-            println!("peer_frame_offset: {}", peer_frame_offset);
+            println!("peer_frame_offset: {peer_frame_offset}");
         }
 
         Ok(UdpStream {
@@ -317,7 +314,7 @@ impl UdpStream {
                 .push_front((current_frame as u32, local_inputs));
         }
 
-        if self.outbound_buf.len() > 0 {
+        if !self.outbound_buf.is_empty() {
             let (inputs1, inputs2) = self.outbound_buf.as_slices();
             let mut input_iter =
                 inputs1
@@ -358,8 +355,7 @@ impl UdpStream {
 
         if cfg!(feature = "debug") {
             println!(
-                "Recieved {} new inputs, skipping: {}",
-                inputs_recv, skip_inputs
+                "Recieved {inputs_recv} new inputs, skipping: {skip_inputs}"
             );
         }
 
@@ -368,10 +364,10 @@ impl UdpStream {
             .skip(skip_inputs)
         {
             let input_frame = u32::from_ne_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]) as usize;
-            let game_frame = (input_frame as usize).saturating_sub(peer_frame_offset);
+            let game_frame = input_frame.saturating_sub(peer_frame_offset);
             let dir = Direction::from(chunk[4]);
             let buttons = ButtonFlag::from_bits_retain(chunk[5]);
-            println!("recieved: {:?}, {:?} at {}", dir, buttons, game_frame);
+            println!("recieved: {dir:?}, {buttons:?} at {game_frame}");
             peer_inputs.insert_input(
                 (current_frame - local_frame_offset) - game_frame,
                 dir,
@@ -410,15 +406,13 @@ impl UdpStream {
         )
     }
 
-    fn recv_msg<'a>(&'a mut self) -> Option<GameMessage<'a>> {
-        let Some((msg, src_addr)) = recv_msg(&self.socket, &mut self.recv_buf) else {
-            return None;
-        };
+    fn recv_msg(&mut self) -> Option<GameMessage> {
+        let (msg, src_addr) = recv_msg(&self.socket, &mut self.recv_buf)?;
 
-        if src_addr != self.peer_addr {
-            None
-        } else {
+        if src_addr == self.peer_addr {
             Some(msg)
+        } else {
+            None
         }
     }
 }

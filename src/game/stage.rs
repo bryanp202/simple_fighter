@@ -44,16 +44,16 @@ impl Stage {
     pub fn render(
         &self,
         canvas: &mut Canvas<Window>,
-        global_textures: &Vec<Texture>,
+        global_textures: &[Texture],
     ) -> Result<(), sdl3::Error> {
-        for &layer in self.layers.iter() {
+        for &layer in &self.layers {
             canvas.copy(&global_textures[layer], None, None)?;
         }
 
         Ok(())
     }
 
-    pub fn bind_pos(&self, pos: &FPoint) -> FPoint {
+    pub fn bind_pos(&self, pos: FPoint) -> FPoint {
         FPoint::new(pos.x.clamp(self.left_wall, self.right_wall), pos.y)
     }
 }

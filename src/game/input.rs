@@ -272,10 +272,10 @@ impl InputHistory {
         }
     }
 
-    /// Insert a data point index_from_head places back from the current index
-    /// ie. if index_from_head == 3 then insert 3 places in the past
+    /// Insert a data point `index_from_head` places back from the current index
+    /// ie. if `index_from_head` == 3 then insert 3 places in the past
     ///
-    /// Expects index_from_head to be <= SIZE
+    /// Expects `index_from_head` to be <= SIZE
     ///
     /// Returns if inserted data caused shift in running length encoding
     ///
@@ -303,7 +303,7 @@ impl InputHistory {
         for i in (1..=(self.current_index.abs_diff(run_index))).rev() {
             let src_index = (run_index + i) % HISTORY_FRAME_LEN;
             let dst_index = (src_index + 1) % HISTORY_FRAME_LEN;
-            self.buf[dst_index] = self.buf[src_index].clone();
+            self.buf[dst_index] = self.buf[src_index];
         }
         let split_index = (run_index + 1) % HISTORY_FRAME_LEN;
         self.buf[split_index] = (input_dir, input_buttons, overlap);
@@ -331,7 +331,7 @@ impl InputHistory {
         self.parse_history_at(0)
     }
 
-    /// Expects delay to be <= HISTORY_FRAME_LEN + PARSE_LEN
+    /// Expects delay to be <= `HISTORY_FRAME_LEN` + `PARSE_LEN`
     pub fn parse_history_at(&self, rollback: usize) -> (Direction, Motion, ButtonFlag) {
         let mut result = Motion::NONE;
 
@@ -398,7 +398,7 @@ impl InputHistory {
     }
 
     fn find_dir_sequence(haystack: &[Direction], seq: &[Direction], motion: Motion) -> Motion {
-        if let Some(_) = haystack.windows(seq.len()).position(|window| window == seq) {
+        if haystack.windows(seq.len()).any(|window| window == seq) {
             motion
         } else {
             Motion::NONE
@@ -410,9 +410,9 @@ bitflags! {
     #[derive(Copy, Clone, Debug, PartialEq)]
     pub struct ButtonFlag: u8 {
         const NONE = 0;
-        const L = 0b00000001;
-        const M = 0b00000010;
-        const H = 0b00000100;
+        const L = 0b0000_0001;
+        const M = 0b0000_0010;
+        const H = 0b0000_0100;
     }
 }
 
@@ -470,9 +470,9 @@ impl From<u8> for Direction {
     }
 }
 
-impl Into<u8> for Direction {
-    fn into(self) -> u8 {
-        match self {
+impl From<Direction> for u8 {
+    fn from(val: Direction) -> Self {
+        match val {
             Direction::Neutral => 0,
             Direction::Up => 1,
             Direction::Down => 2,
@@ -487,7 +487,7 @@ impl Into<u8> for Direction {
 }
 
 impl Direction {
-    pub fn on_left_side(&self) -> RelativeDirection {
+    pub fn on_left_side(self) -> RelativeDirection {
         match self {
             Direction::Down => RelativeDirection::Down,
             Direction::DownLeft => RelativeDirection::DownBack,
@@ -501,7 +501,7 @@ impl Direction {
         }
     }
 
-    pub fn on_right_side(&self) -> RelativeDirection {
+    pub fn on_right_side(self) -> RelativeDirection {
         match self {
             Direction::Down => RelativeDirection::Down,
             Direction::DownLeft => RelativeDirection::DownForward,
@@ -516,7 +516,7 @@ impl Direction {
     }
 
     #[allow(dead_code)]
-    pub fn inverse(&self) -> Direction {
+    pub fn inverse(self) -> Direction {
         match self {
             Direction::Down => Direction::Down,
             Direction::DownLeft => Direction::DownRight,
@@ -547,49 +547,49 @@ pub enum RelativeDirection {
 
 impl RelativeDirection {
     /// Returns true if self and other match, or if self is none
-    pub fn matches_or_is_none(&self, other: &Self) -> bool {
-        *self == *other || *self == Self::None
+    pub fn matches_or_is_none(self, other: Self) -> bool {
+        self == other || self == Self::None
     }
 }
 
 bitflags! {
     #[derive(Copy, Clone, Debug, PartialEq)]
     pub struct Motion: u32 {
-        const NONE       = 0b00000000;
-        const DownDown   = 0b00000001;
-        const RightRight = 0b00000010;
-        const LeftLeft   = 0b00000100;
-        const QcRight    = 0b00001000;
-        const QcLeft     = 0b00010000;
-        const DpRight    = 0b00100000;
-        const DpLeft     = 0b01000000;
+        const NONE       = 0b0000_0000;
+        const DownDown   = 0b0000_0001;
+        const RightRight = 0b0000_0010;
+        const LeftLeft   = 0b0000_0100;
+        const QcRight    = 0b0000_1000;
+        const QcLeft     = 0b0001_0000;
+        const DpRight    = 0b0010_0000;
+        const DpLeft     = 0b0100_0000;
 
-        const LEFTS      = 0b01010100;
-        const RIGHTS     = 0b00101010;
-        const NEUTRALS   = 0b00000001;
+        const LEFTS      = 0b0101_0100;
+        const RIGHTS     = 0b0010_1010;
+        const NEUTRALS   = 0b0000_0001;
     }
 }
 
 bitflags! {
     #[derive(Copy, Clone, Debug, PartialEq)]
     pub struct RelativeMotion: u32 {
-        const NONE             = 0b00000000;
-        const DownDown         = 0b00000001;
-        const ForwardForward   = 0b00000010;
-        const BackBack         = 0b00000100;
-        const QcForward        = 0b00001000;
-        const QcBack           = 0b00010000;
-        const DpForward        = 0b00100000;
-        const DpBack           = 0b01000000;
+        const NONE             = 0b0000_0000;
+        const DownDown         = 0b0000_0001;
+        const ForwardForward   = 0b0000_0010;
+        const BackBack         = 0b0000_0100;
+        const QcForward        = 0b0000_1000;
+        const QcBack           = 0b0001_0000;
+        const DpForward        = 0b0010_0000;
+        const DpBack           = 0b0100_0000;
     }
 }
 
 impl Motion {
-    pub fn on_left_side(&self) -> RelativeMotion {
+    pub fn on_left_side(self) -> RelativeMotion {
         RelativeMotion::from_bits_retain(self.bits())
     }
 
-    pub fn on_right_side(&self) -> RelativeMotion {
+    pub fn on_right_side(self) -> RelativeMotion {
         let bits = self.bits();
         let shifted = (bits & Motion::LEFTS.bits()) >> 1
             | (bits & Motion::RIGHTS.bits()) << 1
