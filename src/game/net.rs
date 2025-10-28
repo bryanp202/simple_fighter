@@ -354,9 +354,7 @@ impl UdpStream {
         }
 
         if cfg!(feature = "debug") {
-            println!(
-                "Recieved {inputs_recv} new inputs, skipping: {skip_inputs}"
-            );
+            println!("Recieved {inputs_recv} new inputs, skipping: {skip_inputs}");
         }
 
         for chunk in bytes

@@ -39,9 +39,10 @@ impl DuringRound {
                 if self.time == ROUND_LEN * FRAME_RATE {
                     match player1_hp_ratio.partial_cmp(&player2_hp_ratio) {
                         Some(Ordering::Less) => self.score.1 += 1,
-                        Some(Ordering::Equal) => self.score = (self.score.0 + 1, self.score.1 + 1),
+                        Some(Ordering::Equal) | None => {
+                            self.score = (self.score.0 + 1, self.score.1 + 1)
+                        }
                         Some(Ordering::Greater) => self.score.0 += 1,
-                        None => self.score = (self.score.0 + 1, self.score.1 + 1),
                     }
                 } else {
                     // Timer not over so should return no scene transition

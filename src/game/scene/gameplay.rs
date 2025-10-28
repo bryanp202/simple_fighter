@@ -247,20 +247,10 @@ fn render_player2_health(
     bar_width: f32,
 ) -> Result<(), sdl3::Error> {
     canvas.set_draw_color(Color::RED);
-    canvas.fill_rect(FRect::new(
-        screen_w - bar_width,
-        0.0,
-        bar_width,
-        bar_h,
-    ))?;
+    canvas.fill_rect(FRect::new(screen_w - bar_width, 0.0, bar_width, bar_h))?;
     canvas.set_draw_color(Color::GREEN);
     let health_bar = hp_per.powf(1.4) * bar_width;
-    canvas.fill_rect(FRect::new(
-        screen_w - bar_width,
-        0.0,
-        health_bar,
-        bar_h,
-    ))?;
+    canvas.fill_rect(FRect::new(screen_w - bar_width, 0.0, health_bar, bar_h))?;
 
     Ok(())
 }

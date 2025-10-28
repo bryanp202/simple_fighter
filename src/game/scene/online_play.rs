@@ -167,10 +167,9 @@ impl OnlinePlay {
         state: &mut GameState,
         frames: usize,
     ) {
-        if cfg!(feature = "debug")
-            && frames > 0 {
-                println!("fastforwarding: {frames}");
-            }
+        if cfg!(feature = "debug") && frames > 0 {
+            println!("fastforwarding: {frames}");
+        }
 
         for _ in 0..frames {
             state.player1_inputs.update(inputs.player1.parse_history());

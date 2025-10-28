@@ -43,11 +43,11 @@ impl Scene for MainMenu {
         }
         if self.m_button_pressed && !buttons.intersects(ButtonFlag::M) {
             return Some(Scenes::Hosting(Hosting::new()));
-        }  
+        }
         if self.h_button_pressed && !buttons.intersects(ButtonFlag::H) {
             return Some(Scenes::Matching(Matching::new()));
         }
-        
+
         self.l_button_pressed = buttons.intersects(ButtonFlag::L);
         self.m_button_pressed = buttons.intersects(ButtonFlag::M);
         self.h_button_pressed = buttons.intersects(ButtonFlag::H);

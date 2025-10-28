@@ -49,12 +49,7 @@ pub enum Scenes {
 }
 
 impl Scene for Scenes {
-    fn enter(
-        &mut self,
-        context: &GameContext,
-        inputs: &mut PlayerInputs,
-        state: &mut GameState,
-    ) {
+    fn enter(&mut self, context: &GameContext, inputs: &mut PlayerInputs, state: &mut GameState) {
         match self {
             Self::MainMenu(main_menu) => main_menu.enter(context, inputs, state),
             Self::LocalPlay(local_play) => local_play.enter(context, inputs, state),

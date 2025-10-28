@@ -81,11 +81,7 @@ pub struct Context {
 }
 
 impl Context {
-    fn active_hit_boxes(
-        &self,
-        current_state: StateIndex,
-        mut current_frame: usize,
-    ) -> &[HitBox] {
+    fn active_hit_boxes(&self, current_state: StateIndex, mut current_frame: usize) -> &[HitBox] {
         let mut run_start = self.states.hit_boxes_start[current_state];
 
         loop {
@@ -98,11 +94,7 @@ impl Context {
         }
     }
 
-    fn active_hurt_boxes(
-        &self,
-        current_state: StateIndex,
-        mut current_frame: usize,
-    ) -> &[HurtBox] {
+    fn active_hurt_boxes(&self, current_state: StateIndex, mut current_frame: usize) -> &[HurtBox] {
         let mut run_start = self.states.hurt_boxes_start[current_state];
 
         loop {
@@ -154,7 +146,7 @@ impl State {
                 self.check_transitions(
                     context,
                     inputs.dir().on_left_side(),
-                    inputs
+                    &inputs
                         .move_buf()
                         .iter()
                         .map(|(motion, buttons)| (motion.on_left_side(), *buttons)),
@@ -164,7 +156,7 @@ impl State {
                 self.check_transitions(
                     context,
                     inputs.dir().on_right_side(),
-                    inputs
+                    &inputs
                         .move_buf()
                         .iter()
                         .map(|(motion, buttons)| (motion.on_right_side(), *buttons)),
@@ -261,10 +253,10 @@ impl State {
     }
 
     pub fn get_hit_boxes<'a>(&self, context: &'a Context) -> &'a [HitBox] {
-        if !self.hit_connected {
-            context.active_hit_boxes(self.current_state, self.current_frame)
-        } else {
+        if self.hit_connected {
             &context.states.hit_box_data[0..0]
+        } else {
+            context.active_hit_boxes(self.current_state, self.current_frame)
         }
     }
 
@@ -310,7 +302,7 @@ impl State {
 }
 
 impl State {
-    fn check_transitions<T>(&mut self, context: &Context, dir: RelativeDirection, move_iter: T)
+    fn check_transitions<T>(&mut self, context: &Context, dir: RelativeDirection, move_iter: &T)
     where
         T: Iterator<Item = (RelativeMotion, ButtonFlag)> + Clone,
     {
@@ -340,7 +332,7 @@ impl State {
         }
     }
 
-    fn check_cancels<T>(&mut self, context: &Context, dir: RelativeDirection, move_iter: T)
+    fn check_cancels<T>(&mut self, context: &Context, dir: RelativeDirection, move_iter: &T)
     where
         T: Iterator<Item = (RelativeMotion, ButtonFlag)> + Clone,
     {

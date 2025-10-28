@@ -175,8 +175,8 @@ pub fn draw_collision_box_system(
 }
 
 fn open_img(file_path: &str) -> Result<DynamicImage, String> {
-    let file = std::fs::File::open(file_path)
-        .map_err(|err| format!("File: '{file_path}': {err}"))?;
+    let file =
+        std::fs::File::open(file_path).map_err(|err| format!("File: '{file_path}': {err}"))?;
     let reader = std::io::BufReader::new(file);
     let img = image::ImageReader::new(reader)
         .with_guessed_format()

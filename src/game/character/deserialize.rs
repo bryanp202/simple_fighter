@@ -23,8 +23,8 @@ pub fn deserialize<'a>(
 ) -> Result<(character::Context, character::State), String> {
     let src = std::fs::read_to_string(config)
         .map_err(|err| format!("Failed to open: '{config}': {err}"))?;
-    let character_json: CharacterJson = serde_json::from_str(&src)
-        .map_err(|err| format!("Failed to parse: '{config}': {err}"))?;
+    let character_json: CharacterJson =
+        serde_json::from_str(&src).map_err(|err| format!("Failed to parse: '{config}': {err}"))?;
 
     let mut animation_data = Vec::new();
     for mov in &character_json.moves {
@@ -182,8 +182,7 @@ fn append_hit_box_data(
         let duration = second.frame.checked_sub(first.frame).ok_or_else(|| {
             format!(
                 "'{}': {}",
-                mov.name,
-                "Run length encoding required for hitbox frames"
+                mov.name, "Run length encoding required for hitbox frames"
             )
         })?;
         let range = *offset..*offset + first.boxes.len();
@@ -221,8 +220,7 @@ fn append_hurt_box_data(
         let duration = second.frame.checked_sub(first.frame).ok_or_else(|| {
             format!(
                 "'{}': {}",
-                mov.name,
-                "Run length encoding required for hurtbox frames"
+                mov.name, "Run length encoding required for hurtbox frames"
             )
         })?;
         let range = *offset..*offset + first.boxes.len();
