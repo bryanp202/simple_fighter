@@ -229,6 +229,11 @@ impl InputHistory {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.buf = std::array::from_fn(|_| (Direction::Neutral, ButtonFlag::NONE, 1));
+        self.current_index = 0;
+    }
+
     pub fn set_mappings(&mut self, key_to_button: KeyToButtons, key_to_direction: KeyToDirections) {
         self.input.key_to_button = key_to_button;
         self.input.key_to_direction = key_to_direction;
@@ -260,6 +265,11 @@ impl InputHistory {
         self.buf[self.current_index].2 += 1;
     }
 
+    pub fn skip_for(&mut self, frames: usize) {
+        // Increment running frame length
+        self.buf[self.current_index].2 += frames;
+    }
+
     pub fn update(&mut self) {
         let (input_dir, input_buttons) = self.input.update();
 
@@ -272,43 +282,46 @@ impl InputHistory {
         }
     }
 
-    /// Insert a data point `index_from_head` places back from the current index
-    /// ie. if `index_from_head` == 3 then insert 3 places in the past
-    ///
-    /// Expects `index_from_head` to be <= SIZE
-    ///
-    /// Returns if inserted data caused shift in running length encoding
-    ///
-    /// This will never increment a runs length, so do not use to change shap, just to split runs
-    pub fn insert_input(
+    /// Add a new input that may or may not split the current run
+    /// 
+    /// Should never be called out of order
+    /// 
+    /// Ex: [(Neutral, Buttons::L, 200 frames)]: Insert 20 frames back ->
+    /// [(Neutral, Buttons::L, 180 frames), (new_dir, new_buttons, 20)]
+    pub fn append_input(
         &mut self,
-        rollback: usize,
+        frames_back: isize,
         input_dir: Direction,
         input_buttons: ButtonFlag,
     ) -> bool {
-        let (run_index, overlap) = self.get_index_and_overlap(rollback);
-        let (dir, buttons, frames) = &mut self.buf[run_index];
+        let (dir, buttons, frames) = &mut self.buf[self.current_index];
+
+        if frames_back < 0 {
+            // Increment running frame length to simulate fastforward
+            if *dir == input_dir && *buttons == input_buttons {
+                self.buf[self.current_index].2 += (-frames_back) as usize;
+                return false;
+            }
+
+            self.buf[self.current_index].2 += (-frames_back - 1) as usize;
+            self.current_index = (self.current_index + 1) % HISTORY_FRAME_LEN;
+            self.buf[self.current_index] = (input_dir, input_buttons, 1);
+            return true;
+        }
+
+        let new_run_length = frames_back as usize + 1;
+
         if *dir == input_dir && *buttons == input_buttons {
             return false;
         }
 
-        if *frames == overlap {
-            self.buf[run_index] = (input_dir, input_buttons, overlap);
-            return true;
+        if *frames != new_run_length {
+            *frames -= new_run_length;
+            self.current_index = (self.current_index + 1) % HISTORY_FRAME_LEN;
         }
+        self.buf[self.current_index] = (input_dir, input_buttons, new_run_length);
 
-        *frames -= overlap;
-
-        // Shift all data points newer than inserted one
-        for i in (1..=(self.current_index.abs_diff(run_index))).rev() {
-            let src_index = (run_index + i) % HISTORY_FRAME_LEN;
-            let dst_index = (src_index + 1) % HISTORY_FRAME_LEN;
-            self.buf[dst_index] = self.buf[src_index];
-        }
-        let split_index = (run_index + 1) % HISTORY_FRAME_LEN;
-        self.buf[split_index] = (input_dir, input_buttons, overlap);
-        self.current_index = (self.current_index + 1) % HISTORY_FRAME_LEN;
-
+        
         true
     }
 
@@ -335,7 +348,8 @@ impl InputHistory {
     pub fn parse_history_at(&self, rollback: usize) -> (Direction, Motion, ButtonFlag) {
         let mut result = Motion::NONE;
 
-        let (overlap_index, overlap) = self.get_index_and_overlap(self.delay + rollback);
+        let target_frame = self.delay + rollback;
+        let (overlap_index, overlap) = self.get_index_and_overlap(target_frame);
 
         let just_pressed_buttons = self.get_buttons_pressed(overlap_index, overlap);
 
@@ -609,7 +623,7 @@ fn test_insert_input() {
     history.update();
     history.update();
 
-    history.insert_input(0, Direction::Down, ButtonFlag::L);
+    history.append_input(0, Direction::Down, ButtonFlag::L);
 
     assert_eq!(
         [

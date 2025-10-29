@@ -74,6 +74,14 @@ pub struct PlayerInputs {
 }
 
 impl PlayerInputs {
+    pub fn reset_player1(&mut self) {
+        self.player1.reset();
+    }
+
+    pub fn reset_player2(&mut self) {
+        self.player2.reset();
+    }
+
     pub fn update_player1(&mut self) {
         self.player1.update();
     }

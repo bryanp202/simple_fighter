@@ -40,7 +40,6 @@ impl Scene for Matching {
                 connection,
                 crate::game::Side::Right,
                 state,
-                self.current_frame,
             )))
         } else {
             self.current_frame += 1;

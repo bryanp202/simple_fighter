@@ -1,12 +1,10 @@
 use crate::{
     game::{
-        FRAME_DURATION, GameContext, GameState, MAX_ROLLBACK_FRAMES, PlayerInputs, Side,
-        net::UdpStream,
-        scene::{
+        FRAME_DURATION, GameContext, GameState, MAX_ROLLBACK_FRAMES, PlayerInputs, Side, net::UdpStream, scene::{
             Scene, Scenes,
             gameplay::{GameplayScene, GameplayScenes},
             main_menu::MainMenu,
-        },
+        }
     },
     ring_buf::RingBuf,
 };
@@ -48,9 +46,8 @@ impl Scene for OnlinePlay {
         let (rollback, fastforward) =
             self.connection
                 .update(self.current_frame, local_inputs, peer_inputs)?;
-        self.rollback(context, inputs, state, rollback);
-        self.fastforward(context, inputs, state, fastforward);
-        self.current_frame += fastforward;
+        self.rollback(context, inputs, state, rollback, fastforward);
+        self.fast_forward(context, inputs, state, fastforward);
 
         Ok(())
     }
@@ -89,6 +86,12 @@ impl Scene for OnlinePlay {
 
     fn exit(&mut self, context: &GameContext, inputs: &mut PlayerInputs, state: &mut GameState) {
         inputs.set_delay(0);
+
+        match self.local_side {
+            Side::Left => inputs.reset_player2(),
+            Side::Right => inputs.reset_player1(),
+        }
+
         self.scene.exit(context, state);
     }
 }
@@ -98,7 +101,6 @@ impl OnlinePlay {
         connection: UdpStream,
         local_side: Side,
         state: &GameState,
-        current_frame: usize,
     ) -> Self {
         let scene = GameplayScenes::new_round_start((0, 0));
         let initial_state = (scene.clone(), state.clone());
@@ -106,7 +108,7 @@ impl OnlinePlay {
             local_side,
             connection,
             scene,
-            current_frame,
+            current_frame: 0,
             game_state_history: RingBuf::new(initial_state),
             delay: 3,
         }
@@ -117,12 +119,13 @@ impl OnlinePlay {
         context: &GameContext,
         inputs: &PlayerInputs,
         state: &mut GameState,
-        frames: usize,
+        rollback_frames: usize,
+        fastforward_frames: usize,
     ) {
-        if frames < self.delay {
+        if rollback_frames < self.delay {
             return;
         }
-        let frames = frames - self.delay;
+        let frames = rollback_frames - self.delay;
 
         if cfg!(feature = "debug") {
             println!("rolling back: {frames}");
@@ -132,7 +135,7 @@ impl OnlinePlay {
         self.scene = old_scene;
         *state = old_state;
 
-        self.fast_simulate(context, inputs, state, frames);
+        self.fast_simulate(context, inputs, state, frames, fastforward_frames);
     }
 
     fn fast_simulate(
@@ -141,7 +144,44 @@ impl OnlinePlay {
         inputs: &PlayerInputs,
         state: &mut GameState,
         frames: usize,
+        offset: usize,
     ) {
+        for frame in (1..frames + 1).rev() {
+            state
+                .player1_inputs
+                .update(inputs.player1.parse_history_at(frame + offset));
+            state
+                .player2_inputs
+                .update(inputs.player2.parse_history_at(frame + offset));
+
+            if let Some(mut new_scene) = self.scene.update(context, state, FRAME_DURATION) {
+                self.scene.exit(context, state);
+                new_scene.enter(context, state);
+                self.scene = new_scene;
+            }
+
+            self.append_game_snapshot(state);
+        }
+    }
+
+    fn fast_forward(
+        &mut self,
+        context: &GameContext,
+        inputs: &mut PlayerInputs,
+        state: &mut GameState,
+        frames: usize,
+    ) {
+        if cfg!(feature = "debug") {
+            if frames > 0 {
+                println!("Fastfowarding: {frames} frames");
+            }
+        }
+
+        match self.local_side {
+            Side::Left => inputs.player1.skip_for(frames),
+            Side::Right => inputs.player2.skip_for(frames),
+        }
+
         for frame in (1..frames + 1).rev() {
             state
                 .player1_inputs
@@ -158,34 +198,8 @@ impl OnlinePlay {
 
             self.append_game_snapshot(state);
         }
-    }
 
-    fn fastforward(
-        &mut self,
-        context: &GameContext,
-        inputs: &mut PlayerInputs,
-        state: &mut GameState,
-        frames: usize,
-    ) {
-        if cfg!(feature = "debug") && frames > 0 {
-            println!("fastforwarding: {frames}");
-        }
-
-        for _ in 0..frames {
-            state.player1_inputs.update(inputs.player1.parse_history());
-            state.player2_inputs.update(inputs.player2.parse_history());
-
-            if let Some(mut new_scene) = self.scene.update(context, state, FRAME_DURATION) {
-                self.scene.exit(context, state);
-                new_scene.enter(context, state);
-                self.scene = new_scene;
-            }
-
-            self.append_game_snapshot(state);
-
-            inputs.skip_player1();
-            inputs.skip_player2();
-        }
+        self.current_frame += frames;
     }
 
     fn append_game_snapshot(&mut self, state: &GameState) {

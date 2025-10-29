@@ -44,7 +44,6 @@ impl Scene for Hosting {
                 connection,
                 crate::game::Side::Left,
                 state,
-                self.current_frame,
             )))
         } else {
             self.current_frame += 1;

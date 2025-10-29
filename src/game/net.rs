@@ -33,13 +33,15 @@ enum MessageContent<'a> {
     Syn,
     SynAck,
     Connect,
+    StartAt(usize),
     Inputs((u32, &'a [u8])), // Start seq_num, (frame_num as u32, Direction, ButtonFlags) as bytes
     InputsAck(u32),
 }
 
 pub struct UdpListener {
     socket: UdpSocket,
-    potential_peer: (usize, Option<SocketAddr>),
+    potential_peer: (usize, Option<(usize, usize, SocketAddr)>),
+    start_timer: Option<usize>,
     recv_buf: [u8; BUFFER_LEN],
     send_buf: [u8; BUFFER_LEN],
 }
@@ -54,12 +56,23 @@ impl UdpListener {
         Ok(Self {
             socket,
             potential_peer: (usize::MAX, None),
+            start_timer: None,
             recv_buf: [0; BUFFER_LEN],
             send_buf: [0; BUFFER_LEN],
         })
     }
 
     pub fn update(&mut self, current_frame: usize) -> std::io::Result<Option<UdpStream>> {
+        match self.start_timer {
+            Some(start_frame) => self.wait_for_start(current_frame, start_frame),
+            None => {
+                self.wait_for_client(current_frame)?;
+                Ok(None)
+            },
+        }
+    }
+
+    fn wait_for_client(&mut self, current_frame: usize) -> std::io::Result<()> {
         let (mut peer_time_out, mut potential_peer) = self.potential_peer;
         if current_frame >= peer_time_out {
             peer_time_out = usize::MAX;
@@ -71,26 +84,35 @@ impl UdpListener {
                 MessageContent::Syn => {
                     if potential_peer.is_none() {
                         peer_time_out = current_frame + PEER_TIME_OUT;
-                        potential_peer = Some(src_addr);
+                        potential_peer = Some((current_frame, msg.current_frame, src_addr));
                         self.send_msg(src_addr, current_frame, MessageContent::SynAck)?;
                     }
-                }
+                },
                 MessageContent::Connect => {
-                    if potential_peer == Some(src_addr) {
-                        let peer_frame = msg.current_frame;
-                        self.send_msg(src_addr, current_frame, MessageContent::Connect)?;
-                        return Ok(Some(self.establish_connection(
-                            current_frame,
-                            peer_frame,
-                            src_addr,
-                        )?));
+                    match potential_peer {
+                        Some((local_offset, peer_offset, peer_addr))
+                        if peer_addr == src_addr => {
+                            let peer_start = (current_frame - local_offset) + peer_offset + 60;
+                            self.start_timer = Some(current_frame + 60);
+                            self.send_msg(src_addr, current_frame, MessageContent::StartAt(peer_start))?;
+                        }
+                        _ => {},
                     }
-                }
+                },
                 _ => {}
             }
         }
         self.potential_peer = (peer_time_out, potential_peer);
-        Ok(None)
+        Ok(())
+    }
+
+    fn wait_for_start(&mut self, current_frame: usize, start_frame: usize) -> std::io::Result<Option<UdpStream>> {
+        if current_frame >= start_frame {
+            let peer_addr = self.potential_peer.1.unwrap().2;
+            Ok(Some(self.establish_connection(peer_addr)?))
+        } else {
+            Ok(None)
+        }
     }
 
     fn send_msg(
@@ -114,16 +136,10 @@ impl UdpListener {
 
     fn establish_connection(
         &mut self,
-        local_frame: usize,
-        peer_frame: usize,
         peer_addr: SocketAddr,
     ) -> std::io::Result<UdpStream> {
-        let local_frame_offset = local_frame;
-        let peer_frame_offset = peer_frame;
-
         if cfg!(feature = "debug") {
             println!("Connection established");
-            println!("peer_frame_offset: {peer_frame_offset}");
         }
 
         Ok(UdpStream {
@@ -132,8 +148,6 @@ impl UdpListener {
             seq_num: 0,
             peer_seq_num: 0,
             peer_addr,
-            local_frame_offset,
-            peer_frame_offset,
             recv_buf: [0; BUFFER_LEN],
             send_buf: [0; BUFFER_LEN],
         })
@@ -143,6 +157,7 @@ impl UdpListener {
 pub struct UdpClient {
     socket: UdpSocket,
     target_addr: SocketAddr,
+    start_timer: Option<usize>,
     recv_buf: [u8; BUFFER_LEN],
     send_buf: [u8; BUFFER_LEN],
 }
@@ -159,6 +174,7 @@ impl UdpClient {
         Ok(Self {
             socket,
             target_addr,
+            start_timer: None,
             recv_buf: [0; BUFFER_LEN],
             send_buf: [0; BUFFER_LEN],
         })
@@ -172,16 +188,22 @@ impl UdpClient {
                 MessageContent::SynAck => {
                     self.send_msg(current_frame, MessageContent::Connect)?;
                 }
-                MessageContent::Connect => {
-                    let peer_frame = msg.current_frame;
-                    self.send_msg(current_frame, MessageContent::Connect)?;
-                    return Ok(Some(self.establish_connection(current_frame, peer_frame)?));
+                MessageContent::StartAt(start_frame) => {
+                    self.start_timer = Some(start_frame);
                 }
                 _ => {}
             }
         }
 
-        Ok(None)
+        let Some(start_timer) = self.start_timer else {
+            return Ok(None);
+        };
+
+        if current_frame >= start_timer {
+            Ok(Some(self.establish_connection()?))
+        } else {
+            Ok(None)
+        }
     }
 
     fn send_msg(
@@ -210,15 +232,10 @@ impl UdpClient {
 
     fn establish_connection(
         &mut self,
-        local_frame: usize,
-        peer_frame: usize,
     ) -> std::io::Result<UdpStream> {
-        let local_frame_offset = local_frame;
-        let peer_frame_offset = peer_frame;
 
         if cfg!(feature = "debug") {
             println!("Connection established");
-            println!("peer_frame_offset: {peer_frame_offset}");
         }
 
         Ok(UdpStream {
@@ -227,8 +244,6 @@ impl UdpClient {
             seq_num: 0,
             peer_seq_num: 0,
             peer_addr: self.target_addr,
-            local_frame_offset,
-            peer_frame_offset,
             recv_buf: [0; BUFFER_LEN],
             send_buf: [0; BUFFER_LEN],
         })
@@ -241,8 +256,6 @@ pub struct UdpStream {
     seq_num: u32,
     peer_seq_num: u32,
     peer_addr: SocketAddr,
-    local_frame_offset: usize,
-    peer_frame_offset: usize,
     recv_buf: [u8; BUFFER_LEN],
     send_buf: [u8; BUFFER_LEN],
 }
@@ -257,18 +270,14 @@ impl UdpStream {
     ) -> std::io::Result<(usize, usize)> {
         let mut rollback = 0;
         let mut fastforward = 0;
-        let local_frame_offset = self.local_frame_offset;
-        let peer_frame_offset = self.peer_frame_offset;
 
         let mut peer_seq_num = self.peer_seq_num;
         while let Some(msg) = self.recv_msg() {
             match msg.content {
                 MessageContent::Inputs((new_seq_start, raw_inputs)) => {
-                    let (new_seq_num, frame_error) = Self::recv_inputs(
+                    let (new_seq_num, new_rollback, new_fastforward) = Self::recv_inputs(
                         peer_seq_num,
                         current_frame,
-                        local_frame_offset,
-                        peer_frame_offset,
                         peer_inputs,
                         new_seq_start,
                         raw_inputs,
@@ -277,11 +286,8 @@ impl UdpStream {
 
                     self.send_msg(current_frame, MessageContent::InputsAck(peer_seq_num))?;
 
-                    if frame_error >= 0 {
-                        rollback = rollback.max(frame_error as usize);
-                    } else {
-                        fastforward = fastforward.max(-frame_error as usize);
-                    }
+                    rollback = rollback.max(new_rollback);
+                    fastforward = fastforward.max(new_fastforward);
                 }
                 MessageContent::InputsAck(ack_seq_num) => {
                     let old_seq_num = self.seq_num;
@@ -339,38 +345,44 @@ impl UdpStream {
 
     fn recv_inputs(
         peer_seq_num: u32,
-        current_frame: usize,
-        local_frame_offset: usize,
-        peer_frame_offset: usize,
+        mut current_frame: usize,
         peer_inputs: &mut InputHistory,
         new_seq_start: u32,
         bytes: &[u8],
-    ) -> (u32, isize) {
+    ) -> (u32, usize, usize) {
         let skip_inputs = peer_seq_num.saturating_sub(new_seq_start) as usize;
         let inputs_recv = (bytes.len() / Self::INPUTS_CHUNK_SIZE) as u32;
 
         if skip_inputs == inputs_recv as usize {
-            return (peer_seq_num, 0);
+            return (peer_seq_num, 0, 0);
         }
 
         if cfg!(feature = "debug") {
             println!("Recieved {inputs_recv} new inputs, skipping: {skip_inputs}");
         }
 
+        let frame_at_start = current_frame;
+
         for chunk in bytes
             .chunks_exact(Self::INPUTS_CHUNK_SIZE)
             .skip(skip_inputs)
         {
             let input_frame = u32::from_ne_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]) as usize;
-            let game_frame = input_frame.saturating_sub(peer_frame_offset);
             let dir = Direction::from(chunk[4]);
             let buttons = ButtonFlag::from_bits_retain(chunk[5]);
-            println!("recieved: {dir:?}, {buttons:?} at {game_frame}");
-            peer_inputs.insert_input(
-                (current_frame - local_frame_offset) - game_frame,
+            println!("recieved: {dir:?}, {buttons:?} at {input_frame}");
+
+            let relative_frame = current_frame as isize - input_frame as isize;
+
+            peer_inputs.append_input(
+                relative_frame,
                 dir,
                 buttons,
             );
+
+            if relative_frame < 0 {
+                current_frame = current_frame + (-relative_frame) as usize;
+            }
         }
 
         let next_seq_num = peer_seq_num.max(new_seq_start + inputs_recv);
@@ -381,12 +393,12 @@ impl UdpStream {
             bytes[offset + 1],
             bytes[offset + 2],
             bytes[offset + 3],
-        ]);
+        ]) as usize;
 
         (
             next_seq_num,
-            (current_frame - local_frame_offset) as isize
-                - (oldest_input as usize - peer_frame_offset) as isize,
+            frame_at_start.saturating_sub(oldest_input),
+            current_frame - frame_at_start,
         )
     }
 
