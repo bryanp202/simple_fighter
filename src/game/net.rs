@@ -330,7 +330,8 @@ impl UdpStream {
                         let dir_raw: u8 = dir.into();
                         let button_bits = buttons.bits();
                         [fb[0], fb[1], fb[2], fb[3], dir_raw, button_bits]
-                    });
+                    })
+                    .rev();
             let input_raw: [u8; BUFFER_LEN] =
                 std::array::from_fn(|_| input_iter.next().unwrap_or_default());
             let content = MessageContent::Inputs((
