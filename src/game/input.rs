@@ -283,9 +283,9 @@ impl InputHistory {
     }
 
     /// Add a new input that may or may not split the current run
-    /// 
+    ///
     /// Should never be called out of order
-    /// 
+    ///
     /// Ex: [(Neutral, Buttons::L, 200 frames)]: Insert 20 frames back ->
     /// [(Neutral, Buttons::L, 180 frames), (new_dir, new_buttons, 20)]
     pub fn append_input(
@@ -321,7 +321,6 @@ impl InputHistory {
         }
         self.buf[self.current_index] = (input_dir, input_buttons, new_run_length);
 
-        
         true
     }
 

@@ -68,7 +68,7 @@ impl UdpListener {
             None => {
                 self.wait_for_client(current_frame)?;
                 Ok(None)
-            },
+            }
         }
     }
 
@@ -87,17 +87,18 @@ impl UdpListener {
                         potential_peer = Some((current_frame, msg.current_frame, src_addr));
                         self.send_msg(src_addr, current_frame, MessageContent::SynAck)?;
                     }
-                },
-                MessageContent::Connect => {
-                    match potential_peer {
-                        Some((local_offset, peer_offset, peer_addr))
-                        if peer_addr == src_addr => {
-                            let peer_start = (current_frame - local_offset) + peer_offset + 60;
-                            self.start_timer = Some(current_frame + 60);
-                            self.send_msg(src_addr, current_frame, MessageContent::StartAt(peer_start))?;
-                        }
-                        _ => {},
+                }
+                MessageContent::Connect => match potential_peer {
+                    Some((local_offset, peer_offset, peer_addr)) if peer_addr == src_addr => {
+                        let peer_start = (current_frame - local_offset) + peer_offset + 60;
+                        self.start_timer = Some(current_frame + 60);
+                        self.send_msg(
+                            src_addr,
+                            current_frame,
+                            MessageContent::StartAt(peer_start),
+                        )?;
                     }
+                    _ => {}
                 },
                 _ => {}
             }
@@ -106,7 +107,11 @@ impl UdpListener {
         Ok(())
     }
 
-    fn wait_for_start(&mut self, current_frame: usize, start_frame: usize) -> std::io::Result<Option<UdpStream>> {
+    fn wait_for_start(
+        &mut self,
+        current_frame: usize,
+        start_frame: usize,
+    ) -> std::io::Result<Option<UdpStream>> {
         if current_frame >= start_frame {
             let peer_addr = self.potential_peer.1.unwrap().2;
             Ok(Some(self.establish_connection(peer_addr)?))
@@ -134,10 +139,7 @@ impl UdpListener {
         recv_msg(&self.socket, &mut self.recv_buf)
     }
 
-    fn establish_connection(
-        &mut self,
-        peer_addr: SocketAddr,
-    ) -> std::io::Result<UdpStream> {
+    fn establish_connection(&mut self, peer_addr: SocketAddr) -> std::io::Result<UdpStream> {
         if cfg!(feature = "debug") {
             println!("Connection established");
         }
@@ -230,10 +232,7 @@ impl UdpClient {
         }
     }
 
-    fn establish_connection(
-        &mut self,
-    ) -> std::io::Result<UdpStream> {
-
+    fn establish_connection(&mut self) -> std::io::Result<UdpStream> {
         if cfg!(feature = "debug") {
             println!("Connection established");
         }
@@ -374,11 +373,7 @@ impl UdpStream {
 
             let relative_frame = current_frame as isize - input_frame as isize;
 
-            peer_inputs.append_input(
-                relative_frame,
-                dir,
-                buttons,
-            );
+            peer_inputs.append_input(relative_frame, dir, buttons);
 
             if relative_frame < 0 {
                 current_frame = current_frame + (-relative_frame) as usize;

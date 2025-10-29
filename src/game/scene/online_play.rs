@@ -1,10 +1,12 @@
 use crate::{
     game::{
-        FRAME_DURATION, GameContext, GameState, MAX_ROLLBACK_FRAMES, PlayerInputs, Side, net::UdpStream, scene::{
+        FRAME_DURATION, GameContext, GameState, MAX_ROLLBACK_FRAMES, PlayerInputs, Side,
+        net::UdpStream,
+        scene::{
             Scene, Scenes,
             gameplay::{GameplayScene, GameplayScenes},
             main_menu::MainMenu,
-        }
+        },
     },
     ring_buf::RingBuf,
 };
@@ -97,11 +99,7 @@ impl Scene for OnlinePlay {
 }
 
 impl OnlinePlay {
-    pub fn new(
-        connection: UdpStream,
-        local_side: Side,
-        state: &GameState,
-    ) -> Self {
+    pub fn new(connection: UdpStream, local_side: Side, state: &GameState) -> Self {
         let scene = GameplayScenes::new_round_start((0, 0));
         let initial_state = (scene.clone(), state.clone());
         Self {
