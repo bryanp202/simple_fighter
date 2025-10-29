@@ -369,7 +369,10 @@ impl UdpStream {
             let input_frame = u32::from_ne_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]) as usize;
             let dir = Direction::from(chunk[4]);
             let buttons = ButtonFlag::from_bits_retain(chunk[5]);
-            println!("recieved: {dir:?}, {buttons:?} at {input_frame}");
+
+            if cfg!(feature = "debug") {
+                println!("recieved: {dir:?}, {buttons:?} at {input_frame}");
+            }
 
             let relative_frame = current_frame as isize - input_frame as isize;
 
