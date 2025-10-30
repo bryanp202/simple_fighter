@@ -24,35 +24,35 @@ recompilation.
 	"name": "medium_attack",
 	"input": {"Direction": {"dir": {"type" : "Any"}, "button": {"type" : "M"}}},
 	"hit_boxes": [
-	{"frame": 0, "boxes": []},
-	{"frame": 10, "boxes":
-		[
-		{
-			"rect": {"x": 60, "y": 10, "w": 120, "h": 60},
-			"dmg": 60,
-			"block_stun": 12,
-			"hit_stun": 20,
-			"cancel_window": 10,
-			"block_type": {"type": "Mid"}
-		}
-		]
-	},
-	{"frame": 14, "boxes":
-		[
-		{
-			"rect": {"x": 20, "y": 10, "w": 40, "h": 60},
-			"dmg": 60,
-			"block_stun": 12,
-			"hit_stun": 20,
-			"cancel_window": 10,
-			"block_type": {"type": "Mid"}
-		}
-		]
-	},
-	{"frame": 16, "boxes": []}
+		{"frame": 0, "boxes": []},
+		{"frame": 10, "boxes":
+			[
+			{
+				"rect": {"x": 60, "y": 10, "w": 120, "h": 60},
+				"dmg": 60,
+				"block_stun": 12,
+				"hit_stun": 20,
+				"cancel_window": 10,
+				"block_type": {"type": "Mid"}
+			}
+			]
+		},
+		{"frame": 14, "boxes":
+			[
+			{
+				"rect": {"x": 20, "y": 10, "w": 40, "h": 60},
+				"dmg": 60,
+				"block_stun": 12,
+				"hit_stun": 20,
+				"cancel_window": 10,
+				"block_type": {"type": "Mid"}
+			}
+			]
+		},
+		{"frame": 16, "boxes": []}
 	],
 	"hurt_boxes": [
-	{"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
+		{"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 40, "h": 40}}]}
 	],
 	"collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
