@@ -3,6 +3,8 @@ A simple 2D fighter made in a custom fighting game engine with local and P2P onl
 
 自作のエンジンで開発したシンプルな2D格闘ゲーム！ローカルとオンラインプレイも対応！
 
+[Game-play Example](https://www.youtube.com/watch?v=pk6sew3V2ks)
+
 # About the engine / エンジンについて
 Rendering is handled by SDL3 bindings for rust, but game physics, animations, and input parsing are all custom implementations.
 Player data is seperated into static "Context" and mutable "State" structures, allowing for instantateous loading of past states.
@@ -89,4 +91,4 @@ the player to jump back to where they should have stopped.
 
 プレイヤーが止まるが、入力が遅れた。届く際に、ゲームが再びシミュレートされ、止まったはずの位置に戻る。
 
-![Rollback Example](./assets/rollback_example.mp4)
+![Rollback Example](./assets/rollback_example.gif)
