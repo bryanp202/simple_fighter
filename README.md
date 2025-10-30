@@ -7,7 +7,7 @@ A simple 2D fighter made in a custom fighting game engine with local and P2P onl
 
 # About the engine / エンジンについて
 Rendering is handled by SDL3 bindings for rust, but game physics, animations, and input parsing are all custom implementations.
-Player data is seperated into static "Context" and mutable "State" structures, allowing for instantateous loading of past states.
+Player data is separated into static "Context" and mutable "State" structures, allowing for instantaneous loading of past states.
 
 SDL3に任せたレンダリングを除いて、 フィジックスエンジン・アニメーション・入力パーシングなどが独自実装だ。
 プレイヤーデータが変更する「コンテキスト」とスタティックな「ステート」に分けられて、即座に過去ステートに巻き戻すことができる。
@@ -73,11 +73,11 @@ recompilation.
 }
 ```
 
-## Netcode / ネットコード
-Games syncronize by negotiating a shared frame to start the game on. After that, the only communication is user inputs.
-Local inputs are immediatly used, but remote peer inputs are predicted and applied retroactively if the prediction fails.
+## Net code / ネットコード
+Games synchronize by negotiating a shared frame to start the game on. After that, the only communication is user inputs.
+Local inputs are immediately used, but remote peer inputs are predicted and applied retroactively if the prediction fails.
 Each frame, the current game state is captured and stored for later. If an input arrives on a past frame, the game rolls back
-to before that frame and deterministically resimulates the game with that new input. This sometimes results in slight jumps or teleportations.
+to before that frame and deterministically restimulates the game with that new input. This sometimes results in slight jumps or teleportation.
 
 試合開始時に、両プレイヤーのゲーム状態（ステート）を同期させる。この初期フレームを基準に、以後の同期が行われる。
 その後、ローカルとピアの入力しか送信されない。
@@ -86,7 +86,7 @@ to before that frame and deterministically resimulates the game with that new in
 最後には、ゲームが再びシミュレートされる。予測が特に外れたときに、キャラクターが突然に動いたりすることもある。
 
 ### Rollback Example
-The remote player stops moving left, but the input is delayed. The game is resimulated with the input once it arrives, causing
+The remote player stops moving left, but the input is delayed. The game is restimulated with the input once it arrives, causing
 the player to jump back to where they should have stopped.
 
 プレイヤーが止まるが、入力が遅れた。届く際に、ゲームが再びシミュレートされ、止まったはずの位置に戻る。
