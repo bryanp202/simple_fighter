@@ -120,7 +120,7 @@ impl OnlinePlay {
         rollback_frames: usize,
         fastforward_frames: usize,
     ) {
-        if rollback_frames < self.delay {
+        if rollback_frames <= self.delay {
             return;
         }
         let frames = rollback_frames - self.delay;
