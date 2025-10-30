@@ -135,7 +135,7 @@ impl UdpListener {
         )
     }
 
-    fn recv_msg(&mut self) -> Option<(GameMessage, SocketAddr)> {
+    fn recv_msg(&mut self) -> Option<(GameMessage<'_>, SocketAddr)> {
         recv_msg(&self.socket, &mut self.recv_buf)
     }
 
@@ -222,7 +222,7 @@ impl UdpClient {
         )
     }
 
-    fn recv_msg(&mut self) -> Option<GameMessage> {
+    fn recv_msg(&mut self) -> Option<GameMessage<'_>> {
         let (msg, src_addr) = recv_msg(&self.socket, &mut self.recv_buf)?;
 
         if src_addr == self.target_addr {
@@ -415,7 +415,7 @@ impl UdpStream {
         )
     }
 
-    fn recv_msg(&mut self) -> Option<GameMessage> {
+    fn recv_msg(&mut self) -> Option<GameMessage<'_>> {
         let (msg, src_addr) = recv_msg(&self.socket, &mut self.recv_buf)?;
 
         if src_addr == self.peer_addr {
