@@ -372,7 +372,7 @@ impl UdpStream {
             let buttons = ButtonFlag::from_bits_retain(chunk[5]);
 
             if cfg!(feature = "debug") {
-                println!("recieved: {dir:?}, {buttons:?} at {input_frame}");
+                println!("recieved: {dir:?}, {buttons:?} for frame: {input_frame} at local frame: {frame_at_start}");
             }
 
             let relative_frame = current_frame as isize - input_frame as isize;
