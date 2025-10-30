@@ -38,19 +38,19 @@ impl Scene for MainMenu {
     ) -> Option<super::Scenes> {
         let buttons = state.player1_inputs.active_buttons();
 
-        if self.l_button_pressed && !buttons.intersects(ButtonFlag::L) {
+        if self.l_button_pressed && !ButtonFlag::L.intersects(buttons) {
             return Some(Scenes::LocalPlay(LocalPlay::new()));
         }
-        if self.m_button_pressed && !buttons.intersects(ButtonFlag::M) {
+        if self.m_button_pressed && !ButtonFlag::M.intersects(buttons) {
             return Some(Scenes::Hosting(Hosting::new()));
         }
-        if self.h_button_pressed && !buttons.intersects(ButtonFlag::H) {
+        if self.h_button_pressed && !ButtonFlag::H.intersects(buttons) {
             return Some(Scenes::Matching(Matching::new()));
         }
 
-        self.l_button_pressed = buttons.intersects(ButtonFlag::L);
-        self.m_button_pressed = buttons.intersects(ButtonFlag::M);
-        self.h_button_pressed = buttons.intersects(ButtonFlag::H);
+        self.l_button_pressed = ButtonFlag::L.intersects(buttons);
+        self.m_button_pressed = ButtonFlag::M.intersects(buttons);
+        self.h_button_pressed = ButtonFlag::H.intersects(buttons);
 
         None
     }

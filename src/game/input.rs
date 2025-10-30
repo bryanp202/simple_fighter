@@ -98,7 +98,11 @@ impl Inputs {
         self.buf
     }
 
-    pub fn update(&mut self, parsed_input: (Direction, Motion, ButtonFlag)) {
+    pub fn update(
+        &mut self,
+        held_buttons: ButtonFlag,
+        parsed_input: (Direction, Motion, ButtonFlag),
+    ) {
         let mut new_buf: MoveBuffer = std::array::from_fn(|_| (Motion::NONE, ButtonFlag::NONE));
         new_buf[1..].copy_from_slice(&self.buf[0..MOTION_BUF_SIZE - 1]);
 
@@ -106,7 +110,7 @@ impl Inputs {
         new_buf[0] = (motion, buttons);
         self.buf = new_buf;
         self.dir = dir;
-        self.buttons = buttons;
+        self.buttons = held_buttons;
     }
 }
 
@@ -227,6 +231,10 @@ impl InputHistory {
             current_index: 0,
             delay,
         }
+    }
+
+    pub fn held_buttons(&self) -> ButtonFlag {
+        self.input.active_buttons
     }
 
     pub fn reset(&mut self) {

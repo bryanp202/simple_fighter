@@ -145,12 +145,14 @@ impl OnlinePlay {
         offset: usize,
     ) {
         for frame in (1..frames + 1).rev() {
-            state
-                .player1_inputs
-                .update(inputs.player1.parse_history_at(frame + offset));
-            state
-                .player2_inputs
-                .update(inputs.player2.parse_history_at(frame + offset));
+            state.player1_inputs.update(
+                inputs.player1.held_buttons(),
+                inputs.player1.parse_history_at(frame + offset),
+            );
+            state.player2_inputs.update(
+                inputs.player2.held_buttons(),
+                inputs.player2.parse_history_at(frame + offset),
+            );
 
             if let Some(mut new_scene) = self.scene.update(context, state, FRAME_DURATION) {
                 self.scene.exit(context, state);
@@ -181,12 +183,14 @@ impl OnlinePlay {
         }
 
         for frame in (1..frames + 1).rev() {
-            state
-                .player1_inputs
-                .update(inputs.player1.parse_history_at(frame));
-            state
-                .player2_inputs
-                .update(inputs.player2.parse_history_at(frame));
+            state.player1_inputs.update(
+                inputs.player1.held_buttons(),
+                inputs.player1.parse_history_at(frame),
+            );
+            state.player2_inputs.update(
+                inputs.player2.held_buttons(),
+                inputs.player2.parse_history_at(frame),
+            );
 
             if let Some(mut new_scene) = self.scene.update(context, state, FRAME_DURATION) {
                 self.scene.exit(context, state);

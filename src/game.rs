@@ -279,12 +279,14 @@ impl<'a> Game<'a> {
             .handle_input(&self.context, &mut self.inputs, &mut self.state)
             .expect("Failed to handle user inputs");
 
-        self.state
-            .player1_inputs
-            .update(self.inputs.player1.parse_history());
-        self.state
-            .player2_inputs
-            .update(self.inputs.player2.parse_history());
+        self.state.player1_inputs.update(
+            self.inputs.player1.held_buttons(),
+            self.inputs.player1.parse_history(),
+        );
+        self.state.player2_inputs.update(
+            self.inputs.player1.held_buttons(),
+            self.inputs.player2.parse_history(),
+        );
 
         if let Some(mut new_scene) = self.scene.update(&self.context, &mut self.state, dt) {
             self.scene
