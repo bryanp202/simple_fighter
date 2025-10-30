@@ -353,12 +353,12 @@ impl UdpStream {
         let skip_inputs = peer_seq_num.saturating_sub(new_seq_start) as usize;
         let inputs_recv = (bytes.len() / Self::INPUTS_CHUNK_SIZE) as u32;
 
-        if skip_inputs == inputs_recv as usize {
-            return (peer_seq_num, 0, 0);
-        }
-
         if cfg!(feature = "debug") {
             println!("Recieved {inputs_recv} new inputs, skipping: {skip_inputs}");
+        }
+
+        if skip_inputs == inputs_recv as usize {
+            return (peer_seq_num, 0, 0);
         }
 
         let frame_at_start = current_frame;
