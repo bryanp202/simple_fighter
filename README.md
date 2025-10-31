@@ -89,6 +89,6 @@ to before that frame and deterministically restimulates the game with that new i
 The remote player stops moving left, but the input is delayed. The game is restimulated with the input once it arrives, causing
 the player to jump back to where they should have stopped.
 
-プレイヤーが止まるが、入力が遅れた。届く際に、ゲームが再びシミュレートされ、止まったはずの位置に戻る。
+プレイヤーは止まったが、入力が遅れたため、キャラクターが左へ進む。届く際に、ゲームが再びシミュレートされ、止まったはずの位置に戻る。
 
 ![Rollback Example](./assets/rollback_example.gif)
