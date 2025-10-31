@@ -295,7 +295,7 @@ impl UdpStream {
                     self.outbound_buf.drain(0..deque_amt as usize);
 
                     if cfg!(feature = "debug") {
-                        println!("self.seq: {}", self.seq_num);
+                        println!("self.seq: {} received at frame: {current_frame}", self.seq_num);
                     }
                 }
                 _ => {}
