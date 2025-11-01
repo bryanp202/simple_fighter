@@ -6,8 +6,7 @@ use sdl3::{
 use crate::game::{
     GameContext, GameState, PlayerInputs,
     scene::{
-        hosting::Hosting, local_play::LocalPlay, main_menu::MainMenu, matching::Matching,
-        online_play::OnlinePlay,
+        connecting::Connecting, hosting::Hosting, local_play::LocalPlay, main_menu::MainMenu, online_play::OnlinePlay
     },
 };
 
@@ -15,7 +14,7 @@ mod gameplay;
 mod hosting;
 mod local_play;
 mod main_menu;
-mod matching;
+mod connecting;
 mod online_play;
 
 pub trait Scene {
@@ -26,7 +25,7 @@ pub trait Scene {
         inputs: &mut PlayerInputs,
         state: &mut GameState,
     ) -> std::io::Result<()>;
-    fn update(&mut self, context: &GameContext, state: &mut GameState, dt: f32) -> Option<Scenes>;
+    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<Scenes>;
     fn render(
         &self,
         canvas: &mut Canvas<Window>,
@@ -42,7 +41,7 @@ pub enum Scenes {
     LocalPlay(LocalPlay),
     OnlinePlay(OnlinePlay),
     Hosting(Hosting),
-    Matching(Matching),
+    Connecting(Connecting),
     //RoundEnd,
     //WinScreen,
     //Settings,
@@ -55,7 +54,7 @@ impl Scene for Scenes {
             Self::LocalPlay(local_play) => local_play.enter(context, inputs, state),
             Self::OnlinePlay(online_play) => online_play.enter(context, inputs, state),
             Self::Hosting(hosting) => hosting.enter(context, inputs, state),
-            Self::Matching(matching) => matching.enter(context, inputs, state),
+            Self::Connecting(connecting) => connecting.enter(context, inputs, state),
         }
     }
 
@@ -71,17 +70,17 @@ impl Scene for Scenes {
             Self::LocalPlay(local_play) => local_play.handle_input(context, inputs, state),
             Self::OnlinePlay(online_play) => online_play.handle_input(context, inputs, state),
             Self::Hosting(hosting) => hosting.handle_input(context, inputs, state),
-            Self::Matching(matching) => matching.handle_input(context, inputs, state),
+            Self::Connecting(connecting) => connecting.handle_input(context, inputs, state),
         }
     }
 
-    fn update(&mut self, context: &GameContext, state: &mut GameState, dt: f32) -> Option<Scenes> {
+    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<Scenes> {
         match self {
-            Self::MainMenu(main_menu) => main_menu.update(context, state, dt),
-            Self::LocalPlay(local_play) => local_play.update(context, state, dt),
-            Self::OnlinePlay(online_play) => online_play.update(context, state, dt),
-            Self::Hosting(hosting) => hosting.update(context, state, dt),
-            Self::Matching(matching) => matching.update(context, state, dt),
+            Self::MainMenu(main_menu) => main_menu.update(context, state),
+            Self::LocalPlay(local_play) => local_play.update(context, state),
+            Self::OnlinePlay(online_play) => online_play.update(context, state),
+            Self::Hosting(hosting) => hosting.update(context, state),
+            Self::Connecting(connecting) => connecting.update(context, state),
         }
     }
 
@@ -101,7 +100,7 @@ impl Scene for Scenes {
                 online_play.render(canvas, global_textures, context, state)
             }
             Self::Hosting(hosting) => hosting.render(canvas, global_textures, context, state),
-            Self::Matching(matching) => matching.render(canvas, global_textures, context, state),
+            Self::Connecting(connecting) => connecting.render(canvas, global_textures, context, state),
         }
     }
 
@@ -111,7 +110,7 @@ impl Scene for Scenes {
             Self::LocalPlay(local_play) => local_play.exit(context, inputs, state),
             Self::OnlinePlay(online_play) => online_play.exit(context, inputs, state),
             Self::Hosting(hosting) => hosting.exit(context, inputs, state),
-            Self::Matching(matching) => matching.exit(context, inputs, state),
+            Self::Connecting(connecting) => connecting.exit(context, inputs, state),
         }
     }
 }

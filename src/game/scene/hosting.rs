@@ -33,7 +33,6 @@ impl Scene for Hosting {
         &mut self,
         _context: &GameContext,
         state: &mut GameState,
-        _dt: f32,
     ) -> Option<super::Scenes> {
         if let Some(connection) = self
             .listener
@@ -61,7 +60,10 @@ impl Scene for Hosting {
         Ok(())
     }
 
-    fn exit(&mut self, _context: &GameContext, _inputs: &mut PlayerInputs, _state: &mut GameState) {
+    fn exit(&mut self, context: &GameContext, _inputs: &mut PlayerInputs, _state: &mut GameState) {
+        if context.should_quit() {
+            _ = self.listener.abort(self.current_frame);
+        }
     }
 }
 

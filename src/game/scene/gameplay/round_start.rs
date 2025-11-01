@@ -26,7 +26,6 @@ impl GameplayScene for RoundStart {
         &mut self,
         _context: &GameContext,
         state: &mut GameState,
-        _dt: f32,
     ) -> Option<super::GameplayScenes> {
         state.player1.advance_frame();
         state.player2.advance_frame();

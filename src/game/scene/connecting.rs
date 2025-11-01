@@ -4,12 +4,12 @@ use crate::game::{
     scene::{Scene, Scenes, online_play::OnlinePlay},
 };
 
-pub struct Matching {
+pub struct Connecting {
     current_frame: usize,
     client: UdpClient,
 }
 
-impl Scene for Matching {
+impl Scene for Connecting {
     fn enter(&mut self, _context: &GameContext, inputs: &mut PlayerInputs, _state: &mut GameState) {
         inputs.online_key_mapping();
     }
@@ -29,12 +29,11 @@ impl Scene for Matching {
         &mut self,
         _context: &GameContext,
         state: &mut GameState,
-        _dt: f32,
     ) -> Option<super::Scenes> {
         if let Some(connection) = self
             .client
             .update(self.current_frame)
-            .expect("Client matching failed")
+            .expect("Client connection failed")
         {
             Some(Scenes::OnlinePlay(OnlinePlay::new(
                 connection,
@@ -57,11 +56,14 @@ impl Scene for Matching {
         Ok(())
     }
 
-    fn exit(&mut self, _context: &GameContext, _inputs: &mut PlayerInputs, _state: &mut GameState) {
+    fn exit(&mut self, context: &GameContext, _inputs: &mut PlayerInputs, _state: &mut GameState) {
+        if context.should_quit() {
+            _ = self.client.abort(self.current_frame);
+        }
     }
 }
 
-impl Matching {
+impl Connecting {
     pub fn new() -> Self {
         Self {
             current_frame: 0,

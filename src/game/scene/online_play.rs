@@ -58,9 +58,12 @@ impl Scene for OnlinePlay {
         &mut self,
         context: &GameContext,
         state: &mut GameState,
-        dt: f32,
     ) -> Option<super::Scenes> {
-        if let Some(new_scene) = self.scene.update(context, state, dt) {
+        if self.connection.is_aborted() {
+            return Some(Scenes::MainMenu(MainMenu::new()));
+        }
+
+        if let Some(new_scene) = self.scene.update(context, state) {
             self.scene.exit(context, state);
             self.scene = new_scene;
             self.scene.enter(context, state);
@@ -87,6 +90,7 @@ impl Scene for OnlinePlay {
     }
 
     fn exit(&mut self, context: &GameContext, inputs: &mut PlayerInputs, state: &mut GameState) {
+        _ = self.connection.abort(self.current_frame);
         inputs.set_delay(0);
 
         match self.local_side {
@@ -154,7 +158,7 @@ impl OnlinePlay {
                 inputs.player2.parse_history_at(frame + offset),
             );
 
-            if let Some(mut new_scene) = self.scene.update(context, state, FRAME_DURATION) {
+            if let Some(mut new_scene) = self.scene.update(context, state) {
                 self.scene.exit(context, state);
                 new_scene.enter(context, state);
                 self.scene = new_scene;
@@ -192,7 +196,7 @@ impl OnlinePlay {
                 inputs.player2.parse_history_at(frame),
             );
 
-            if let Some(mut new_scene) = self.scene.update(context, state, FRAME_DURATION) {
+            if let Some(mut new_scene) = self.scene.update(context, state) {
                 self.scene.exit(context, state);
                 new_scene.enter(context, state);
                 self.scene = new_scene;

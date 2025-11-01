@@ -32,9 +32,8 @@ impl Scene for LocalPlay {
         &mut self,
         context: &GameContext,
         state: &mut GameState,
-        dt: f32,
     ) -> Option<super::Scenes> {
-        if let Some(new_gameplay_scene) = self.scene.update(context, state, dt) {
+        if let Some(new_gameplay_scene) = self.scene.update(context, state) {
             self.scene.exit(context, state);
             self.scene = new_gameplay_scene;
             self.scene.enter(context, state);

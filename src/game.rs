@@ -29,7 +29,7 @@ use crate::game::{
 };
 
 const FRAME_RATE: usize = 60;
-const FRAME_DURATION: f32 = 1.0 / FRAME_RATE as f32;
+const FRAME_DURATION: f64 = 1.0 / FRAME_RATE as f64;
 const SCORE_TO_WIN: u32 = 2;
 const MAX_ROLLBACK_FRAMES: usize = 64;
 
@@ -49,6 +49,7 @@ impl Side {
 }
 
 pub struct GameContext {
+    should_quit: bool,
     main_menu_texture: usize,
     round_start_animation: Animation,
     timer_animation: Animation,
@@ -58,6 +59,12 @@ pub struct GameContext {
 
     // Resources
     camera: Camera,
+}
+
+impl GameContext {
+    pub fn should_quit(&self) -> bool {
+        self.should_quit
+    }
 }
 
 #[derive(Clone, PartialEq)]
@@ -126,7 +133,6 @@ pub struct Game<'a> {
     canvas: Canvas<Window>,
     events: EventPump,
     _texture_creator: &'a TextureCreator<WindowContext>,
-    should_quit: bool,
 }
 
 impl<'a> Game<'a> {
@@ -197,6 +203,7 @@ impl<'a> Game<'a> {
 
         Self {
             context: GameContext {
+                should_quit: false,
                 main_menu_texture,
                 round_start_animation,
                 timer_animation,
@@ -218,34 +225,41 @@ impl<'a> Game<'a> {
             events,
             global_textures,
             _texture_creator: texture_creator,
-            should_quit: false,
         }
     }
 
     pub fn run(mut self) {
         let mut last_frame = Instant::now();
-        while !self.should_quit {
+        let mut lag = 0.0;
+        while !self.context.should_quit {
             let frame_start = Instant::now();
-            let dt = frame_start
+            lag += frame_start
                 .checked_duration_since(last_frame)
                 .unwrap_or(Duration::ZERO)
-                .as_secs_f32();
+                .as_secs_f64();
 
             self.input();
-            self.update(dt);
+
+            while lag >= FRAME_DURATION {
+                self.update();
+                lag -= FRAME_DURATION;
+            }
+
             self.render();
 
             last_frame = frame_start;
             spin_sleep::sleep(
-                Duration::from_secs_f32(FRAME_DURATION).saturating_sub(frame_start.elapsed()),
+                Duration::from_secs_f64(FRAME_DURATION).saturating_sub(frame_start.elapsed()),
             );
         }
+
+        self.scene.exit(&self.context, &mut self.inputs, &mut self.state);
     }
 
     fn input(&mut self) {
         for event in self.events.poll_iter() {
             match event {
-                Event::Quit { .. } => self.should_quit = true,
+                Event::Quit { .. } => self.context.should_quit = true,
                 Event::Window {
                     win_event: WindowEvent::Resized(x, y),
                     ..
@@ -273,7 +287,7 @@ impl<'a> Game<'a> {
         }
     }
 
-    fn update(&mut self, dt: f32) {
+    fn update(&mut self) {
         // Handle inputs
         self.scene
             .handle_input(&self.context, &mut self.inputs, &mut self.state)
@@ -288,7 +302,7 @@ impl<'a> Game<'a> {
             self.inputs.player2.parse_history(),
         );
 
-        if let Some(mut new_scene) = self.scene.update(&self.context, &mut self.state, dt) {
+        if let Some(mut new_scene) = self.scene.update(&self.context, &mut self.state) {
             self.scene
                 .exit(&self.context, &mut self.inputs, &mut self.state);
             new_scene.enter(&self.context, &mut self.inputs, &mut self.state);

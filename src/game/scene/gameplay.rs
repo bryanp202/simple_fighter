@@ -21,7 +21,6 @@ pub trait GameplayScene {
         &mut self,
         context: &GameContext,
         state: &mut GameState,
-        dt: f32,
     ) -> Option<GameplayScenes>;
     fn render(
         &self,
@@ -59,11 +58,10 @@ impl GameplayScene for GameplayScenes {
         &mut self,
         context: &GameContext,
         state: &mut GameState,
-        dt: f32,
     ) -> Option<GameplayScenes> {
         match self {
-            Self::DuringRound(during_round) => during_round.update(context, state, dt),
-            Self::RoundStart(round_start) => round_start.update(context, state, dt),
+            Self::DuringRound(during_round) => during_round.update(context, state),
+            Self::RoundStart(round_start) => round_start.update(context, state),
             Self::Exit => None,
         }
     }
