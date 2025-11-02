@@ -230,19 +230,20 @@ impl<'a> Game<'a> {
 
     pub fn run(mut self) {
         let mut last_frame = Instant::now();
-        let mut lag = 0.0;
+        let mut lag = 0;
         while !self.context.should_quit {
             let frame_start = Instant::now();
             lag += frame_start
                 .checked_duration_since(last_frame)
                 .unwrap_or(Duration::ZERO)
-                .as_secs_f64();
+                .as_nanos();
 
             self.input();
 
-            while lag >= FRAME_DURATION {
+            const FRAME_DURATION_NANOS: u128 = (FRAME_DURATION * std::time::Duration::from_secs(1).as_nanos() as f64) as u128;
+            while lag >= FRAME_DURATION_NANOS {
                 self.update();
-                lag -= FRAME_DURATION;
+                lag -= FRAME_DURATION_NANOS;
             }
 
             self.render();

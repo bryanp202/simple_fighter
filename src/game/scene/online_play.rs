@@ -1,6 +1,6 @@
 use crate::{
     game::{
-        FRAME_DURATION, GameContext, GameState, MAX_ROLLBACK_FRAMES, PlayerInputs, Side,
+        GameContext, GameState, MAX_ROLLBACK_FRAMES, PlayerInputs, Side,
         net::UdpStream,
         scene::{
             Scene, Scenes,
