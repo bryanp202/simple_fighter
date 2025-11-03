@@ -5,7 +5,6 @@ use crate::game::{
     character::{self, EndBehavior, MoveInput, StartBehavior, StateData, StateFlags},
     deserialize::{AnimationJson, FlagsJson, RectJson, game::PlayerJson},
     input::{ButtonFlag, RelativeDirection, RelativeMotion},
-    render::animation::Animation,
 };
 
 use sdl3::{
