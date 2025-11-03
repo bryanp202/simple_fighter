@@ -54,11 +54,7 @@ impl Scene for OnlinePlay {
         Ok(())
     }
 
-    fn update(
-        &mut self,
-        context: &GameContext,
-        state: &mut GameState,
-    ) -> Option<super::Scenes> {
+    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<super::Scenes> {
         if self.connection.is_aborted() {
             return Some(Scenes::MainMenu(MainMenu::new()));
         }

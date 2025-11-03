@@ -1,11 +1,8 @@
-mod deserialize;
-
 use std::ops::Range;
 
 use crate::game::{
     Side,
     boxes::{BlockType, CollisionBox, HitBox, HurtBox},
-    character::deserialize::deserialize,
     input::{ButtonFlag, Inputs, RelativeDirection, RelativeMotion},
     physics::{friction_system, gravity_system, velocity_system},
     render::{
@@ -15,8 +12,8 @@ use crate::game::{
 };
 use bitflags::bitflags;
 use sdl3::{
-    render::{Canvas, FPoint, Texture, TextureCreator},
-    video::{Window, WindowContext},
+    render::{Canvas, FPoint, Texture},
+    video::Window,
 };
 
 type StateIndex = usize;
@@ -25,16 +22,6 @@ const HIT_PUSH_BACK: f32 = -6.0;
 const CHIP_DMG_PERCENTAGE: f32 = 0.1;
 const COMBO_SCALE_PER_HIT: f32 = 0.1;
 const MIN_COMBO_SCALING: f32 = 0.1;
-
-pub fn from_config<'a>(
-    texture_creator: &'a TextureCreator<WindowContext>,
-    global_textures: &mut Vec<Texture<'a>>,
-    config: &str,
-    pos: FPoint,
-    side: Side,
-) -> Result<(Context, State), String> {
-    deserialize(texture_creator, global_textures, config, pos, side)
-}
 
 pub struct StateData {
     // Input
@@ -64,20 +51,82 @@ pub struct StateData {
     animation_data: Vec<Animation>,
 }
 
+impl StateData {
+    pub fn new(
+        inputs: Vec<MoveInput>,
+        cancel_windows: Vec<Range<usize>>,
+        cancel_options: Vec<Range<usize>>,
+        hit_boxes_start: Vec<usize>,
+        hurt_boxes_start: Vec<usize>,
+        start_behaviors: Vec<StartBehavior>,
+        flags: Vec<StateFlags>,
+        end_behaviors: Vec<EndBehavior>,
+        run_length_hit_boxes: Vec<(usize, Range<usize>)>,
+        run_length_hurt_boxes: Vec<(usize, Range<usize>)>,
+        run_length_cancel_options: Vec<StateIndex>,
+        hit_box_data: Vec<HitBox>,
+        hurt_box_data: Vec<HurtBox>,
+        collision_box_data: Vec<CollisionBox>,
+        animation_data: Vec<Animation>,
+    ) -> Self {
+        Self {
+            inputs,
+            cancel_windows,
+            cancel_options,
+            hit_boxes_start,
+            hurt_boxes_start,
+            start_behaviors,
+            flags,
+            end_behaviors,
+            run_length_hit_boxes,
+            run_length_hurt_boxes,
+            run_length_cancel_options,
+            hit_box_data,
+            hurt_box_data,
+            collision_box_data,
+            animation_data,
+        }
+    }
+}
+
 pub struct Context {
     name: String,
-    // Moves/states
-    states: StateData,
+    // Init data
+    max_hp: f32,
+    start_side: Side,
+    start_pos: FPoint,
 
     // Special cached states
     block_stun_state: StateIndex,
     ground_hit_state: StateIndex,
     launch_hit_state: StateIndex,
 
-    // Init data
-    max_hp: f32,
-    start_side: Side,
-    start_pos: FPoint,
+    // Moves/states
+    states: StateData,
+}
+
+impl Context {
+    pub fn new(
+        name: String,
+        max_hp: f32,
+        start_side: Side,
+        start_pos: FPoint,
+        block_stun_state: StateIndex,
+        ground_hit_state: StateIndex,
+        launch_hit_state: StateIndex,
+        states: StateData,
+    ) -> Self {
+        Self {
+            name,
+            max_hp,
+            start_side,
+            start_pos,
+            block_stun_state,
+            ground_hit_state,
+            launch_hit_state,
+            states,
+        }
+    }
 }
 
 impl Context {

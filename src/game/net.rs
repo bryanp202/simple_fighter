@@ -72,11 +72,11 @@ impl UdpListener {
     pub fn abort(&mut self, current_frame: usize) -> std::io::Result<()> {
         match self.state {
             UdpListenerState::Connected(peer_addr)
-                | UdpListenerState::Connecting((_, peer_addr))
-                | UdpListenerState::Syncing((_, _, peer_addr)) => {
-                    self.send_msg(peer_addr, current_frame, MessageContent::Abort)?;
+            | UdpListenerState::Connecting((_, peer_addr))
+            | UdpListenerState::Syncing((_, _, peer_addr)) => {
+                self.send_msg(peer_addr, current_frame, MessageContent::Abort)?;
             }
-            _ => {},
+            _ => {}
         }
         Ok(())
     }
@@ -87,7 +87,9 @@ impl UdpListener {
                 return Ok(None);
             };
             match new_state {
-                UdpListenerState::Connected(peer_addr) => return Ok(Some(self.establish_connection(peer_addr)?)),
+                UdpListenerState::Connected(peer_addr) => {
+                    return Ok(Some(self.establish_connection(peer_addr)?));
+                }
                 _ => self.state = new_state,
             }
         }
@@ -96,8 +98,12 @@ impl UdpListener {
     fn poll(&mut self, current_frame: usize) -> std::io::Result<Option<UdpListenerState>> {
         match self.state {
             UdpListenerState::Listening => self.listen(current_frame),
-            UdpListenerState::Syncing(syncing_state) => self.wait_for_connection(current_frame, syncing_state),
-            UdpListenerState::Connecting((start_frame, peer_addr)) => self.wait_for_start(current_frame, start_frame, peer_addr),
+            UdpListenerState::Syncing(syncing_state) => {
+                self.wait_for_connection(current_frame, syncing_state)
+            }
+            UdpListenerState::Connecting((start_frame, peer_addr)) => {
+                self.wait_for_start(current_frame, start_frame, peer_addr)
+            }
             _ => Ok(None),
         }
     }
@@ -108,7 +114,11 @@ impl UdpListener {
                 MessageContent::Syn => {
                     let peer_frame = msg.current_frame;
                     self.send_msg(src_addr, current_frame, MessageContent::SynAck)?;
-                    return Ok(Some(UdpListenerState::Syncing((current_frame, peer_frame, src_addr))));
+                    return Ok(Some(UdpListenerState::Syncing((
+                        current_frame,
+                        peer_frame,
+                        src_addr,
+                    ))));
                 }
                 _ => {}
             }
@@ -117,13 +127,18 @@ impl UdpListener {
         Ok(None)
     }
 
-    fn wait_for_connection(&mut self, current_frame: usize, syncing_state: (usize, usize, SocketAddr)) -> std::io::Result<Option<UdpListenerState>> {
+    fn wait_for_connection(
+        &mut self,
+        current_frame: usize,
+        syncing_state: (usize, usize, SocketAddr),
+    ) -> std::io::Result<Option<UdpListenerState>> {
         let (local_offset, peer_offset, peer_addr) = syncing_state;
 
         while let Some(msg) = self.recv_msg_from(peer_addr) {
             match msg.content {
                 MessageContent::Connect => {
-                    let peer_start = (current_frame - local_offset) + peer_offset + GAME_START_DELAY;
+                    let peer_start =
+                        (current_frame - local_offset) + peer_offset + GAME_START_DELAY;
                     let start_timer = current_frame + GAME_START_DELAY;
                     self.send_msg(
                         peer_addr,
@@ -131,12 +146,12 @@ impl UdpListener {
                         MessageContent::StartAt(peer_start),
                     )?;
                     return Ok(Some(UdpListenerState::Connecting((start_timer, peer_addr))));
-                },
+                }
                 MessageContent::Abort => return Ok(Some(UdpListenerState::Listening)),
-                _ => {},
+                _ => {}
             }
         }
-    
+
         if current_frame > local_offset + PEER_TIME_OUT {
             Ok(Some(UdpListenerState::Listening))
         } else {
@@ -153,7 +168,7 @@ impl UdpListener {
         while let Some(msg) = self.recv_msg_from(peer_addr) {
             match msg.content {
                 MessageContent::Abort => return Ok(Some(UdpListenerState::Listening)),
-                _ => {},
+                _ => {}
             }
         }
 
@@ -185,11 +200,7 @@ impl UdpListener {
 
     fn recv_msg_from(&mut self, addr: SocketAddr) -> Option<GameMessage<'_>> {
         let (msg, src_addr) = recv_msg(&self.socket, &mut self.recv_buf)?;
-        if addr == src_addr {
-            Some(msg)
-        } else {
-            None
-        }
+        if addr == src_addr { Some(msg) } else { None }
     }
 
     fn establish_connection(&mut self, peer_addr: SocketAddr) -> std::io::Result<UdpStream> {
@@ -264,33 +275,41 @@ impl UdpClient {
         match self.state {
             UdpClientState::Syncing => self.sync(current_frame),
             UdpClientState::Connecting(time_out) => self.connect(current_frame, time_out),
-            UdpClientState::WaitingToStart(start_time) => self.wait_to_start(current_frame, start_time),
+            UdpClientState::WaitingToStart(start_time) => {
+                self.wait_to_start(current_frame, start_time)
+            }
             _ => Ok(None),
         }
     }
 
     fn sync(&mut self, current_frame: usize) -> std::io::Result<Option<UdpClientState>> {
         self.send_msg(current_frame, MessageContent::Syn)?;
-        
+
         while let Some(msg) = self.recv_msg() {
             match msg.content {
                 MessageContent::SynAck => {
                     self.send_msg(current_frame, MessageContent::Connect)?;
                     return Ok(Some(UdpClientState::Connecting(current_frame)));
                 }
-                _ => {},
+                _ => {}
             }
         }
 
         Ok(None)
     }
 
-    fn connect(&mut self, current_frame: usize, time_out: usize) -> std::io::Result<Option<UdpClientState>> {
+    fn connect(
+        &mut self,
+        current_frame: usize,
+        time_out: usize,
+    ) -> std::io::Result<Option<UdpClientState>> {
         while let Some(msg) = self.recv_msg() {
             match msg.content {
-                MessageContent::StartAt(start_timer) => return Ok(Some(UdpClientState::WaitingToStart(start_timer))),
+                MessageContent::StartAt(start_timer) => {
+                    return Ok(Some(UdpClientState::WaitingToStart(start_timer)));
+                }
                 MessageContent::Abort => return Ok(Some(UdpClientState::Syncing)),
-                _ => {},
+                _ => {}
             }
         }
 
@@ -301,11 +320,15 @@ impl UdpClient {
         }
     }
 
-    fn wait_to_start(&mut self, current_frame: usize, start_frame: usize) -> std::io::Result<Option<UdpClientState>> {
+    fn wait_to_start(
+        &mut self,
+        current_frame: usize,
+        start_frame: usize,
+    ) -> std::io::Result<Option<UdpClientState>> {
         while let Some(msg) = self.recv_msg() {
             match msg.content {
                 MessageContent::Abort => return Ok(Some(UdpClientState::Syncing)),
-                _ => {},
+                _ => {}
             }
         }
 
@@ -417,7 +440,10 @@ impl UdpStream {
                     self.outbound_buf.drain(0..deque_amt as usize);
 
                     if cfg!(feature = "debug") {
-                        println!("self.seq: {} received at frame: {current_frame}", self.seq_num);
+                        println!(
+                            "self.seq: {} received at frame: {current_frame}",
+                            self.seq_num
+                        );
                     }
                 }
                 _ => {}

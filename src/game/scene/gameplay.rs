@@ -17,11 +17,7 @@ const ROUND_LEN: usize = 99;
 
 pub trait GameplayScene {
     fn enter(&mut self, context: &GameContext, state: &mut GameState);
-    fn update(
-        &mut self,
-        context: &GameContext,
-        state: &mut GameState,
-    ) -> Option<GameplayScenes>;
+    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<GameplayScenes>;
     fn render(
         &self,
         canvas: &mut Canvas<Window>,
@@ -54,11 +50,7 @@ impl GameplayScene for GameplayScenes {
         }
     }
 
-    fn update(
-        &mut self,
-        context: &GameContext,
-        state: &mut GameState,
-    ) -> Option<GameplayScenes> {
+    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<GameplayScenes> {
         match self {
             Self::DuringRound(during_round) => during_round.update(context, state),
             Self::RoundStart(round_start) => round_start.update(context, state),

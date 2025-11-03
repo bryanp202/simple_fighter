@@ -1,15 +1,15 @@
 use std::{collections::HashMap, ops::Range};
 
 use crate::game::{
-    Side,
     boxes::{BlockType, CollisionBox, HitBox, HurtBox},
     character::{self, EndBehavior, MoveInput, StartBehavior, StateData, StateFlags},
+    deserialize::{AnimationJson, FlagsJson, RectJson, game::PlayerJson},
     input::{ButtonFlag, RelativeDirection, RelativeMotion},
-    render::animation::{Animation, AnimationLayout},
+    render::animation::Animation,
 };
 
 use sdl3::{
-    render::{FPoint, FRect, Texture, TextureCreator},
+    render::{Texture, TextureCreator},
     video::WindowContext,
 };
 use serde::Deserialize;
@@ -17,10 +17,9 @@ use serde::Deserialize;
 pub fn deserialize<'a>(
     texture_creator: &'a TextureCreator<WindowContext>,
     global_textures: &mut Vec<Texture<'a>>,
-    config: &str,
-    start_pos: FPoint,
-    start_side: Side,
+    character_data: &PlayerJson,
 ) -> Result<(character::Context, character::State), String> {
+    let config = &character_data.config;
     let src = std::fs::read_to_string(config)
         .map_err(|err| format!("Failed to open: '{config}': {err}"))?;
     let character_json: CharacterJson =
@@ -28,16 +27,9 @@ pub fn deserialize<'a>(
 
     let mut animation_data = Vec::new();
     for mov in &character_json.moves {
-        let new_animation = Animation::load(
-            texture_creator,
-            global_textures,
-            &mov.animation.texture_path,
-            mov.animation.w,
-            mov.animation.h,
-            mov.animation.frames,
-            mov.animation.layout.to_animation_layout(),
-        )?;
-
+        let new_animation = mov
+            .animation
+            .make_animation(texture_creator, global_textures)?;
         animation_data.push(new_animation);
     }
 
@@ -136,22 +128,25 @@ pub fn deserialize<'a>(
         ));
     };
 
-    let context = character::Context {
-        name: character_json.name,
-        max_hp: character_json.hp as f32,
-        start_pos,
+    let start_side = character_data.start_side.to_side();
+    let start_pos = character_data.start_pos.to_fpoint();
+
+    let context = character::Context::new(
+        character_json.name,
+        character_json.hp as f32,
         start_side,
+        start_pos,
         block_stun_state,
         ground_hit_state,
         launch_hit_state,
-        states: StateData {
+        StateData::new(
             inputs,
             cancel_windows,
             cancel_options,
             hit_boxes_start,
             hurt_boxes_start,
-            flags,
             start_behaviors,
+            flags,
             end_behaviors,
             run_length_hit_boxes,
             run_length_hurt_boxes,
@@ -160,8 +155,8 @@ pub fn deserialize<'a>(
             hurt_box_data,
             collision_box_data,
             animation_data,
-        },
-    };
+        ),
+    );
     let state = character::State::new(character_json.hp as f32, start_pos, start_side);
 
     Ok((context, state))
@@ -521,66 +516,5 @@ struct CollisionBoxJson {
 impl CollisionBoxJson {
     fn to_collision_box(self) -> CollisionBox {
         CollisionBox::new(self.rect.to_frect())
-    }
-}
-
-#[derive(Deserialize, Clone, Copy)]
-struct RectJson {
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-}
-
-impl RectJson {
-    fn to_frect(self) -> FRect {
-        FRect::new(self.x - self.w / 2.0, self.y + self.h / 2.0, self.w, self.h)
-    }
-}
-
-#[derive(Deserialize)]
-struct AnimationJson {
-    texture_path: String,
-    layout: AnimationLayoutJson,
-    frames: u32,
-    w: u32,
-    h: u32,
-}
-
-#[derive(Deserialize)]
-#[serde(tag = "type")]
-pub enum AnimationLayoutJson {
-    Horz,
-    Vert,
-}
-
-impl AnimationLayoutJson {
-    fn to_animation_layout(&self) -> AnimationLayout {
-        match self {
-            AnimationLayoutJson::Horz => AnimationLayout::Horizontal,
-            AnimationLayoutJson::Vert => AnimationLayout::Vertical,
-        }
-    }
-}
-
-#[derive(Deserialize)]
-#[serde(tag = "type")]
-enum FlagsJson {
-    Airborne,
-    CancelOnWhiff,
-    LockSide,
-    LowBlock,
-    HighBlock,
-}
-
-impl FlagsJson {
-    fn to_state_json(&self) -> StateFlags {
-        match self {
-            FlagsJson::Airborne => StateFlags::Airborne,
-            FlagsJson::CancelOnWhiff => StateFlags::CancelOnWhiff,
-            FlagsJson::LockSide => StateFlags::LockSide,
-            FlagsJson::HighBlock => StateFlags::HighBlock,
-            FlagsJson::LowBlock => StateFlags::LowBlock,
-        }
     }
 }

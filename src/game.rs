@@ -1,5 +1,6 @@
 mod boxes;
 mod character;
+mod deserialize;
 mod input;
 mod net;
 mod physics;
@@ -14,7 +15,7 @@ use sdl3::{
     EventPump,
     event::{Event, WindowEvent},
     pixels::Color,
-    render::{Canvas, FPoint, Texture, TextureCreator},
+    render::{Canvas, Texture, TextureCreator},
     video::{Window, WindowContext},
 };
 
@@ -23,7 +24,7 @@ use crate::game::{
         InputHistory, Inputs, PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, PLAYER2_BUTTONS,
         PLAYER2_DIRECTIONS,
     },
-    render::{Camera, animation::Animation, load_texture},
+    render::{Camera, animation::Animation},
     scene::{Scene, Scenes},
     stage::Stage,
 };
@@ -50,6 +51,8 @@ impl Side {
 
 pub struct GameContext {
     should_quit: bool,
+    version: String,
+    matchmaking_server: String,
     main_menu_texture: usize,
     round_start_animation: Animation,
     timer_animation: Animation,
@@ -125,7 +128,6 @@ pub struct Game<'a> {
     context: GameContext,
     state: GameState,
     scene: Scenes,
-
     inputs: PlayerInputs,
 
     // Window management / render
@@ -143,89 +145,14 @@ impl<'a> Game<'a> {
         events: EventPump,
         screen_dim: (u32, u32),
     ) -> Self {
-        let mut global_textures = Vec::new();
-
-        let main_menu_texture = load_texture(
+        deserialize::deserialize(
             texture_creator,
-            &mut global_textures,
-            "./resources/scenes/main_menu.png",
-        )
-        .expect("Invalid main menu texture");
-        let round_start_animation = Animation::load(
-            texture_creator,
-            &mut global_textures,
-            "./resources/scenes/round_start_text.png",
-            512,
-            128,
-            4,
-            render::animation::AnimationLayout::Vertical,
-        )
-        .expect("Invalid round start animation");
-        let timer_animation = Animation::load(
-            texture_creator,
-            &mut global_textures,
-            "./resources/scenes/timer_100.png",
-            128,
-            128,
-            100,
-            render::animation::AnimationLayout::Vertical,
-        )
-        .expect("Invalid timer animation");
-
-        let (player1_context, player1_state) = character::from_config(
-            texture_creator,
-            &mut global_textures,
-            "./resources/character1/character1.json",
-            FPoint::new(-100.0, 0.0),
-            Side::Left,
-        )
-        .expect("Failed to load player1 config");
-        let (player2_context, player2_state) = character::from_config(
-            texture_creator,
-            &mut global_textures,
-            "./resources/character1/character2.json",
-            FPoint::new(100.0, 0.0),
-            Side::Right,
-        )
-        .expect("Failed to load player2 config");
-
-        let (player1_input_history, player1_inputs) =
-            input::new_inputs(PLAYER1_BUTTONS, PLAYER1_DIRECTIONS);
-        let (player2_input_history, player2_inputs) =
-            input::new_inputs(PLAYER2_BUTTONS, PLAYER2_DIRECTIONS);
-
-        let state = GameState {
-            player1: player1_state,
-            player2: player2_state,
-            player1_inputs,
-            player2_inputs,
-        };
-
-        Self {
-            context: GameContext {
-                should_quit: false,
-                main_menu_texture,
-                round_start_animation,
-                timer_animation,
-                stage: Stage::init(texture_creator, &mut global_textures),
-                player1: player1_context,
-                player2: player2_context,
-                camera: Camera::new(screen_dim),
-            },
-            state,
-            scene: Scenes::new(),
-
-            inputs: PlayerInputs {
-                player1: player1_input_history,
-                player2: player2_input_history,
-            },
-
-            // Window management
             canvas,
             events,
-            global_textures,
-            _texture_creator: texture_creator,
-        }
+            screen_dim,
+            "./resources/config.json",
+        )
+        .expect("Failed to deserialize game config")
     }
 
     pub fn run(mut self) {
@@ -240,7 +167,8 @@ impl<'a> Game<'a> {
 
             self.input();
 
-            const FRAME_DURATION_NANOS: u128 = (FRAME_DURATION * std::time::Duration::from_secs(1).as_nanos() as f64) as u128;
+            const FRAME_DURATION_NANOS: u128 =
+                (FRAME_DURATION * std::time::Duration::from_secs(1).as_nanos() as f64) as u128;
             while lag >= FRAME_DURATION_NANOS {
                 self.update();
                 lag -= FRAME_DURATION_NANOS;
@@ -254,7 +182,8 @@ impl<'a> Game<'a> {
             );
         }
 
-        self.scene.exit(&self.context, &mut self.inputs, &mut self.state);
+        self.scene
+            .exit(&self.context, &mut self.inputs, &mut self.state);
     }
 
     fn input(&mut self) {

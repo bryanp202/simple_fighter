@@ -6,15 +6,16 @@ use sdl3::{
 use crate::game::{
     GameContext, GameState, PlayerInputs,
     scene::{
-        connecting::Connecting, hosting::Hosting, local_play::LocalPlay, main_menu::MainMenu, online_play::OnlinePlay
+        connecting::Connecting, hosting::Hosting, local_play::LocalPlay, main_menu::MainMenu,
+        online_play::OnlinePlay,
     },
 };
 
+mod connecting;
 mod gameplay;
 mod hosting;
 mod local_play;
 mod main_menu;
-mod connecting;
 mod online_play;
 
 pub trait Scene {
@@ -100,7 +101,9 @@ impl Scene for Scenes {
                 online_play.render(canvas, global_textures, context, state)
             }
             Self::Hosting(hosting) => hosting.render(canvas, global_textures, context, state),
-            Self::Connecting(connecting) => connecting.render(canvas, global_textures, context, state),
+            Self::Connecting(connecting) => {
+                connecting.render(canvas, global_textures, context, state)
+            }
         }
     }
 

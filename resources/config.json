@@ -1,0 +1,45 @@
+{
+    "version": "0.1.0",
+    
+    "scene_data": {
+        "main_menu": {
+            "background": {
+                "texture_path": "./resources/scenes/main_menu.png"
+            }
+        },
+
+        "gameplay": {
+            "matchmaking_server": "http://ec2-3-22-168-249.us-east-2.compute.amazonaws.com:8000/match",
+
+            "round_start_animation": {
+                "texture_path": "./resources/scenes/round_start_text.png",
+                "layout": {"type": "Vert"},
+                "frames": 4,
+                "w": 512,
+                "h": 128
+            },
+
+            "timer_animation": {
+                "texture_path": "./resources/scenes/timer_100.png",
+                "layout": {"type": "Vert"},
+                "frames": 100,
+                "w": 128,
+                "h": 128
+            },
+
+            "players": {
+                "player1": {
+                    "config": "./resources/character1/character1.json",
+                    "start_pos": { "x": -100, "y": 0 },
+                    "start_side": { "type": "Left" }
+                },
+
+                "player2": {
+                    "config": "./resources/character1/character2.json",
+                    "start_pos": { "x": 100, "y": 0 },
+                    "start_side": { "type": "Right" }
+                }
+            }
+        }
+    }
+}

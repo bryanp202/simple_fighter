@@ -29,11 +29,7 @@ impl Scene for Hosting {
         Ok(())
     }
 
-    fn update(
-        &mut self,
-        _context: &GameContext,
-        state: &mut GameState,
-    ) -> Option<super::Scenes> {
+    fn update(&mut self, _context: &GameContext, state: &mut GameState) -> Option<super::Scenes> {
         if let Some(connection) = self
             .listener
             .update(self.current_frame)

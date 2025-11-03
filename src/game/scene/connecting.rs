@@ -25,11 +25,7 @@ impl Scene for Connecting {
         Ok(())
     }
 
-    fn update(
-        &mut self,
-        _context: &GameContext,
-        state: &mut GameState,
-    ) -> Option<super::Scenes> {
+    fn update(&mut self, _context: &GameContext, state: &mut GameState) -> Option<super::Scenes> {
         if let Some(connection) = self
             .client
             .update(self.current_frame)

@@ -76,11 +76,7 @@ impl DuringRound {
 impl GameplayScene for DuringRound {
     fn enter(&mut self, _context: &GameContext, _state: &mut GameState) {}
 
-    fn update(
-        &mut self,
-        context: &GameContext,
-        state: &mut GameState,
-    ) -> Option<GameplayScenes> {
+    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<GameplayScenes> {
         // Side check first to prevent flickering
         if let Some(player1_side) = side_detection(state.player1.pos(), state.player2.pos()) {
             state.player1.set_side(&context.player1, player1_side);
