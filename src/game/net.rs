@@ -50,7 +50,6 @@ fn send_msg(
     content: MessageContent,
 ) -> std::io::Result<usize> {
     let msg = GameMessage::new(current_frame, content);
-    println!("msg: {:?} to {:?} from {:?}", msg, dst_addr, socket.local_addr()?);
     let len = bincode::encode_into_slice(msg, send_buf, config::standard())
         .map_err(|_| std::io::ErrorKind::InvalidData)?;
     socket.send_to(&send_buf[0..len], dst_addr)
@@ -63,6 +62,7 @@ fn recv_msg<'a>(
     if let Ok((packet_len, src_addr)) = socket.recv_from(recv_buf) {
         let (msg, _len): (GameMessage, usize) =
             bincode::borrow_decode_from_slice(&recv_buf[0..packet_len], config::standard()).ok()?;
+        println!("msg: {:?} to {:?} from {:?}", msg, src_addr, socket.local_addr().unwrap());
 
         if msg.version == GAME_VERSION {
             Some((msg, src_addr))
