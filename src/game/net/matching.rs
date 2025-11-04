@@ -111,7 +111,11 @@ impl MatchingSocket {
         current_frame: usize,
         time_out: usize,
     ) -> std::io::Result<Option<MatchingState>> {
-        while let Ok(len) = self.socket.recv(&mut self.recv_buf) {
+        while let Ok((len, src_addr)) = self.socket.recv_from(&mut self.recv_buf) {
+            if src_addr != self.server_addr {
+                continue;
+            }
+
             let Ok((matchdata, _)): Result<(MatchDataJson, usize), _> =
                 bincode::borrow_decode_from_slice(&self.recv_buf[..len], config::standard())
             else {
@@ -186,10 +190,11 @@ impl MatchingSocket {
     fn recv_game_msg(&mut self, peer_addr: SocketAddr) -> Option<GameMessage<'_>> {
         let (msg, src_addr) = recv_msg(&self.socket, &mut self.recv_buf)?;
 
-        if src_addr == peer_addr {
-            Some(msg)
-        } else {
-            None
-        }
+        Some(msg)
+        // if src_addr == peer_addr {
+        //     Some(msg)
+        // } else {
+        //     None
+        // }
     }
 }
