@@ -60,10 +60,10 @@ impl Scene for Connecting {
 }
 
 impl Connecting {
-    pub fn new() -> Self {
+    pub fn new(client: UdpClient) -> Self {
         Self {
             current_frame: 0,
-            client: UdpClient::bind("0.0.0.0:0", "192.168.1.192:5300").expect("Failed to bind"),
+            client,
         }
     }
 }

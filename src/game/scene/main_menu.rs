@@ -1,7 +1,7 @@
 use crate::game::{
     GameContext, GameState, PlayerInputs,
     input::ButtonFlag,
-    scene::{Scene, Scenes, connecting::Connecting, hosting::Hosting, local_play::LocalPlay},
+    scene::{Scene, Scenes, local_play::LocalPlay, matching::Matching},
 };
 
 pub struct MainMenu {
@@ -30,17 +30,14 @@ impl Scene for MainMenu {
         Ok(())
     }
 
-    fn update(&mut self, _context: &GameContext, state: &mut GameState) -> Option<super::Scenes> {
+    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<super::Scenes> {
         let buttons = state.player1_inputs.active_buttons();
 
         if self.l_button_pressed && !ButtonFlag::L.intersects(buttons) {
             return Some(Scenes::LocalPlay(LocalPlay::new()));
         }
         if self.m_button_pressed && !ButtonFlag::M.intersects(buttons) {
-            return Some(Scenes::Hosting(Hosting::new()));
-        }
-        if self.h_button_pressed && !ButtonFlag::H.intersects(buttons) {
-            return Some(Scenes::Connecting(Connecting::new()));
+            return Some(Scenes::Matching(Matching::new(&context.matchmaking_server)));
         }
 
         self.l_button_pressed = ButtonFlag::L.intersects(buttons);

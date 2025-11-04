@@ -1,16 +1,17 @@
 pub mod client;
 pub mod listener;
+pub mod matching;
 pub mod stream;
 
 use std::net::{SocketAddr, UdpSocket};
 
 use bincode::{BorrowDecode, Encode, config};
 
-use crate::game::GAME_VERSION;
+use crate::game::{FRAME_RATE, GAME_VERSION};
 
 const BUFFER_LEN: usize = 1024;
-const PEER_TIME_OUT: usize = 120;
-const GAME_START_DELAY: usize = 60;
+const PEER_TIME_OUT: usize = FRAME_RATE * 30;
+const GAME_START_DELAY: usize = FRAME_RATE;
 
 #[derive(Debug, Encode, BorrowDecode)]
 struct GameMessage<'a> {
@@ -35,7 +36,7 @@ enum MessageContent<'a> {
     SynAck,
     Connect,
     StartAt(usize),
-    HeartBeat(usize),
+    HeartBeat,
     Inputs((u32, &'a [u8])), // Start seq_num, (frame_num as u32, Direction, ButtonFlags) as bytes
     InputsAck(u32),
     Abort,
@@ -49,6 +50,7 @@ fn send_msg(
     content: MessageContent,
 ) -> std::io::Result<usize> {
     let msg = GameMessage::new(current_frame, content);
+    println!("msg: {:?} to {:?} from {:?}", msg, dst_addr, socket.local_addr()?);
     let len = bincode::encode_into_slice(msg, send_buf, config::standard())
         .map_err(|_| std::io::ErrorKind::InvalidData)?;
     socket.send_to(&send_buf[0..len], dst_addr)

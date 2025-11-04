@@ -127,6 +127,6 @@ impl Scene for Scenes {
 
 impl Scenes {
     pub fn new() -> Self {
-        Self::Matching(Matching::new())
+        Self::MainMenu(MainMenu::new())
     }
 }

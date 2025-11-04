@@ -14,24 +14,21 @@ enum UdpListenerState {
 
 pub struct UdpListener {
     socket: UdpSocket,
+    client_addr: SocketAddr,
     state: UdpListenerState,
     recv_buf: [u8; BUFFER_LEN],
     send_buf: [u8; BUFFER_LEN],
 }
 
 impl UdpListener {
-    pub fn bind<A>(addr: A) -> std::io::Result<Self>
-    where
-        A: ToSocketAddrs,
-    {
-        let socket = UdpSocket::bind(addr)?;
-        socket.set_nonblocking(true)?;
-        Ok(Self {
-            socket,
+    pub fn new(connection: UdpSocket, peer_addr: SocketAddr) -> Self {
+        Self {
+            socket: connection,
+            client_addr: peer_addr,
             state: UdpListenerState::Listening,
             recv_buf: [0; BUFFER_LEN],
             send_buf: [0; BUFFER_LEN],
-        })
+        }
     }
 
     pub fn abort(&mut self, current_frame: usize) -> std::io::Result<()> {

@@ -1,4 +1,4 @@
-use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
+use std::net::{SocketAddr, UdpSocket};
 
 use crate::game::net::{
     BUFFER_LEN, GameMessage, MessageContent, PEER_TIME_OUT, recv_msg, send_msg, stream::UdpStream,
@@ -20,21 +20,14 @@ pub struct UdpClient {
 }
 
 impl UdpClient {
-    pub fn bind<A>(local_addr: A, peer_addr: A) -> std::io::Result<Self>
-    where
-        A: ToSocketAddrs,
-    {
-        let socket = UdpSocket::bind(local_addr)?;
-        socket.connect(peer_addr)?;
-        let target_addr = socket.peer_addr()?;
-        socket.set_nonblocking(true)?;
-        Ok(Self {
-            socket,
-            target_addr,
+    pub fn new(connection: UdpSocket, peer_addr: SocketAddr) -> Self {
+        Self {
+            socket: connection,
+            target_addr: peer_addr,
             state: UdpClientState::Syncing,
             recv_buf: [0; BUFFER_LEN],
             send_buf: [0; BUFFER_LEN],
-        })
+        }
     }
 
     pub fn abort(&mut self, current_frame: usize) -> std::io::Result<()> {
@@ -72,7 +65,8 @@ impl UdpClient {
             match msg.content {
                 MessageContent::SynAck => {
                     self.send_msg(current_frame, MessageContent::Connect)?;
-                    return Ok(Some(UdpClientState::Connecting(current_frame)));
+                    let time_out = current_frame + PEER_TIME_OUT;
+                    return Ok(Some(UdpClientState::Connecting(time_out)));
                 }
                 _ => {}
             }
@@ -96,7 +90,7 @@ impl UdpClient {
             }
         }
 
-        if current_frame > time_out + PEER_TIME_OUT {
+        if current_frame > time_out {
             Ok(Some(UdpClientState::Syncing))
         } else {
             Ok(None)

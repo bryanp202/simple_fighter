@@ -64,10 +64,10 @@ impl Scene for Hosting {
 }
 
 impl Hosting {
-    pub fn new() -> Self {
+    pub fn new(listener: UdpListener) -> Self {
         Self {
             current_frame: 0,
-            listener: UdpListener::bind("0.0.0.0:5300").expect("Failed to bind"),
+            listener,
         }
     }
 }

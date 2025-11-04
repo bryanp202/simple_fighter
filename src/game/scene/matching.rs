@@ -1,11 +1,12 @@
-use std::net::UdpSocket;
-
-use bincode::{BorrowDecode, config};
-
-use crate::game::{GAME_VERSION, GameContext, GameState, PlayerInputs, scene::Scene};
+use crate::game::{
+    GameContext, GameState, PlayerInputs,
+    net::matching::{MatchingSocket, PeerConnectionType},
+    scene::{Scene, Scenes, connecting::Connecting, hosting::Hosting},
+};
 
 pub struct Matching {
-    socket: UdpSocket,
+    socket: MatchingSocket,
+    current_frame: usize,
 }
 
 impl Scene for Matching {
@@ -15,13 +16,6 @@ impl Scene for Matching {
         _inputs: &mut PlayerInputs,
         _state: &mut GameState,
     ) {
-        self.socket
-            .send_to(
-                GAME_VERSION,
-                "ec2-3-22-168-249.us-east-2.compute.amazonaws.com:8000",
-            )
-            .expect("failed to send to matchmaking server");
-        println!("{:?}", self.socket.local_addr().unwrap());
     }
 
     fn handle_input(
@@ -35,32 +29,24 @@ impl Scene for Matching {
         Ok(())
     }
 
-    fn update(&mut self, _context: &GameContext, state: &mut GameState) -> Option<super::Scenes> {
-        // if let Some(connection) = self
-        //     .listener
-        //     .update(self.current_frame)
-        //     .expect("Host listener failed")
-        // {
-        //     Some(Scenes::OnlinePlay(OnlinePlay::new(
-        //         connection,
-        //         crate::game::Side::Left,
-        //         state,
-        //     )))
-        // } else {
-        //     self.current_frame += 1;
-        //     None
-        // }
-        let mut buf = [0u8; 512];
-        match self.socket.recv_from(&mut buf) {
-            Ok((len, _)) => {
-                let (matchdata, _): (MatchDataJson, usize) =
-                    bincode::borrow_decode_from_slice(&buf[..len], config::standard()).unwrap();
-                println!("{:?}", matchdata);
+    fn update(&mut self, _context: &GameContext, _state: &mut GameState) -> Option<Scenes> {
+        if let Some(connection) = self
+            .socket
+            .update(self.current_frame)
+            .expect("Match socket failed")
+        {
+            match connection {
+                PeerConnectionType::Hosting(listener) => {
+                    Some(Scenes::Hosting(Hosting::new(listener)))
+                }
+                PeerConnectionType::Joining(client) => {
+                    Some(Scenes::Connecting(Connecting::new(client)))
+                }
             }
-            _ => {}
+        } else {
+            self.current_frame += 1;
+            None
         }
-
-        None
     }
 
     fn render(
@@ -73,26 +59,16 @@ impl Scene for Matching {
         Ok(())
     }
 
-    fn exit(&mut self, context: &GameContext, _inputs: &mut PlayerInputs, _state: &mut GameState) {
-        // if context.should_quit() {
-        //     _ = self.listener.abort(self.current_frame);
-        // }
+    fn exit(&mut self, _context: &GameContext, _inputs: &mut PlayerInputs, _state: &mut GameState) {
     }
 }
 
 impl Matching {
-    pub fn new() -> Self {
-        let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind");
-        socket
-            .set_nonblocking(true)
-            .expect("Failed to set non blockind");
-        Self { socket }
+    pub fn new(server_addr: &str) -> Self {
+        Self {
+            socket: MatchingSocket::bind("0.0.0.0:0", server_addr)
+                .expect("Failed to bind matching socket"),
+            current_frame: 0,
+        }
     }
-}
-
-#[derive(BorrowDecode, Debug)]
-struct MatchDataJson<'a> {
-    local_is_host: bool,
-    local: &'a str,
-    peer: &'a str,
 }
