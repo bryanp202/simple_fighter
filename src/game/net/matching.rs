@@ -18,7 +18,7 @@ pub enum PeerConnectionType {
 #[derive(BorrowDecode, Debug)]
 struct MatchDataJson<'a> {
     local_is_host: bool,
-    local: &'a str,
+    _local: &'a str,
     peer: &'a str,
 }
 
@@ -44,8 +44,10 @@ impl MatchingSocket {
         A: ToSocketAddrs,
     {
         let socket = UdpSocket::bind(local_addr)?;
-        socket.connect(server_addr)?;
-        let server_addr = socket.peer_addr()?;
+        let server_addr = server_addr
+            .to_socket_addrs()?
+            .next()
+            .ok_or(std::io::ErrorKind::InvalidData)?;
         socket.set_nonblocking(true)?;
         Ok(Self {
             socket,
