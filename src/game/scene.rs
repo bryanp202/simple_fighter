@@ -7,7 +7,7 @@ use crate::game::{
     GameContext, GameState, PlayerInputs,
     scene::{
         connecting::Connecting, hosting::Hosting, local_play::LocalPlay, main_menu::MainMenu,
-        online_play::OnlinePlay,
+        matching::Matching, online_play::OnlinePlay,
     },
 };
 
@@ -16,6 +16,7 @@ mod gameplay;
 mod hosting;
 mod local_play;
 mod main_menu;
+mod matching;
 mod online_play;
 
 pub trait Scene {
@@ -43,6 +44,7 @@ pub enum Scenes {
     OnlinePlay(OnlinePlay),
     Hosting(Hosting),
     Connecting(Connecting),
+    Matching(Matching),
     //RoundEnd,
     //WinScreen,
     //Settings,
@@ -56,6 +58,7 @@ impl Scene for Scenes {
             Self::OnlinePlay(online_play) => online_play.enter(context, inputs, state),
             Self::Hosting(hosting) => hosting.enter(context, inputs, state),
             Self::Connecting(connecting) => connecting.enter(context, inputs, state),
+            Self::Matching(matching) => matching.enter(context, inputs, state),
         }
     }
 
@@ -72,6 +75,7 @@ impl Scene for Scenes {
             Self::OnlinePlay(online_play) => online_play.handle_input(context, inputs, state),
             Self::Hosting(hosting) => hosting.handle_input(context, inputs, state),
             Self::Connecting(connecting) => connecting.handle_input(context, inputs, state),
+            Self::Matching(matching) => matching.handle_input(context, inputs, state),
         }
     }
 
@@ -82,6 +86,7 @@ impl Scene for Scenes {
             Self::OnlinePlay(online_play) => online_play.update(context, state),
             Self::Hosting(hosting) => hosting.update(context, state),
             Self::Connecting(connecting) => connecting.update(context, state),
+            Self::Matching(matching) => matching.update(context, state),
         }
     }
 
@@ -104,6 +109,7 @@ impl Scene for Scenes {
             Self::Connecting(connecting) => {
                 connecting.render(canvas, global_textures, context, state)
             }
+            Self::Matching(matching) => matching.render(canvas, global_textures, context, state),
         }
     }
 
@@ -114,12 +120,13 @@ impl Scene for Scenes {
             Self::OnlinePlay(online_play) => online_play.exit(context, inputs, state),
             Self::Hosting(hosting) => hosting.exit(context, inputs, state),
             Self::Connecting(connecting) => connecting.exit(context, inputs, state),
+            Self::Matching(matching) => matching.exit(context, inputs, state),
         }
     }
 }
 
 impl Scenes {
     pub fn new() -> Self {
-        Self::MainMenu(MainMenu::new())
+        Self::Matching(Matching::new())
     }
 }

@@ -1,6 +1,4 @@
 {
-    "version": "0.1.0",
-    
     "scene_data": {
         "main_menu": {
             "background": {
@@ -9,7 +7,7 @@
         },
 
         "gameplay": {
-            "matchmaking_server": "http://ec2-3-22-168-249.us-east-2.compute.amazonaws.com:8000/match",
+            "matchmaking_server": "ec2-3-22-168-249.us-east-2.compute.amazonaws.com:8000",
 
             "round_start_animation": {
                 "texture_path": "./resources/scenes/round_start_text.png",

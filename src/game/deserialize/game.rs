@@ -49,7 +49,6 @@ pub fn deserialize<'a>(
     Ok(Game {
         context: GameContext {
             should_quit: false,
-            version: game_json.version,
             matchmaking_server: game_json.scene_data.gameplay.matchmaking_server,
             main_menu_texture: game_json
                 .scene_data
@@ -91,7 +90,6 @@ pub fn deserialize<'a>(
 
 #[derive(Deserialize)]
 struct GameJson {
-    version: String,
     scene_data: SceneDataJson,
 }
 

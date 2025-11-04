@@ -29,6 +29,8 @@ use crate::game::{
     stage::Stage,
 };
 
+const GAME_VERSION: &[u8] = "0.1.0".as_bytes();
+
 const FRAME_RATE: usize = 60;
 const FRAME_DURATION: f64 = 1.0 / FRAME_RATE as f64;
 const SCORE_TO_WIN: u32 = 2;
@@ -51,7 +53,6 @@ impl Side {
 
 pub struct GameContext {
     should_quit: bool,
-    version: String,
     matchmaking_server: String,
     main_menu_texture: usize,
     round_start_animation: Animation,
@@ -156,6 +157,10 @@ impl<'a> Game<'a> {
     }
 
     pub fn run(mut self) {
+        // Enter starting scene
+        self.scene
+            .enter(&self.context, &mut self.inputs, &mut self.state);
+
         let mut last_frame = Instant::now();
         let mut lag = 0;
         while !self.context.should_quit {

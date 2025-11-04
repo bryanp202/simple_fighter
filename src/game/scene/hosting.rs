@@ -1,6 +1,6 @@
 use crate::game::{
     GameContext, GameState, PlayerInputs,
-    net::UdpListener,
+    net::listener::UdpListener,
     scene::{Scene, Scenes, online_play::OnlinePlay},
 };
 

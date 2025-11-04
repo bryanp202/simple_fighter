@@ -1,7 +1,7 @@
 use crate::{
     game::{
         GameContext, GameState, MAX_ROLLBACK_FRAMES, PlayerInputs, Side,
-        net::UdpStream,
+        net::stream::UdpStream,
         scene::{
             Scene, Scenes,
             gameplay::{GameplayScene, GameplayScenes},
