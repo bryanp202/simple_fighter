@@ -5,8 +5,8 @@ use bincode::{BorrowDecode, config};
 use crate::game::{
     GAME_VERSION,
     net::{
-        BUFFER_LEN, GameMessage, MessageContent, PEER_TIME_OUT, client::UdpClient,
-        host::UdpHost, recv_msg, send_msg,
+        BUFFER_LEN, GameMessage, MessageContent, PEER_TIME_OUT, client::UdpClient, host::UdpHost,
+        recv_msg, send_msg,
     },
 };
 

@@ -33,9 +33,7 @@ impl UdpHost {
 
     pub fn abort(&mut self, current_frame: usize) -> std::io::Result<()> {
         match self.state {
-            UdpHostState::Connected
-            | UdpHostState::Connecting(_)
-            | UdpHostState::Syncing(_) => {
+            UdpHostState::Connected | UdpHostState::Connecting(_) | UdpHostState::Syncing(_) => {
                 self.send_msg(current_frame, MessageContent::Abort)?;
             }
             _ => {}
@@ -76,10 +74,7 @@ impl UdpHost {
                 MessageContent::Syn => {
                     let peer_frame = msg.current_frame;
                     self.send_msg(current_frame, MessageContent::SynAck)?;
-                    return Ok(Some(UdpHostState::Syncing((
-                        current_frame,
-                        peer_frame,
-                    ))));
+                    return Ok(Some(UdpHostState::Syncing((current_frame, peer_frame))));
                 }
                 _ => {}
             }
@@ -100,10 +95,7 @@ impl UdpHost {
                     let peer_start =
                         (current_frame - local_offset) + peer_offset + GAME_START_DELAY;
                     let start_timer = current_frame + GAME_START_DELAY;
-                    self.send_msg(
-                        current_frame,
-                        MessageContent::StartAt(peer_start),
-                    )?;
+                    self.send_msg(current_frame, MessageContent::StartAt(peer_start))?;
                     return Ok(Some(UdpHostState::Connecting(start_timer)));
                 }
                 MessageContent::Abort => return Ok(Some(UdpHostState::Listening)),

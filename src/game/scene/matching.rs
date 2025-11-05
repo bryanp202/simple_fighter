@@ -36,9 +36,7 @@ impl Scene for Matching {
             .expect("Match socket failed")
         {
             match connection {
-                PeerConnectionType::Hosting(host) => {
-                    Some(Scenes::Hosting(Hosting::new(host)))
-                }
+                PeerConnectionType::Hosting(host) => Some(Scenes::Hosting(Hosting::new(host))),
                 PeerConnectionType::Joining(client) => {
                     Some(Scenes::Connecting(Connecting::new(client)))
                 }
