@@ -70,13 +70,10 @@ impl UdpHost {
 
     fn listen(&mut self, current_frame: usize) -> std::io::Result<Option<UdpHostState>> {
         while let Some(msg) = self.recv_msg() {
-            match msg.content {
-                MessageContent::Syn => {
-                    let peer_frame = msg.current_frame;
-                    self.send_msg(current_frame, MessageContent::SynAck)?;
-                    return Ok(Some(UdpHostState::Syncing((current_frame, peer_frame))));
-                }
-                _ => {}
+            if let MessageContent::Syn = msg.content {
+                let peer_frame = msg.current_frame;
+                self.send_msg(current_frame, MessageContent::SynAck)?;
+                return Ok(Some(UdpHostState::Syncing((current_frame, peer_frame))));
             }
         }
 
@@ -116,9 +113,8 @@ impl UdpHost {
         start_frame: usize,
     ) -> std::io::Result<Option<UdpHostState>> {
         while let Some(msg) = self.recv_msg() {
-            match msg.content {
-                MessageContent::Abort => return Ok(Some(UdpHostState::Listening)),
-                _ => {}
+            if let MessageContent::Abort = msg.content {
+                return Ok(Some(UdpHostState::Listening));
             }
         }
 

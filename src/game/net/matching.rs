@@ -153,15 +153,12 @@ impl MatchingSocket {
         self.send_game_msg(peer_addr, current_frame, MessageContent::HeartBeat)?;
 
         while let Some(msg) = self.recv_game_msg(peer_addr) {
-            match msg.content {
-                MessageContent::HeartBeat => {
-                    return if is_host {
-                        Ok(Some(MatchingState::Hosting(peer_addr)))
-                    } else {
-                        Ok(Some(MatchingState::Joining(peer_addr)))
-                    };
-                }
-                _ => {}
+            if let MessageContent::HeartBeat = msg.content {
+                return if is_host {
+                    Ok(Some(MatchingState::Hosting(peer_addr)))
+                } else {
+                    Ok(Some(MatchingState::Joining(peer_addr)))
+                };
             }
         }
 

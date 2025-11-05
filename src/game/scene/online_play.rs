@@ -171,10 +171,8 @@ impl OnlinePlay {
         state: &mut GameState,
         frames: usize,
     ) {
-        if cfg!(feature = "debug") {
-            if frames > 0 {
-                println!("Fastfowarding: {frames} frames");
-            }
+        if cfg!(feature = "debug") && frames > 0 {
+            println!("Fastfowarding: {frames} frames");
         }
 
         match self.local_side {

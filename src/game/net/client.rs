@@ -62,13 +62,10 @@ impl UdpClient {
         self.send_msg(current_frame, MessageContent::Syn)?;
 
         while let Some(msg) = self.recv_msg() {
-            match msg.content {
-                MessageContent::SynAck => {
-                    self.send_msg(current_frame, MessageContent::Connect)?;
-                    let time_out = current_frame + PEER_TIME_OUT;
-                    return Ok(Some(UdpClientState::Connecting(time_out)));
-                }
-                _ => {}
+            if let MessageContent::SynAck = msg.content {
+                self.send_msg(current_frame, MessageContent::Connect)?;
+                let time_out = current_frame + PEER_TIME_OUT;
+                return Ok(Some(UdpClientState::Connecting(time_out)));
             }
         }
 
@@ -103,9 +100,8 @@ impl UdpClient {
         start_frame: usize,
     ) -> std::io::Result<Option<UdpClientState>> {
         while let Some(msg) = self.recv_msg() {
-            match msg.content {
-                MessageContent::Abort => return Ok(Some(UdpClientState::Syncing)),
-                _ => {}
+            if let MessageContent::Abort = msg.content {
+                return Ok(Some(UdpClientState::Syncing));
             }
         }
 

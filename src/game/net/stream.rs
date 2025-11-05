@@ -170,7 +170,7 @@ impl UdpStream {
             peer_inputs.append_input(relative_frame, dir, buttons);
 
             if relative_frame < 0 {
-                current_frame = current_frame + (-relative_frame) as usize;
+                current_frame += (-relative_frame) as usize;
             }
         }
 
