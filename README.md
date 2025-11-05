@@ -12,6 +12,41 @@ Player data is separated into static "Context" and mutable "State" structures, a
 SDL3に任せたレンダリングを除いて、 フィジックスエンジン・アニメーション・入力パーシングなどが独自実装だ。
 プレイヤーデータが変更する「コンテキスト」とスタティックな「ステート」に分けられて、即座に過去ステートに巻き戻すことができる。
 
+## Net code / ネットコード
+Games synchronize by negotiating a shared frame to start the game on. After that, the only communication is user inputs.
+Local inputs are immediately used, but remote peer inputs are predicted and applied retroactively if the prediction fails.
+Each frame, the current game state is captured and stored for later. If an input arrives on a past frame, the game rolls back
+to before that frame and deterministically restimulates the game with that new input. This sometimes results in slight jumps or teleportation.
+
+試合開始時に、両プレイヤーのゲーム状態（ステート）を同期させる。この初期フレームを基準に、以後の同期が行われる。
+その後、ローカルとピアの入力しか送信されない。
+ローカルの入力が即対応される一方、ピアの入力がまず予測され、その予測が間違った場合に訂正される。
+ピアの入力が遅れて届いたら、入力前のステートに巻き戻される。
+最後には、ゲームが再びシミュレートされる。予測が特に外れたときに、キャラクターが突然に動いたりすることもある。
+
+### Rollback Example
+The remote player stops moving left, but the input is delayed. The game is restimulated with the input once it arrives, causing
+the player to jump back to where they should have stopped.
+
+プレイヤーは止まったが、入力が遅れたため、キャラクターが左へ進む。届く際に、ゲームが再びシミュレートされ、止まったはずの位置に戻る。
+
+![Rollback Example](./assets/rollback_example.gif)
+
+### Matchmaking Server / マッチングサーバー
+The game connects to a remote matchmaking server. Players are placed in a queue, and once a match is found
+all participants receive info about their peer player and who is "hosting." The server acts as a STUN server
+that helps facilitate peer-to-peer communications through NAT hole punching.
+The implementation of the server can be found here:
+- ![Rust UDP Example](https://github.com/bryanp202/tokio-p2p-matching)
+- ![Python TCP Example](https://github.com/bryanp202/p2p-matchmaker)
+
+オンラインでプレイするにはまずリモートサーバーに接続する必要がある。マッチングサーバーは、依頼が届いた時にプレイヤーのIPをキューに追加し、
+適当な相手が判断する。そうしたら、格プレイヤーへそのマッチの情報を送信し、ピアツーピア接続を仲介する。ゲームはプレイヤーの間に接続するために、
+「NATホールパンチング」という手法が利用する。
+サーバーの実装はこちら：
+- ![Rust UDP Example](https://github.com/bryanp202/tokio-p2p-matching)
+- ![Python TCP Example](https://github.com/bryanp202/p2p-matchmaker)
+
 ## Fast Iteration Friendly / コンパイラが必要ない
 Because all character moves and states are serialized in a config file, they can be easily changed and customized without requiring
 recompilation.
@@ -72,38 +107,3 @@ recompilation.
 	}
 }
 ```
-
-## Net code / ネットコード
-Games synchronize by negotiating a shared frame to start the game on. After that, the only communication is user inputs.
-Local inputs are immediately used, but remote peer inputs are predicted and applied retroactively if the prediction fails.
-Each frame, the current game state is captured and stored for later. If an input arrives on a past frame, the game rolls back
-to before that frame and deterministically restimulates the game with that new input. This sometimes results in slight jumps or teleportation.
-
-試合開始時に、両プレイヤーのゲーム状態（ステート）を同期させる。この初期フレームを基準に、以後の同期が行われる。
-その後、ローカルとピアの入力しか送信されない。
-ローカルの入力が即対応される一方、ピアの入力がまず予測され、その予測が間違った場合に訂正される。
-ピアの入力が遅れて届いたら、入力前のステートに巻き戻される。
-最後には、ゲームが再びシミュレートされる。予測が特に外れたときに、キャラクターが突然に動いたりすることもある。
-
-### Rollback Example
-The remote player stops moving left, but the input is delayed. The game is restimulated with the input once it arrives, causing
-the player to jump back to where they should have stopped.
-
-プレイヤーは止まったが、入力が遅れたため、キャラクターが左へ進む。届く際に、ゲームが再びシミュレートされ、止まったはずの位置に戻る。
-
-![Rollback Example](./assets/rollback_example.gif)
-
-### Matchmaking Server / マッチングサーバー
-The game connects to a remote matchmaking server. Players are placed in a queue, and once a match is found
-all participants receive info about their peer player and who is "hosting." The server acts as a STUN server
-that helps facilitate peer-to-peer communications through NAT hole punching.
-The implementation of the server can be found here:
-- ![Rust UDP Example](https://github.com/bryanp202/tokio-p2p-matching)
-- ![Python TCP Example](https://github.com/bryanp202/p2p-matchmaker)
-
-オンラインでプレイするにはまずリモートサーバーに接続する必要がある。マッチングサーバーは、依頼が届いた時にプレイヤーのIPをキューに追加し、
-適当な相手が判断する。そうしたら、格プレイヤーへそのマッチの情報を送信し、ピアツーピア接続を仲介する。ゲームはプレイヤーの間に接続するために、
-「NATホールパンチング」という手法が利用する。
-サーバーの実装はこちら：
-- ![Rust UDP Example](https://github.com/bryanp202/tokio-p2p-matching)
-- ![Python TCP Example](https://github.com/bryanp202/p2p-matchmaker)
