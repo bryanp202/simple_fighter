@@ -116,21 +116,25 @@ impl MatchingSocket {
                 continue;
             }
 
-            let Ok((matchdata, _)): Result<(MatchDataJson, usize), _> =
+            let Ok((match_data, _)): Result<(MatchDataJson, usize), _> =
                 bincode::borrow_decode_from_slice(&self.recv_buf[..len], config::standard())
             else {
                 continue;
             };
 
+            if cfg!(feature = "debug") {
+                println!("Found match: {match_data:?}");
+            }
+
             let time_out = current_frame + PEER_TIME_OUT;
-            let peer_addr = matchdata
+            let peer_addr = match_data
                 .peer
                 .to_socket_addrs()?
                 .next()
                 .ok_or(std::io::ErrorKind::InvalidData)?;
 
             return Ok(Some(MatchingState::HolePunching((
-                matchdata.local_is_host,
+                match_data.local_is_host,
                 time_out,
                 peer_addr,
             ))));

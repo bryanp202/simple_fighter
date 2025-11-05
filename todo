@@ -9,3 +9,5 @@
 
 [ ] Add Special state for crouch blocking, and maybe crouch hitstun. Transition to crouch blocking if lowblock
     true and attack connects
+
+[ ] Better matchmaking abort handling

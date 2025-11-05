@@ -7,7 +7,7 @@
         },
 
         "gameplay": {
-            "matchmaking_server": "ec2-3-22-168-249.us-east-2.compute.amazonaws.com:8000",
+            "matchmaking_server": "3.17.61.99:8000",
 
             "round_start_animation": {
                 "texture_path": "./resources/scenes/round_start_text.png",
