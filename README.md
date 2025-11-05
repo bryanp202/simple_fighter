@@ -12,7 +12,7 @@ Player data is separated into static "Context" and mutable "State" structures, a
 SDL3に任せたレンダリングを除いて、 フィジックスエンジン・アニメーション・入力パーシングなどが独自実装だ。
 プレイヤーデータが変更する「コンテキスト」とスタティックな「ステート」に分けられて、即座に過去ステートに巻き戻すことができる。
 
-## Net code / ネットコード
+## Netcode / ネットコード
 Games synchronize by negotiating a shared frame to start the game on. After that, the only communication is user inputs.
 Local inputs are immediately used, but remote peer inputs are predicted and applied retroactively if the prediction fails.
 Each frame, the current game state is captured and stored for later. If an input arrives on a past frame, the game rolls back
