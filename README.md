@@ -92,3 +92,18 @@ the player to jump back to where they should have stopped.
 プレイヤーは止まったが、入力が遅れたため、キャラクターが左へ進む。届く際に、ゲームが再びシミュレートされ、止まったはずの位置に戻る。
 
 ![Rollback Example](./assets/rollback_example.gif)
+
+### Matchmaking Server / マッチングサーバー
+The game connects to a remote matchmaking server. Players are placed in a queue, and once a match is found
+all participants receive info about their peer player and who is "hosting." The server acts as a STUN server
+that helps facilitate peer-to-peer communications through NAT hole punching.
+The implementation of the server can be found here:
+- ![Rust UDP Example](https://github.com/bryanp202/tokio-p2p-matching)
+- ![Python TCP Example](https://github.com/bryanp202/p2p-matchmaker)
+
+オンラインでプレイするにはまずリモートサーバーに接続する必要がある。マッチングサーバーは、依頼が届いた時にプレイヤーのIPをキューに追加し、
+適当な相手が判断する。そうしたら、格プレイヤーへそのマッチの情報を送信し、ピアツーピア接続を仲介する。ゲームはプレイヤーの間に接続するために、
+「NATホールパンチング」という手法が利用する。
+サーバーの実装はこちら：
+- ![Rust UDP Example](https://github.com/bryanp202/tokio-p2p-matching)
+- ![Python TCP Example](https://github.com/bryanp202/p2p-matchmaker)
