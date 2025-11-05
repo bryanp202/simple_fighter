@@ -1,4 +1,4 @@
-use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
+use std::net::{SocketAddr, UdpSocket};
 
 use crate::game::net::{
     BUFFER_LEN, GAME_START_DELAY, GameMessage, MessageContent, PEER_TIME_OUT, recv_msg, send_msg,

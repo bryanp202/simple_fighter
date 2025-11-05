@@ -62,7 +62,6 @@ fn recv_msg<'a>(
     if let Ok((packet_len, src_addr)) = socket.recv_from(recv_buf) {
         let (msg, _len): (GameMessage, usize) =
             bincode::borrow_decode_from_slice(&recv_buf[0..packet_len], config::standard()).ok()?;
-        println!("msg: {:?} to {:?} from {:?}", msg, src_addr, socket.local_addr().unwrap());
 
         if msg.version == GAME_VERSION {
             Some((msg, src_addr))
