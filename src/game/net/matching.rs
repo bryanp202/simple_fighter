@@ -6,12 +6,12 @@ use crate::game::{
     GAME_VERSION,
     net::{
         BUFFER_LEN, GameMessage, MessageContent, PEER_TIME_OUT, client::UdpClient,
-        listener::UdpListener, recv_msg, send_msg,
+        host::UdpHost, recv_msg, send_msg,
     },
 };
 
 pub enum PeerConnectionType {
-    Hosting(UdpListener),
+    Hosting(UdpHost),
     Joining(UdpClient),
 }
 
@@ -59,7 +59,7 @@ impl MatchingSocket {
     }
 
     fn host(&mut self, client_addr: SocketAddr) -> std::io::Result<PeerConnectionType> {
-        Ok(PeerConnectionType::Hosting(UdpListener::new(
+        Ok(PeerConnectionType::Hosting(UdpHost::new(
             self.socket.try_clone()?,
             client_addr,
         )))
@@ -188,13 +188,6 @@ impl MatchingSocket {
     }
 
     fn recv_game_msg(&mut self, peer_addr: SocketAddr) -> Option<GameMessage<'_>> {
-        let (msg, src_addr) = recv_msg(&self.socket, &mut self.recv_buf)?;
-
-        Some(msg)
-        // if src_addr == peer_addr {
-        //     Some(msg)
-        // } else {
-        //     None
-        // }
+        recv_msg(&self.socket, &mut self.recv_buf, peer_addr)
     }
 }

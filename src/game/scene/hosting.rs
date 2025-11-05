@@ -1,12 +1,12 @@
 use crate::game::{
     GameContext, GameState, PlayerInputs,
-    net::listener::UdpListener,
+    net::host::UdpHost,
     scene::{Scene, Scenes, online_play::OnlinePlay},
 };
 
 pub struct Hosting {
     current_frame: usize,
-    listener: UdpListener,
+    host: UdpHost,
 }
 
 impl Scene for Hosting {
@@ -31,7 +31,7 @@ impl Scene for Hosting {
 
     fn update(&mut self, _context: &GameContext, state: &mut GameState) -> Option<super::Scenes> {
         if let Some(connection) = self
-            .listener
+            .host
             .update(self.current_frame)
             .expect("Host listener failed")
         {
@@ -58,16 +58,16 @@ impl Scene for Hosting {
 
     fn exit(&mut self, context: &GameContext, _inputs: &mut PlayerInputs, _state: &mut GameState) {
         if context.should_quit() {
-            _ = self.listener.abort(self.current_frame);
+            _ = self.host.abort(self.current_frame);
         }
     }
 }
 
 impl Hosting {
-    pub fn new(listener: UdpListener) -> Self {
+    pub fn new(host: UdpHost) -> Self {
         Self {
             current_frame: 0,
-            listener,
+            host,
         }
     }
 }

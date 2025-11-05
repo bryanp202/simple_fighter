@@ -131,13 +131,7 @@ impl UdpClient {
     }
 
     fn recv_msg(&mut self) -> Option<GameMessage<'_>> {
-        let (msg, src_addr) = recv_msg(&self.socket, &mut self.recv_buf)?;
-
-        if src_addr == self.target_addr {
-            Some(msg)
-        } else {
-            None
-        }
+        recv_msg(&self.socket, &mut self.recv_buf, self.target_addr)
     }
 
     fn establish_connection(&mut self) -> std::io::Result<UdpStream> {

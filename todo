@@ -1,0 +1,11 @@
+[ ] Make direction cancel option for states use bitflags
+    Ex. Crouch would just be down. Then anything with down would count (down, downback, downforward)
+
+[ ] Make blocking be a option on states flag; AllowBlocking
+    Ex. Allow blocking would mean if the character is hold back, normal block, downblock is low block
+    This solves the problem of hit stun and blocking states. Blocking is still tied to state but no longer
+    Requires transitions to update block type. Could also allow for left/right during hitstun block protection
+    if i want it.
+
+[ ] Add Special state for crouch blocking, and maybe crouch hitstun. Transition to crouch blocking if lowblock
+    true and attack connects

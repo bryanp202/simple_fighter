@@ -1,5 +1,5 @@
 pub mod client;
-pub mod listener;
+pub mod host;
 pub mod matching;
 pub mod stream;
 
@@ -58,13 +58,18 @@ fn send_msg(
 fn recv_msg<'a>(
     socket: &UdpSocket,
     recv_buf: &'a mut [u8],
-) -> Option<(GameMessage<'a>, SocketAddr)> {
+    target_addr: SocketAddr,
+) -> Option<GameMessage<'a>> {
     if let Ok((packet_len, src_addr)) = socket.recv_from(recv_buf) {
+        if target_addr != src_addr {
+            return None;
+        }
+
         let (msg, _len): (GameMessage, usize) =
             bincode::borrow_decode_from_slice(&recv_buf[0..packet_len], config::standard()).ok()?;
 
         if msg.version == GAME_VERSION {
-            Some((msg, src_addr))
+            Some(msg)
         } else {
             None
         }
