@@ -173,7 +173,7 @@ impl<'a> Game<'a> {
             self.input();
 
             const FRAME_DURATION_NANOS: u128 =
-                (FRAME_DURATION * std::time::Duration::from_secs(1).as_nanos() as f64) as u128;
+                std::time::Duration::from_secs(1).as_nanos() / FRAME_RATE as u128;
             while lag >= FRAME_DURATION_NANOS {
                 self.update();
                 lag -= FRAME_DURATION_NANOS;

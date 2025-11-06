@@ -98,8 +98,7 @@ impl MatchingSocket {
 
     fn request_peer(&mut self, current_frame: usize) -> std::io::Result<Option<MatchingState>> {
         self.socket
-            .send_to(GAME_VERSION, self.server_addr)
-            .expect("Failed to contact matchmaking server");
+            .send_to(GAME_VERSION, self.server_addr)?;
 
         let time_out = current_frame + PEER_TIME_OUT;
 
