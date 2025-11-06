@@ -62,26 +62,26 @@ recompilation.
 		{"frame": 0, "boxes": []},
 		{"frame": 10, "boxes":
 			[
-			{
-				"rect": {"x": 60, "y": 10, "w": 120, "h": 60},
-				"dmg": 60,
-				"block_stun": 12,
-				"hit_stun": 20,
-				"cancel_window": 10,
-				"block_type": {"type": "Mid"}
-			}
+				{
+					"rect": {"x": 60, "y": 10, "w": 120, "h": 60},
+					"dmg": 60,
+					"block_stun": 12,
+					"hit_stun": 20,
+					"cancel_window": 10,
+					"block_type": {"type": "Mid"}
+				}
 			]
 		},
 		{"frame": 14, "boxes":
 			[
-			{
-				"rect": {"x": 20, "y": 10, "w": 40, "h": 60},
-				"dmg": 60,
-				"block_stun": 12,
-				"hit_stun": 20,
-				"cancel_window": 10,
-				"block_type": {"type": "Mid"}
-			}
+				{
+					"rect": {"x": 20, "y": 10, "w": 40, "h": 60},
+					"dmg": 60,
+					"block_stun": 12,
+					"hit_stun": 20,
+					"cancel_window": 10,
+					"block_type": {"type": "Mid"}
+				}
 			]
 		},
 		{"frame": 16, "boxes": []}
@@ -99,11 +99,11 @@ recompilation.
 	"cancel_options": ["spin_attack", "forward_dash", "jump_forward", "jump_back", "jump"],
 
 	"animation": {
-	"texture_path": "./resources/character1/Attack2.png",
-	"layout": {"type": "Horz"},
-	"frames": 6,
-	"w": 200,
-	"h": 200
+		"texture_path": "./resources/character1/Attack2.png",
+		"layout": {"type": "Horz"},
+		"frames": 6,
+		"w": 200,
+		"h": 200
 	}
 }
 ```
