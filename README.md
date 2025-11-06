@@ -42,7 +42,7 @@ The implementation of the server can be found here:
 
 オンラインでプレイするにはまずリモートサーバーに接続する必要がある。マッチングサーバーは、依頼が届いた時にプレイヤーのIPをキューに追加し、
 適当な相手が判断する。そうしたら、格プレイヤーへそのマッチの情報を送信し、ピアツーピア接続を仲介する。ゲームはプレイヤーの間に接続するために、
-「NATホールパンチング」という手法が利用する。
+「NATホールパンチング」という手法を利用する。
 サーバーの実装はこちら：
 - ![Rust UDP Example](https://github.com/bryanp202/tokio-p2p-matching)
 - ![Python TCP Example](https://github.com/bryanp202/p2p-matchmaker)
