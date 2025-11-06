@@ -1,5 +1,6 @@
 [ ] Make direction cancel option for states use bitflags
     Ex. Crouch would just be down. Then anything with down would count (down, downback, downforward)
+    How does this work with neutral? Would always cancel
 
 [ ] Make blocking be a option on states flag; AllowBlocking
     Ex. Allow blocking would mean if the character is hold back, normal block, downblock is low block
@@ -11,3 +12,13 @@
     true and attack connects
 
 [ ] Better matchmaking abort handling
+
+[ ] Animations should have anchor points and speeds. Slightly less effecient but more robust
+
+[ ] Win round scene
+[ ] Win game scene
+
+[ ] Settings
+
+[ ] Gameplay balance
+[ ] Better animations
