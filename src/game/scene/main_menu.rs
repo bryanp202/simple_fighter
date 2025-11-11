@@ -1,7 +1,10 @@
 use crate::game::{
     GameContext, GameState, PlayerInputs,
     input::ButtonFlag,
-    scene::{Scene, Scenes, local_play::LocalPlay, matching::Matching},
+    scene::{
+        Scene, Scenes, local_play::LocalPlay, matching::Matching, spectate_ai::SpectateAi,
+        verses_ai::VersesAi,
+    },
 };
 
 pub struct MainMenu {
@@ -38,6 +41,13 @@ impl Scene for MainMenu {
         }
         if self.m_button_pressed && !ButtonFlag::M.intersects(buttons) {
             return Some(Scenes::Matching(Matching::new(&context.matchmaking_server)));
+        }
+        if self.h_button_pressed && !ButtonFlag::H.intersects(buttons) {
+            return Some(Scenes::SpectateAi(SpectateAi::new(
+                &context.left_agent_filepath,
+                &context.right_agent_filepath,
+            )));
+            // return Some(Scenes::VersesAi(VersesAi::new(&context.right_agent_filepath)));
         }
 
         self.l_button_pressed = ButtonFlag::L.intersects(buttons);

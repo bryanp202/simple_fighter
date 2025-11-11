@@ -50,6 +50,8 @@ pub fn deserialize<'a>(
         context: GameContext {
             should_quit: false,
             matchmaking_server: game_json.scene_data.gameplay.matchmaking_server,
+            left_agent_filepath: game_json.ai.left_agent_path,
+            right_agent_filepath: game_json.ai.right_agent_path,
             main_menu_texture: game_json
                 .scene_data
                 .main_menu
@@ -91,6 +93,7 @@ pub fn deserialize<'a>(
 #[derive(Deserialize)]
 struct GameJson {
     scene_data: SceneDataJson,
+    ai: AiDataJson,
 }
 
 #[derive(Deserialize)]
@@ -102,6 +105,12 @@ struct SceneDataJson {
 #[derive(Deserialize)]
 struct MainMenuDataJson {
     background: TextureJson,
+}
+
+#[derive(Deserialize)]
+struct AiDataJson {
+    left_agent_path: String,
+    right_agent_path: String,
 }
 
 #[derive(Deserialize)]

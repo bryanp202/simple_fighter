@@ -1,4 +1,4 @@
-mod during_round;
+pub mod during_round;
 mod round_start;
 
 use sdl3::{

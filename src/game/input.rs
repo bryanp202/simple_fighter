@@ -70,7 +70,7 @@ pub fn new_inputs(
     (input_history, inputs)
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Inputs {
     dir: Direction,
     buttons: ButtonFlag,
@@ -84,6 +84,10 @@ impl Inputs {
             buttons: ButtonFlag::NONE,
             buf: std::array::from_fn(|_| (Motion::NONE, ButtonFlag::NONE)),
         }
+    }
+
+    pub fn reset(&mut self) {
+        *self = Inputs::new();
     }
 
     pub fn active_buttons(&self) -> ButtonFlag {

@@ -1,4 +1,9 @@
 {
+    "ai": {
+        "left_agent_path": "./resources/scenes/dqn_agent1_weights.safetensors",
+        "right_agent_path": "./resources/scenes/dqn_agent2_weights.safetensors"
+    },
+
     "scene_data": {
         "main_menu": {
             "background": {

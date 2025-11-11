@@ -1,3 +1,4 @@
+pub mod ai;
 mod boxes;
 mod character;
 mod deserialize;
@@ -20,6 +21,7 @@ use sdl3::{
 };
 
 use crate::game::{
+    ai::train,
     input::{
         InputHistory, Inputs, PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, PLAYER2_BUTTONS,
         PLAYER2_DIRECTIONS,
@@ -54,6 +56,8 @@ impl Side {
 pub struct GameContext {
     should_quit: bool,
     matchmaking_server: String,
+    left_agent_filepath: String,
+    right_agent_filepath: String,
     main_menu_texture: usize,
     round_start_animation: Animation,
     timer_animation: Animation,
@@ -77,6 +81,15 @@ pub struct GameState {
     player2_inputs: Inputs,
     player1: character::State,
     player2: character::State,
+}
+
+impl GameState {
+    pub fn reset(&mut self, context: &GameContext) {
+        self.player1.reset(&context.player1);
+        self.player2.reset(&context.player2);
+        self.player1_inputs.reset();
+        self.player2_inputs.reset();
+    }
 }
 
 pub struct PlayerInputs {
@@ -157,6 +170,11 @@ impl<'a> Game<'a> {
     }
 
     pub fn run(mut self) {
+        if cfg!(feature = "train_agents") {
+            train(&self.context, &mut self.inputs, &mut self.state).expect("Failed to train AI");
+            panic!("Done training");
+        }
+
         // Enter starting scene
         self.scene
             .enter(&self.context, &mut self.inputs, &mut self.state);

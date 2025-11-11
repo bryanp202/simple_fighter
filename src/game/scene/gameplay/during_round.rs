@@ -24,6 +24,18 @@ impl DuringRound {
         }
     }
 
+    pub fn current_frame(&self) -> usize {
+        self.time
+    }
+
+    pub fn timer(&self) -> f32 {
+        self.time as f32 / (ROUND_LEN * FRAME_RATE) as f32
+    }
+
+    pub fn score(&self) -> (u32, u32) {
+        self.score
+    }
+
     fn check_round_end(
         &mut self,
         context: &GameContext,

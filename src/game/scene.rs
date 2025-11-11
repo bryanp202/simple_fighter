@@ -7,17 +7,19 @@ use crate::game::{
     GameContext, GameState, PlayerInputs,
     scene::{
         connecting::Connecting, hosting::Hosting, local_play::LocalPlay, main_menu::MainMenu,
-        matching::Matching, online_play::OnlinePlay,
+        matching::Matching, online_play::OnlinePlay, spectate_ai::SpectateAi, verses_ai::VersesAi,
     },
 };
 
 mod connecting;
-mod gameplay;
+pub mod gameplay;
 mod hosting;
 mod local_play;
 mod main_menu;
 mod matching;
 mod online_play;
+mod spectate_ai;
+mod verses_ai;
 
 pub trait Scene {
     fn enter(&mut self, context: &GameContext, inputs: &mut PlayerInputs, state: &mut GameState);
@@ -45,6 +47,8 @@ pub enum Scenes {
     Hosting(Hosting),
     Connecting(Connecting),
     Matching(Matching),
+    VersesAi(VersesAi),
+    SpectateAi(SpectateAi),
     //RoundEnd,
     //WinScreen,
     //Settings,
@@ -59,6 +63,8 @@ impl Scene for Scenes {
             Self::Hosting(hosting) => hosting.enter(context, inputs, state),
             Self::Connecting(connecting) => connecting.enter(context, inputs, state),
             Self::Matching(matching) => matching.enter(context, inputs, state),
+            Self::VersesAi(verses_ai) => verses_ai.enter(context, inputs, state),
+            Self::SpectateAi(spectate_ai) => spectate_ai.enter(context, inputs, state),
         }
     }
 
@@ -76,6 +82,8 @@ impl Scene for Scenes {
             Self::Hosting(hosting) => hosting.handle_input(context, inputs, state),
             Self::Connecting(connecting) => connecting.handle_input(context, inputs, state),
             Self::Matching(matching) => matching.handle_input(context, inputs, state),
+            Self::VersesAi(verses_ai) => verses_ai.handle_input(context, inputs, state),
+            Self::SpectateAi(spectate_ai) => spectate_ai.handle_input(context, inputs, state),
         }
     }
 
@@ -87,6 +95,8 @@ impl Scene for Scenes {
             Self::Hosting(hosting) => hosting.update(context, state),
             Self::Connecting(connecting) => connecting.update(context, state),
             Self::Matching(matching) => matching.update(context, state),
+            Self::VersesAi(verses_ai) => verses_ai.update(context, state),
+            Self::SpectateAi(spectate_ai) => spectate_ai.update(context, state),
         }
     }
 
@@ -110,6 +120,10 @@ impl Scene for Scenes {
                 connecting.render(canvas, global_textures, context, state)
             }
             Self::Matching(matching) => matching.render(canvas, global_textures, context, state),
+            Self::VersesAi(verses_ai) => verses_ai.render(canvas, global_textures, context, state),
+            Self::SpectateAi(spectate_ai) => {
+                spectate_ai.render(canvas, global_textures, context, state)
+            }
         }
     }
 
@@ -121,6 +135,8 @@ impl Scene for Scenes {
             Self::Hosting(hosting) => hosting.exit(context, inputs, state),
             Self::Connecting(connecting) => connecting.exit(context, inputs, state),
             Self::Matching(matching) => matching.exit(context, inputs, state),
+            Self::VersesAi(verses_ai) => verses_ai.exit(context, inputs, state),
+            Self::SpectateAi(spectate_ai) => spectate_ai.exit(context, inputs, state),
         }
     }
 }

@@ -157,7 +157,7 @@ impl Context {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct State {
     current_state: StateIndex,
     current_frame: usize,
@@ -187,6 +187,33 @@ impl State {
             stun: 0,
             combo_scaling: 1.0,
         }
+    }
+
+    pub fn serialize(&self, context: &Context) -> [f32; 34] {
+        let mut data = [0.0; 34];
+
+        // Normal floats
+        data[0] = self.hp / context.max_hp;
+        data[1] = self.pos.x;
+        data[2] = self.pos.y;
+        data[3] = self.vel.x;
+        data[4] = self.vel.y;
+        data[5] = self.friction_vel.x;
+        data[6] = self.friction_vel.y;
+        data[7] = self.gravity_mult;
+        data[8] = self.combo_scaling;
+        // Integers
+        data[9] = (self.current_frame as f32).ln();
+        data[10] = self.stun as f32;
+        // bools / enums
+        data[11] = (self.side == Side::Left) as usize as f32;
+        data[12 + self.current_state] = 1.0;
+
+        data
+    }
+
+    pub fn combo_scaling(&self) -> f32 {
+        self.combo_scaling
     }
 
     pub fn state_update(&mut self, inputs: &Inputs, context: &Context) {
