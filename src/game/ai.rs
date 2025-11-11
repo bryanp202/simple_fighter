@@ -26,9 +26,9 @@ const END_E: f64 = 0.05;
 const EPSILON_RANGE: usize = EPISODES;
 
 // REWARDS
-const ROUND_WIN_SCORE: f32 = 500.0;
-const ROUND_LOSE_SCORE: f32 = -50.0;
-const ROUND_TIE_SCORE: f32 = -500.0;
+const ROUND_WIN_SCORE: f32 = 50_000.0;
+const ROUND_LOSE_SCORE: f32 = -500.0;
+const ROUND_TIE_SCORE: f32 = -50_000.0;
 
 /// Not a zero sum game
 ///
@@ -83,17 +83,17 @@ fn step_reward(
     if agent1_start_hp != agent1_end_hp {
         *agent2_last_hit_time = current_frame;
     }
-    let passive_penalty1 = (current_frame - *agent1_last_hit_time) as f32 / 1000.0;
-    let passive_penalty2 = (current_frame - *agent2_last_hit_time) as f32 / 1000.0;
+    let passive_penalty1 = (current_frame - *agent1_last_hit_time) as f32 / 1_000.0;
+    let passive_penalty2 = (current_frame - *agent2_last_hit_time) as f32 / 1_000.0;
 
     let corner_penalty1 = ((agent1_pos.x.abs() == 420.0) as u8 * 10) as f32;
     let corner_penalty2 = ((agent2_pos.x.abs() == 420.0) as u8 * 10) as f32;
 
-    let dmg_rwd1 = (agent2_start_hp - agent2_end_hp) * 500.0;
-    let dmg_rwd2 = (agent1_start_hp - agent1_end_hp) * 500.0;
+    let dmg_rwd1 = (agent2_start_hp - agent2_end_hp) * 10_000.0;
+    let dmg_rwd2 = (agent1_start_hp - agent1_end_hp) * 10_000.0;
 
-    let combo_rwd1 = (agent1_start_combo - agent1_end_combo).max(0.0) * 1000.0;
-    let combo_rwd2 = (agent2_start_combo - agent2_end_combo).max(0.0) * 1000.0;
+    let combo_rwd1 = (agent1_start_combo - agent1_end_combo).max(0.0) * 10_000.0;
+    let combo_rwd2 = (agent2_start_combo - agent2_end_combo).max(0.0) * 10_000.0;
 
     let (hp_rwd1, hp_rwd2) = match agent1_end_hp.total_cmp(&agent2_end_hp) {
         Ordering::Less => (0.0, 0.005),
