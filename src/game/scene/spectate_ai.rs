@@ -56,8 +56,6 @@ impl Scene for SpectateAi {
         );
 
         // Agent2
-        let observation = serialize_observation(&self.device, timer, context, state)
-            .expect("Model failed to observe environment");
         let ai_action =
             get_ai_action(&self.ai_agent2, &observation, GAMEPLAY_EPSILON).expect("Model failed to exploit");
         let (dir, buttons) = map_ai_action(ai_action);
