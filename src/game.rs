@@ -21,7 +21,7 @@ use sdl3::{
 };
 
 use crate::game::{
-    ai::train,
+    ai::dqn,
     input::{
         InputHistory, Inputs, PLAYER1_BUTTONS, PLAYER1_DIRECTIONS, PLAYER2_BUTTONS,
         PLAYER2_DIRECTIONS,
@@ -171,7 +171,8 @@ impl<'a> Game<'a> {
 
     pub fn run(mut self) {
         if cfg!(feature = "train_agents") {
-            train(&self.context, &mut self.inputs, &mut self.state).expect("Failed to train AI");
+            dqn::train(&self.context, &mut self.inputs, &mut self.state)
+                .expect("Failed to train AI");
             panic!("Done training");
         }
 

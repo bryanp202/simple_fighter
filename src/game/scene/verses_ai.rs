@@ -3,7 +3,7 @@ use candle_nn::VarMap;
 
 use crate::game::{
     GameContext, GameState, PlayerInputs,
-    ai::{get_ai_action, make_model, map_ai_action, serialize_observation},
+    ai::{dqn, serialize_observation},
     scene::{
         Scene, Scenes,
         gameplay::{GameplayScene, GameplayScenes},
@@ -42,22 +42,15 @@ impl Scene for VersesAi {
 
         let observation = serialize_observation(&self.device, timer, context, state)
             .expect("Model failed to observe environment");
-
-        let ai_action = get_ai_action(
+        dqn::take_agent_turn(
             &mut self.rng,
             &self.ai_agent,
+            &mut inputs.player2,
+            &mut state.player2_inputs,
             &observation,
             GAMEPLAY_EPSILON,
         )
-        .expect("Model failed to exploit");
-        let (dir, buttons) = map_ai_action(ai_action);
-        inputs.skip_player2();
-        inputs.player2.append_input(0, dir, buttons);
-
-        state.player2_inputs.update(
-            inputs.player2.held_buttons(),
-            inputs.player2.parse_history(),
-        );
+        .expect("Failed to take agent's turn");
 
         Ok(())
     }
@@ -94,7 +87,7 @@ impl VersesAi {
     pub fn new(model_path: &str) -> Self {
         let mut var_map = VarMap::new();
         var_map.load(model_path).expect("Failed to load agent");
-        let agent = make_model(&var_map, &Device::Cpu).expect("Failed to make agent");
+        let agent = dqn::make_model(&var_map, &Device::Cpu).expect("Failed to make agent");
 
         Self {
             scene: GameplayScenes::new_round_start((0, 0)),

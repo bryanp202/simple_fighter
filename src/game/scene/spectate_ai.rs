@@ -3,7 +3,7 @@ use candle_nn::VarMap;
 
 use crate::game::{
     GameContext, GameState, PlayerInputs,
-    ai::{get_ai_action, make_model, map_ai_action, serialize_observation},
+    ai::{dqn, serialize_observation},
     scene::{
         Scene, Scenes,
         gameplay::{GameplayScene, GameplayScenes},
@@ -44,38 +44,25 @@ impl Scene for SpectateAi {
             .expect("Model failed to observe environment");
 
         // Agent1
-        let ai_action = get_ai_action(
+        dqn::take_agent_turn(
             &mut self.rng,
             &self.ai_agent1,
+            &mut inputs.player1,
+            &mut state.player1_inputs,
             &observation,
             GAMEPLAY_EPSILON,
         )
-        .expect("Model failed to exploit");
-        let (dir, buttons) = map_ai_action(ai_action);
-        inputs.skip_player1();
-        inputs.player1.append_input(0, dir, buttons);
-
-        state.player1_inputs.update(
-            inputs.player1.held_buttons(),
-            inputs.player1.parse_history(),
-        );
-
+        .expect("Failed to take agent's turn");
         // Agent2
-        let ai_action = get_ai_action(
+        dqn::take_agent_turn(
             &mut self.rng,
             &self.ai_agent2,
+            &mut inputs.player2,
+            &mut state.player2_inputs,
             &observation,
             GAMEPLAY_EPSILON,
         )
-        .expect("Model failed to exploit");
-        let (dir, buttons) = map_ai_action(ai_action);
-        inputs.skip_player2();
-        inputs.player2.append_input(0, dir, buttons);
-
-        state.player2_inputs.update(
-            inputs.player2.held_buttons(),
-            inputs.player2.parse_history(),
-        );
+        .expect("Failed to take agent's turn");
 
         Ok(())
     }
@@ -118,8 +105,8 @@ impl SpectateAi {
         var_map2
             .load(right_agent_path)
             .expect("Failed to load agent");
-        let agent1 = make_model(&var_map1, &Device::Cpu).expect("Failed to make agent");
-        let agent2 = make_model(&var_map2, &Device::Cpu).expect("Failed to make agent");
+        let agent1 = dqn::make_model(&var_map1, &Device::Cpu).expect("Failed to make agent");
+        let agent2 = dqn::make_model(&var_map2, &Device::Cpu).expect("Failed to make agent");
 
         Self {
             scene: GameplayScenes::new_round_start((0, 0)),
