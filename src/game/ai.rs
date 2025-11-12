@@ -92,8 +92,8 @@ fn step_reward(
     let passive_penalty1 = (current_frame - *agent1_last_hit_time) as f32 / 100_000.0;
     let passive_penalty2 = (current_frame - *agent2_last_hit_time) as f32 / 100_000.0;
 
-    let corner_penalty1 = ((agent1_pos.x.abs() >= 410.0) as u8) as f32 / 100.0;
-    let corner_penalty2 = ((agent2_pos.x.abs() >= 410.0) as u8) as f32 / 100.0;
+    let corner_penalty1 = ((agent1_pos.x.abs() > 400.0) as u8) as f32 / 100.0;
+    let corner_penalty2 = ((agent2_pos.x.abs() > 400.0) as u8) as f32 / 100.0;
 
     let dmg_rwd1 = (agent2_start_hp - agent2_end_hp) * 10.0;
     let dmg_rwd2 = (agent1_start_hp - agent1_end_hp) * 10.0;
