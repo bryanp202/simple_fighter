@@ -330,8 +330,8 @@ pub fn serialize_observation(
 ) -> Result<Tensor> {
     let global_inputs = [
         timer,
-        (state.player1.pos().x - state.player2.pos().x).abs(),
-        (state.player1.pos().y - state.player2.pos().y).abs(),
+        (state.player1.pos().x - state.player2.pos().x).abs() / context.stage.width(),
+        (state.player1.pos().y - state.player2.pos().y).abs() / context.stage.width(),
     ];
     let agent1_state = state.player1.serialize(&context.player1, &context.stage);
     let agent2_state = state.player2.serialize(&context.player2, &context.stage);
