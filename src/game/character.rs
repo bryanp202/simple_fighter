@@ -9,6 +9,7 @@ use crate::game::{
         Camera, animation::Animation, draw_collision_box_system, draw_hit_boxes_system,
         draw_hurt_boxes_system,
     },
+    stage::Stage,
 };
 use bitflags::bitflags;
 use sdl3::{
@@ -189,22 +190,22 @@ impl State {
         }
     }
 
-    pub fn serialize(&self, context: &Context) -> [f32; 34] {
-        let mut data = [0.0; 34];
+    pub fn serialize(&self, context: &Context, stage: &Stage) -> [f32; 35] {
+        let mut data = [0.0; 35];
 
         // Normal floats
         data[0] = self.hp / context.max_hp;
-        data[1] = self.pos.x;
-        data[2] = self.pos.y;
-        data[3] = self.vel.x;
-        data[4] = self.vel.y;
-        data[5] = self.friction_vel.x;
-        data[6] = self.friction_vel.y;
+        data[1] = self.pos.x / stage.width();
+        data[2] = self.pos.y / stage.height();
+        data[3] = self.vel.x / stage.width();
+        data[4] = self.vel.y / stage.height();
+        data[5] = self.friction_vel.x / stage.width();
+        data[6] = self.friction_vel.y / stage.height();
         data[7] = self.gravity_mult;
         data[8] = self.combo_scaling;
         // Integers
-        data[9] = (self.current_frame as f32).ln();
-        data[10] = self.stun as f32;
+        data[9] = (self.current_frame as f32).ln() / 30.0f32.ln();
+        data[10] = self.stun as f32 / 60.0;
         // bools / enums
         data[11] = (self.side == Side::Left) as usize as f32;
         data[12 + self.current_state] = 1.0;

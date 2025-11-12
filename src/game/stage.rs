@@ -18,8 +18,8 @@ const STATIC_LAYERS: &[&str] = &[
 
 pub struct Stage {
     layers: Vec<usize>,
-    left_wall: f32,
-    right_wall: f32,
+    width: f32,
+    height: f32,
 }
 
 impl Stage {
@@ -36,9 +36,17 @@ impl Stage {
 
         Self {
             layers,
-            left_wall: -420.0,
-            right_wall: 420.0,
+            width: 420.0,
+            height: 600.0,
         }
+    }
+
+    pub fn width(&self) -> f32 {
+        self.width
+    }
+
+    pub fn height(&self) -> f32 {
+        self.height
     }
 
     pub fn render(
@@ -54,6 +62,6 @@ impl Stage {
     }
 
     pub fn bind_pos(&self, pos: FPoint) -> FPoint {
-        FPoint::new(pos.x.clamp(self.left_wall, self.right_wall), pos.y)
+        FPoint::new(pos.x.clamp(-self.width, self.width), pos.y)
     }
 }

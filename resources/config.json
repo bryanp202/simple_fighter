@@ -32,13 +32,13 @@
 
             "players": {
                 "player1": {
-                    "config": "./resources/character1/character1.json",
+                    "config": "./resources/character1/config.json",
                     "start_pos": { "x": -100, "y": 0 },
                     "start_side": { "type": "Left" }
                 },
 
                 "player2": {
-                    "config": "./resources/character1/character2.json",
+                    "config": "./resources/character1/config.json",
                     "start_pos": { "x": 100, "y": 0 },
                     "start_side": { "type": "Right" }
                 }

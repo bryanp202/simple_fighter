@@ -34,16 +34,18 @@ impl Scene for VersesAi {
     ) -> std::io::Result<()> {
         inputs.update_player1();
 
-        inputs.skip_player2();
         let timer = match &self.scene {
             GameplayScenes::DuringRound(during_round) => during_round.timer(),
             _ => 0.0,
         };
+
         let observation = serialize_observation(&self.device, timer, context, state)
             .expect("Model failed to observe environment");
-        let ai_action =
-            get_ai_action(&self.ai_agent, &observation, GAMEPLAY_EPSILON).expect("Model failed to exploit");
+
+        let ai_action = get_ai_action(&self.ai_agent, &observation, GAMEPLAY_EPSILON)
+            .expect("Model failed to exploit");
         let (dir, buttons) = map_ai_action(ai_action);
+        inputs.skip_player2();
         inputs.player2.append_input(0, dir, buttons);
 
         state.player2_inputs.update(

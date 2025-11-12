@@ -11,24 +11,27 @@ use crate::game::{
     scene::gameplay::{GameplayScene, during_round::DuringRound},
 };
 
-const AGENT1_OUTPUT_PATH: &str = "./resources/scenes/dqn_agent1_weights.safetensors";
-const AGENT2_OUTPUT_PATH: &str = "./resources/scenes/dqn_agent2_weights.safetensors";
+const AGENT1_OUTPUT_PATH: &str = "./resources/scenes/dqn_agent1_weights_NEW.safetensors";
+const AGENT2_OUTPUT_PATH: &str = "./resources/scenes/dqn_agent2_weights_NEW.safetensors";
+const SAVE_INTERVAL: usize = 5000;
 
-const STATE_VECTOR_LEN: usize = 34 + 34 + 1;
+const STATE_VECTOR_LEN: usize = 35 + 35 + 3;
 const HIDDEN_COUNT: usize = 256;
 const ACTION_SPACE: usize = 9 * 8;
-const LEARNING_RATE: f64 = 0.1;
-const EPISODES: usize = 1000;
+const LEARNING_RATE: f64 = 0.0001;
+const EPISODES: usize = 25_000;
 const BATCH_SIZE: usize = 128;
+const REPLAY_SIZE: usize = BATCH_SIZE * 256;
 const GAMMA: f64 = 0.99;
 const START_E: f64 = 0.8;
 const END_E: f64 = 0.05;
 const EPSILON_RANGE: usize = EPISODES;
+const EPISODE_PRINT_STEP: usize = EPISODES / 1_000;
 
 // REWARDS
-const ROUND_WIN_SCORE: f32 = 50_000.0;
-const ROUND_LOSE_SCORE: f32 = -500.0;
-const ROUND_TIE_SCORE: f32 = -50_000.0;
+const ROUND_WIN_SCORE: f32 = 25.0;
+const ROUND_LOSE_SCORE: f32 = -0.5;
+const ROUND_TIE_SCORE: f32 = -50.0;
 
 /// Not a zero sum game
 ///
@@ -49,14 +52,15 @@ fn step_reward(
     agent2_pos: FPoint,
     old_score: (u32, u32),
     new_score: (u32, u32),
+    timer: f32,
 ) -> Reward {
     let (round_rwd1, round_rwd2) = match new_score.0.cmp(&new_score.1) {
         Ordering::Less => {
             // Player 2 wins
             if agent1_end_hp <= 0.0 {
-                (ROUND_LOSE_SCORE, ROUND_WIN_SCORE)
+                (ROUND_LOSE_SCORE, ROUND_WIN_SCORE * (1.0 + timer) / 2.0)
             } else {
-                (ROUND_LOSE_SCORE * 2.0, ROUND_WIN_SCORE / 2.0)
+                (ROUND_LOSE_SCORE * 10.0, ROUND_WIN_SCORE / 100.0)
             }
         }
         Ordering::Equal => {
@@ -70,9 +74,9 @@ fn step_reward(
         Ordering::Greater => {
             // Player 1 wins
             if agent2_end_hp <= 0.0 {
-                (ROUND_WIN_SCORE, ROUND_LOSE_SCORE)
+                (ROUND_WIN_SCORE * (1.0 + timer) / 2.0, ROUND_LOSE_SCORE)
             } else {
-                (ROUND_WIN_SCORE / 2.0, ROUND_LOSE_SCORE * 2.0)
+                (ROUND_WIN_SCORE / 100.0, ROUND_LOSE_SCORE * 10.0)
             }
         }
     };
@@ -83,26 +87,28 @@ fn step_reward(
     if agent1_start_hp != agent1_end_hp {
         *agent2_last_hit_time = current_frame;
     }
-    let passive_penalty1 = (current_frame - *agent1_last_hit_time) as f32 / 1_000.0;
-    let passive_penalty2 = (current_frame - *agent2_last_hit_time) as f32 / 1_000.0;
+    let passive_penalty1 = (current_frame - *agent1_last_hit_time) as f32 / 100_000.0;
+    let passive_penalty2 = (current_frame - *agent2_last_hit_time) as f32 / 100_000.0;
 
-    let corner_penalty1 = ((agent1_pos.x.abs() == 420.0) as u8 * 10) as f32;
-    let corner_penalty2 = ((agent2_pos.x.abs() == 420.0) as u8 * 10) as f32;
+    let corner_penalty1 = ((agent1_pos.x.abs() == 420.0) as u8) as f32 / 1_000.0;
+    let corner_penalty2 = ((agent2_pos.x.abs() == 420.0) as u8) as f32 / 1_000.0;
 
-    let dmg_rwd1 = (agent2_start_hp - agent2_end_hp) * 10_000.0;
-    let dmg_rwd2 = (agent1_start_hp - agent1_end_hp) * 10_000.0;
+    let dmg_rwd1 = (agent2_start_hp - agent2_end_hp) * 10.0;
+    let dmg_rwd2 = (agent1_start_hp - agent1_end_hp) * 10.0;
 
-    let combo_rwd1 = (agent1_start_combo - agent1_end_combo).max(0.0) * 10_000.0;
-    let combo_rwd2 = (agent2_start_combo - agent2_end_combo).max(0.0) * 10_000.0;
+    let combo_rwd1 = (agent1_start_combo - agent1_end_combo).max(0.0) * 10.0;
+    let combo_rwd2 = (agent2_start_combo - agent2_end_combo).max(0.0) * 10.0;
+
+    let distance_reward = 1.0 / (agent1_pos.x - agent2_pos.x).abs().max(80.0);
 
     let (hp_rwd1, hp_rwd2) = match agent1_end_hp.total_cmp(&agent2_end_hp) {
-        Ordering::Less => (0.0, 0.005),
-        Ordering::Equal => (-0.01, -0.01),
-        Ordering::Greater => (0.005, 0.0),
+        Ordering::Less => (0.0, 0.0005),
+        Ordering::Equal => (-0.001, -0.001),
+        Ordering::Greater => (0.0005, 0.0),
     };
 
-    let agent1 = round_rwd1 + dmg_rwd1 + hp_rwd1 + combo_rwd1 - passive_penalty1 - corner_penalty1;
-    let agent2 = round_rwd2 + dmg_rwd2 + hp_rwd2 + combo_rwd2 - passive_penalty2 - corner_penalty2;
+    let agent1 = distance_reward + round_rwd1 + dmg_rwd1 + hp_rwd1 + combo_rwd1 - passive_penalty1 - corner_penalty1;
+    let agent2 = distance_reward + round_rwd2 + dmg_rwd2 + hp_rwd2 + combo_rwd2 - passive_penalty2 - corner_penalty2;
 
     Reward { agent1, agent2 }
 }
@@ -123,15 +129,13 @@ struct Reward {
 type GameMemory = (Tensor, Actions, Reward, bool, Tensor); // Init state, actions, reward, terminal, next state
 struct ReplayMemory {
     memory: VecDeque<GameMemory>,
-    max_length: usize,
     count: usize,
 }
 
 impl ReplayMemory {
-    pub fn new(batch_size: usize) -> Self {
+    pub fn new() -> Self {
         Self {
-            memory: VecDeque::new(),
-            max_length: batch_size * 16,
+            memory: VecDeque::with_capacity(REPLAY_SIZE),
             count: 0,
         }
     }
@@ -151,7 +155,7 @@ impl ReplayMemory {
     pub fn append(&mut self, new_memory: GameMemory) {
         self.count += 1;
         self.memory.push_front(new_memory);
-        if self.memory.len() > self.max_length {
+        if self.memory.len() > REPLAY_SIZE {
             self.memory.pop_back();
         }
     }
@@ -186,9 +190,9 @@ pub fn train(
     let mut optimizer1 = AdamW::new_lr(var_map1.all_vars(), LEARNING_RATE)?;
     let mut optimizer2 = AdamW::new_lr(var_map2.all_vars(), LEARNING_RATE)?;
 
-    let mut replay_memory = ReplayMemory::new(BATCH_SIZE);
+    let mut replay_memory = ReplayMemory::new();
 
-    let mut episode = 0;
+    let mut episode = 1;
     let mut accumulate_rewards = Reward {
         agent1: 0.0,
         agent2: 0.0,
@@ -198,8 +202,6 @@ pub fn train(
     let mut agent1_last_hit = 0;
     let mut agent2_last_hit = 0;
 
-    println!("___________________________");
-    println!("EPISODE: {episode}");
     while episode < EPISODES {
         let epsilon = get_epsilon(episode);
         let agent1_action = take_agent_turn(
@@ -228,6 +230,7 @@ pub fn train(
         let current_frame = scene.current_frame();
         let agent1_end_hp = state.player1.hp_per(&context.player1);
         let agent2_end_hp = state.player2.hp_per(&context.player2);
+        let timer = scene.timer();
         let rewards = step_reward(
             current_frame,
             agent1_start_hp,
@@ -244,6 +247,7 @@ pub fn train(
             state.player2.pos(),
             old_score,
             new_score,
+            timer,
         );
 
         let start_state = observation;
@@ -262,7 +266,7 @@ pub fn train(
         accumulate_rewards.agent1 += rewards.agent1;
         accumulate_rewards.agent2 += rewards.agent2;
 
-        if replay_memory.len() >= BATCH_SIZE * 10 && replay_memory.count() > BATCH_SIZE {
+        if replay_memory.len() >= REPLAY_SIZE && replay_memory.count() > BATCH_SIZE {
             train_agents(
                 &device,
                 &agent1,
@@ -275,18 +279,20 @@ pub fn train(
             replay_memory.reset_count();
         }
 
-        if terminal {
+        if terminal {            
+            if episode % EPISODE_PRINT_STEP == 0 {
+                println!("___________________________");
+                println!("EPISODE: {episode}");
+                println!("Accumulate game sum: {accumulate_rewards:?}");
+                println!("Round timer: {}", 1.0 - scene.timer());
+                println!("Agent1: {:?}", state.player1);
+                println!("---------------------------");
+                println!("Agent2: {:?}", state.player2);
+                println!("___________________________\n");
+            }
+
             // Reset Stuff
             episode += 1;
-            println!("Accumulate game sum: {accumulate_rewards:?}");
-            println!("Round timer: {}", 1.0 - scene.timer());
-            println!("Agent1: {:?}", state.player1);
-            println!("---------------------------");
-            println!("Agent2: {:?}", state.player2);
-            println!("___________________________\n");
-            println!("___________________________");
-            println!("EPISODE: {episode}");
-
             accumulate_rewards = Reward {
                 agent1: 0.0,
                 agent2: 0.0,
@@ -297,6 +303,12 @@ pub fn train(
             state.reset(context);
             inputs.reset_player1();
             inputs.reset_player2();
+
+            if episode % SAVE_INTERVAL == 0 {
+                save_model(&var_map1, AGENT1_OUTPUT_PATH)?;
+                save_model(&var_map2, AGENT2_OUTPUT_PATH)?;
+                println!("NOTE: Saved at checkpoint episode: {episode}");
+            }
         }
     }
 
@@ -316,11 +328,15 @@ pub fn serialize_observation(
     context: &GameContext,
     state: &GameState,
 ) -> Result<Tensor> {
-    let timer_normalize = [timer];
-    let agent1_state = state.player1.serialize(&context.player1);
-    let agent2_state = state.player2.serialize(&context.player2);
+    let global_inputs = [
+        timer,
+        (state.player1.pos().x - state.player2.pos().x).abs(),
+        (state.player1.pos().y - state.player2.pos().y).abs(),
+    ];
+    let agent1_state = state.player1.serialize(&context.player1, &context.stage);
+    let agent2_state = state.player2.serialize(&context.player2, &context.stage);
 
-    let state_iter = timer_normalize
+    let state_iter = global_inputs
         .into_iter()
         .chain(agent1_state)
         .chain(agent2_state);
@@ -346,8 +362,6 @@ fn take_agent_turn(
         inputs_history.parse_history(),
     );
 
-    
-
     Ok(agent_action)
 }
 
@@ -360,7 +374,7 @@ fn train_agents(
     memory: &ReplayMemory,
 ) -> Result<()> {
     let batch = rand::rng()
-        .sample_iter(Uniform::new(0, BATCH_SIZE).expect("Bad uniform range"))
+        .sample_iter(Uniform::new(0, REPLAY_SIZE).expect("Bad uniform range"))
         .take(BATCH_SIZE)
         .map(|i| memory.get(i))
         .collect::<Vec<_>>();

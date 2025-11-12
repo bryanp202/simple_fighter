@@ -173,12 +173,7 @@ fn append_hit_box_data(
     for pair in mov.hit_boxes.windows(2) {
         let first = &pair[0];
         let second = &pair[1];
-        let duration = second.frame.checked_sub(first.frame).ok_or_else(|| {
-            format!(
-                "'{}': {}",
-                mov.name, "Run length encoding required for hitbox frames"
-            )
-        })?;
+        let duration = get_running_length_duration(first.frame, second.frame, &mov.name)?;
         let range = *offset..*offset + first.boxes.len();
         *offset += first.boxes.len();
 
@@ -211,12 +206,7 @@ fn append_hurt_box_data(
     for pair in mov.hurt_boxes.windows(2) {
         let first = &pair[0];
         let second = &pair[1];
-        let duration = second.frame.checked_sub(first.frame).ok_or_else(|| {
-            format!(
-                "'{}': {}",
-                mov.name, "Run length encoding required for hurtbox frames"
-            )
-        })?;
+        let duration = get_running_length_duration(first.frame, second.frame, &mov.name)?;
         let range = *offset..*offset + first.boxes.len();
         *offset += first.boxes.len();
 
@@ -255,6 +245,20 @@ fn append_cancel_options_data(
         run_length_cancel_options.push(*index);
     }
     Ok(())
+}
+
+fn get_running_length_duration(
+    first: usize,
+    second: usize,
+    mov_name: &str,
+) -> Result<usize, String> {
+    if second <= first {
+        Err(format!(
+            "'{mov_name}': Run length encoding error [{first} - {second}]",
+        ))
+    } else {
+        Ok(second - first)
+    }
 }
 
 #[derive(Deserialize)]

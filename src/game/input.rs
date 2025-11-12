@@ -74,6 +74,7 @@ pub fn new_inputs(
 pub struct Inputs {
     dir: Direction,
     buttons: ButtonFlag,
+    just_pressed_buttons: ButtonFlag,
     buf: MoveBuffer,
 }
 
@@ -82,6 +83,7 @@ impl Inputs {
         Self {
             dir: Direction::Neutral,
             buttons: ButtonFlag::NONE,
+            just_pressed_buttons: ButtonFlag::NONE,
             buf: std::array::from_fn(|_| (Motion::NONE, ButtonFlag::NONE)),
         }
     }
@@ -92,6 +94,10 @@ impl Inputs {
 
     pub fn active_buttons(&self) -> ButtonFlag {
         self.buttons
+    }
+
+    pub fn just_pressed_buttons(&self) -> ButtonFlag {
+        self.just_pressed_buttons
     }
 
     pub fn dir(&self) -> Direction {
@@ -115,6 +121,7 @@ impl Inputs {
         self.buf = new_buf;
         self.dir = dir;
         self.buttons = held_buttons;
+        self.just_pressed_buttons = buttons;
     }
 }
 

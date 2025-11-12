@@ -34,25 +34,28 @@ impl Scene for MainMenu {
     }
 
     fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<super::Scenes> {
-        let buttons = state.player1_inputs.active_buttons();
+        let just_pressed = state.player1_inputs.just_pressed_buttons();
+        let held = state.player1_inputs.active_buttons();
 
-        if self.l_button_pressed && !ButtonFlag::L.intersects(buttons) {
+        if self.l_button_pressed && !ButtonFlag::L.intersects(held) {
             return Some(Scenes::LocalPlay(LocalPlay::new()));
         }
-        if self.m_button_pressed && !ButtonFlag::M.intersects(buttons) {
+        if self.m_button_pressed && !ButtonFlag::M.intersects(held) {
             return Some(Scenes::Matching(Matching::new(&context.matchmaking_server)));
         }
-        if self.h_button_pressed && !ButtonFlag::H.intersects(buttons) {
+        if self.h_button_pressed && !ButtonFlag::H.intersects(held) {
             return Some(Scenes::SpectateAi(SpectateAi::new(
                 &context.left_agent_filepath,
                 &context.right_agent_filepath,
             )));
-            // return Some(Scenes::VersesAi(VersesAi::new(&context.right_agent_filepath)));
+            //return Some(Scenes::VersesAi(VersesAi::new(
+            //    &context.right_agent_filepath,
+            //)));
         }
 
-        self.l_button_pressed = ButtonFlag::L.intersects(buttons);
-        self.m_button_pressed = ButtonFlag::M.intersects(buttons);
-        self.h_button_pressed = ButtonFlag::H.intersects(buttons);
+        self.l_button_pressed = self.l_button_pressed || ButtonFlag::L.intersects(just_pressed);
+        self.m_button_pressed = self.m_button_pressed || ButtonFlag::M.intersects(just_pressed);
+        self.h_button_pressed = self.h_button_pressed || ButtonFlag::H.intersects(just_pressed);
 
         None
     }

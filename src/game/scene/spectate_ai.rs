@@ -34,20 +34,19 @@ impl Scene for SpectateAi {
         inputs: &mut crate::game::PlayerInputs,
         state: &mut GameState,
     ) -> std::io::Result<()> {
-        inputs.update_player1();
-
-        inputs.skip_player2();
         let timer = match &self.scene {
             GameplayScenes::DuringRound(during_round) => during_round.timer(),
             _ => 1.0,
         };
 
-        // Agent1
         let observation = serialize_observation(&self.device, timer, context, state)
             .expect("Model failed to observe environment");
-        let ai_action =
-            get_ai_action(&self.ai_agent1, &observation, GAMEPLAY_EPSILON).expect("Model failed to exploit");
+
+        // Agent1
+        let ai_action = get_ai_action(&self.ai_agent1, &observation, GAMEPLAY_EPSILON)
+            .expect("Model failed to exploit");
         let (dir, buttons) = map_ai_action(ai_action);
+        inputs.skip_player1();
         inputs.player1.append_input(0, dir, buttons);
 
         state.player1_inputs.update(
@@ -56,9 +55,10 @@ impl Scene for SpectateAi {
         );
 
         // Agent2
-        let ai_action =
-            get_ai_action(&self.ai_agent2, &observation, GAMEPLAY_EPSILON).expect("Model failed to exploit");
+        let ai_action = get_ai_action(&self.ai_agent2, &observation, GAMEPLAY_EPSILON)
+            .expect("Model failed to exploit");
         let (dir, buttons) = map_ai_action(ai_action);
+        inputs.skip_player2();
         inputs.player2.append_input(0, dir, buttons);
 
         state.player2_inputs.update(
