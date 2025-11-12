@@ -18,6 +18,7 @@ pub struct VersesAi {
     _var_map: VarMap,
     ai_agent: candle_nn::Sequential,
     device: Device,
+    rng: rand::rngs::ThreadRng,
 }
 
 impl Scene for VersesAi {
@@ -42,8 +43,13 @@ impl Scene for VersesAi {
         let observation = serialize_observation(&self.device, timer, context, state)
             .expect("Model failed to observe environment");
 
-        let ai_action = get_ai_action(&self.ai_agent, &observation, GAMEPLAY_EPSILON)
-            .expect("Model failed to exploit");
+        let ai_action = get_ai_action(
+            &mut self.rng,
+            &self.ai_agent,
+            &observation,
+            GAMEPLAY_EPSILON,
+        )
+        .expect("Model failed to exploit");
         let (dir, buttons) = map_ai_action(ai_action);
         inputs.skip_player2();
         inputs.player2.append_input(0, dir, buttons);
@@ -95,6 +101,7 @@ impl VersesAi {
             _var_map: var_map,
             ai_agent: agent,
             device: Device::Cpu,
+            rng: rand::rng(),
         }
     }
 }

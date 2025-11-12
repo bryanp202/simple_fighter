@@ -20,6 +20,7 @@ pub struct SpectateAi {
     ai_agent1: candle_nn::Sequential,
     ai_agent2: candle_nn::Sequential,
     device: Device,
+    rng: rand::rngs::ThreadRng,
 }
 
 impl Scene for SpectateAi {
@@ -43,8 +44,13 @@ impl Scene for SpectateAi {
             .expect("Model failed to observe environment");
 
         // Agent1
-        let ai_action = get_ai_action(&self.ai_agent1, &observation, GAMEPLAY_EPSILON)
-            .expect("Model failed to exploit");
+        let ai_action = get_ai_action(
+            &mut self.rng,
+            &self.ai_agent1,
+            &observation,
+            GAMEPLAY_EPSILON,
+        )
+        .expect("Model failed to exploit");
         let (dir, buttons) = map_ai_action(ai_action);
         inputs.skip_player1();
         inputs.player1.append_input(0, dir, buttons);
@@ -55,8 +61,13 @@ impl Scene for SpectateAi {
         );
 
         // Agent2
-        let ai_action = get_ai_action(&self.ai_agent2, &observation, GAMEPLAY_EPSILON)
-            .expect("Model failed to exploit");
+        let ai_action = get_ai_action(
+            &mut self.rng,
+            &self.ai_agent2,
+            &observation,
+            GAMEPLAY_EPSILON,
+        )
+        .expect("Model failed to exploit");
         let (dir, buttons) = map_ai_action(ai_action);
         inputs.skip_player2();
         inputs.player2.append_input(0, dir, buttons);
@@ -117,6 +128,7 @@ impl SpectateAi {
             ai_agent1: agent1,
             ai_agent2: agent2,
             device: Device::Cpu,
+            rng: rand::rng(),
         }
     }
 }

@@ -20,7 +20,9 @@ const HIDDEN_COUNT: usize = 256;
 const ACTION_SPACE: usize = 9 * 8;
 const LEARNING_RATE: f64 = 0.0001;
 const EPISODES: usize = 25_000;
-const BATCH_SIZE: usize = 128;
+const BATCH_SIZE: usize = 256;
+/// Number of steps before copying over agent to target network
+const TARGET_UPDATE_INTERVAL: usize = BATCH_SIZE * 64;
 const REPLAY_SIZE: usize = BATCH_SIZE * 256;
 const GAMMA: f64 = 0.99;
 const START_E: f64 = 0.8;
@@ -90,8 +92,8 @@ fn step_reward(
     let passive_penalty1 = (current_frame - *agent1_last_hit_time) as f32 / 100_000.0;
     let passive_penalty2 = (current_frame - *agent2_last_hit_time) as f32 / 100_000.0;
 
-    let corner_penalty1 = ((agent1_pos.x.abs() == 420.0) as u8) as f32 / 1_000.0;
-    let corner_penalty2 = ((agent2_pos.x.abs() == 420.0) as u8) as f32 / 1_000.0;
+    let corner_penalty1 = ((agent1_pos.x.abs() >= 410.0) as u8) as f32 / 100.0;
+    let corner_penalty2 = ((agent2_pos.x.abs() >= 410.0) as u8) as f32 / 100.0;
 
     let dmg_rwd1 = (agent2_start_hp - agent2_end_hp) * 10.0;
     let dmg_rwd2 = (agent1_start_hp - agent1_end_hp) * 10.0;
@@ -107,8 +109,12 @@ fn step_reward(
         Ordering::Greater => (0.0005, 0.0),
     };
 
-    let agent1 = distance_reward + round_rwd1 + dmg_rwd1 + hp_rwd1 + combo_rwd1 - passive_penalty1 - corner_penalty1;
-    let agent2 = distance_reward + round_rwd2 + dmg_rwd2 + hp_rwd2 + combo_rwd2 - passive_penalty2 - corner_penalty2;
+    let agent1 = distance_reward + round_rwd1 + dmg_rwd1 + hp_rwd1 + combo_rwd1
+        - passive_penalty1
+        - corner_penalty1;
+    let agent2 = distance_reward + round_rwd2 + dmg_rwd2 + hp_rwd2 + combo_rwd2
+        - passive_penalty2
+        - corner_penalty2;
 
     Reward { agent1, agent2 }
 }
@@ -126,7 +132,7 @@ struct Reward {
     agent2: f32,
 }
 
-type GameMemory = (Tensor, Actions, Reward, bool, Tensor); // Init state, actions, reward, terminal, next state
+type GameMemory = (Tensor, Actions, Reward, bool, Tensor); // Init state, actions, reward, terminal_inverse, next state
 struct ReplayMemory {
     memory: VecDeque<GameMemory>,
     count: usize,
@@ -181,18 +187,25 @@ pub fn train(
     state: &mut GameState,
 ) -> Result<()> {
     let device = Device::Cpu;
+    let mut rng = rand::rng();
 
     let var_map1 = VarMap::new();
     let var_map2 = VarMap::new();
     let agent1 = make_model(&var_map1, &device)?;
     let agent2 = make_model(&var_map2, &device)?;
 
+    let mut target_var_map1 = VarMap::new();
+    let mut target_var_map2 = VarMap::new();
+    let target_agent1 = make_model(&target_var_map1, &device)?;
+    let target_agent2 = make_model(&target_var_map2, &device)?;
+
     let mut optimizer1 = AdamW::new_lr(var_map1.all_vars(), LEARNING_RATE)?;
     let mut optimizer2 = AdamW::new_lr(var_map2.all_vars(), LEARNING_RATE)?;
 
     let mut replay_memory = ReplayMemory::new();
 
-    let mut episode = 1;
+    let mut episode = 0;
+    let mut step = 0;
     let mut accumulate_rewards = Reward {
         agent1: 0.0,
         agent2: 0.0,
@@ -205,6 +218,7 @@ pub fn train(
     while episode < EPISODES {
         let epsilon = get_epsilon(episode);
         let agent1_action = take_agent_turn(
+            &mut rng,
             &agent1,
             &mut inputs.player1,
             &mut state.player1_inputs,
@@ -212,6 +226,7 @@ pub fn train(
             epsilon,
         )?;
         let agent2_action = take_agent_turn(
+            &mut rng,
             &agent2,
             &mut inputs.player2,
             &mut state.player2_inputs,
@@ -259,18 +274,27 @@ pub fn train(
                 agent2: agent2_action,
             },
             rewards,
-            terminal,
+            !terminal,
             observation.clone(),
         );
         replay_memory.append(new_memory);
         accumulate_rewards.agent1 += rewards.agent1;
         accumulate_rewards.agent2 += rewards.agent2;
+        step += 1;
 
-        if replay_memory.len() >= REPLAY_SIZE && replay_memory.count() > BATCH_SIZE {
+        if step % TARGET_UPDATE_INTERVAL == 0 {
+            copy_target_agent(&var_map1, &mut target_var_map1)?;
+            copy_target_agent(&var_map2, &mut target_var_map2)?;
+        }
+
+        if replay_memory.len() >= REPLAY_SIZE && replay_memory.count() >= BATCH_SIZE {
             train_agents(
+                &mut rng,
                 &device,
                 &agent1,
+                &target_agent1,
                 &agent2,
+                &target_agent2,
                 &mut optimizer1,
                 &mut optimizer2,
                 &replay_memory,
@@ -279,7 +303,9 @@ pub fn train(
             replay_memory.reset_count();
         }
 
-        if terminal {            
+        if terminal {
+            episode += 1;
+
             if episode % EPISODE_PRINT_STEP == 0 {
                 println!("___________________________");
                 println!("EPISODE: {episode}");
@@ -292,7 +318,6 @@ pub fn train(
             }
 
             // Reset Stuff
-            episode += 1;
             accumulate_rewards = Reward {
                 agent1: 0.0,
                 agent2: 0.0,
@@ -314,12 +339,13 @@ pub fn train(
 
     save_model(&var_map1, AGENT1_OUTPUT_PATH)?;
     save_model(&var_map2, AGENT2_OUTPUT_PATH)?;
+    println!("Total steps: {step}");
 
     Ok(())
 }
 
 fn get_epsilon(episode: usize) -> f64 {
-    START_E - (START_E - END_E) * (episode as f64 / EPSILON_RANGE as f64).max(1.0)
+    START_E - (START_E - END_E) * (episode as f64 / EPSILON_RANGE as f64).min(1.0)
 }
 
 pub fn serialize_observation(
@@ -345,13 +371,14 @@ pub fn serialize_observation(
 }
 
 fn take_agent_turn(
+    rng: &mut rand::rngs::ThreadRng,
     agent: &candle_nn::Sequential,
     inputs_history: &mut InputHistory,
     inputs: &mut Inputs,
     obs: &Tensor,
     epsilon: f64,
 ) -> Result<Action> {
-    let agent_action = get_ai_action(agent, obs, epsilon)?;
+    let agent_action = get_ai_action(rng, agent, obs, epsilon)?;
     let (dir, buttons) = map_ai_action(agent_action);
 
     inputs_history.skip();
@@ -366,14 +393,17 @@ fn take_agent_turn(
 }
 
 fn train_agents(
+    rng: &mut rand::rngs::ThreadRng,
     device: &Device,
     agent1: &candle_nn::Sequential,
+    target_agent1: &candle_nn::Sequential,
     agent2: &candle_nn::Sequential,
+    target_agent2: &candle_nn::Sequential,
     optimizer1: &mut AdamW,
     optimizer2: &mut AdamW,
     memory: &ReplayMemory,
 ) -> Result<()> {
-    let batch = rand::rng()
+    let batch = rng
         .sample_iter(Uniform::new(0, REPLAY_SIZE).expect("Bad uniform range"))
         .take(BATCH_SIZE)
         .map(|i| memory.get(i))
@@ -396,30 +426,71 @@ fn train_agents(
     let next_states = batch.iter().map(|e| &e.4).collect::<Vec<_>>();
     let next_states = Tensor::stack(&next_states, 0)?;
 
-    // Train agent 1
-    let estimated_rewards = agent1.forward(&states)?;
-    let x = estimated_rewards.gather(&agent1_actions, 1)?;
-    let expected_rewards = agent1.forward(&next_states)?.detach();
-    let y = expected_rewards.max_keepdim(1)?;
-    let y = (y * GAMMA * &non_final_mask + &agent1_rewards)?;
-    let loss = candle_nn::loss::mse(&x, &y)?;
-    optimizer1.backward_step(&loss)?;
-
-    // Train agent 1
-    let estimated_rewards = agent2.forward(&states)?;
-    let x = estimated_rewards.gather(&agent2_actions, 1)?;
-    let expected_rewards = agent2.forward(&next_states)?.detach();
-    let y = expected_rewards.max_keepdim(1)?;
-    let y = (y * GAMMA * non_final_mask + agent2_rewards)?;
-    let loss = candle_nn::loss::mse(&x, &y)?;
-    optimizer2.backward_step(&loss)?;
+    train_single_agent(
+        agent1,
+        target_agent1,
+        &states,
+        &agent1_actions,
+        &agent1_rewards,
+        &next_states,
+        &non_final_mask,
+        optimizer1,
+    )?;
+    train_single_agent(
+        agent2,
+        target_agent2,
+        &states,
+        &agent2_actions,
+        &agent2_rewards,
+        &next_states,
+        &non_final_mask,
+        optimizer2,
+    )?;
 
     Ok(())
 }
 
-pub fn get_ai_action(agent: &candle_nn::Sequential, obs: &Tensor, epsilon: f64) -> Result<u32> {
-    let ai_action = if rand::random::<f64>() < epsilon {
-        rand::random_range(0..ACTION_SPACE as u32)
+fn train_single_agent(
+    agent: &candle_nn::Sequential,
+    target_agent: &candle_nn::Sequential,
+    states: &Tensor,
+    actions: &Tensor,
+    rewards: &Tensor,
+    next_states: &Tensor,
+    non_final_mask: &Tensor,
+    optimizer: &mut AdamW,
+) -> Result<()> {
+    let estimated_rewards = agent.forward(&states)?;
+    let x = estimated_rewards.gather(&actions, 1)?;
+    let expected_rewards = target_agent.forward(&next_states)?.detach();
+    let y = expected_rewards.max_keepdim(1)?;
+    let y = (y * GAMMA * non_final_mask + rewards)?;
+    let loss = candle_nn::loss::mse(&x, &y)?;
+    optimizer.backward_step(&loss)?;
+    Ok(())
+}
+
+fn copy_target_agent(source: &VarMap, destination: &mut VarMap) -> Result<()> {
+    destination.set(
+        source
+            .data()
+            .try_lock()
+            .expect("Failed to lock source varmap")
+            .iter()
+            .map(|(name, tensor)| (name, tensor.detach())),
+    )?;
+
+    Ok(())
+}
+
+pub fn get_ai_action(
+    rng: &mut rand::rngs::ThreadRng,
+    agent: &candle_nn::Sequential,
+    obs: &Tensor,
+    epsilon: f64,
+) -> Result<u32> {
+    let ai_action = if rng.random::<f64>() < epsilon {
+        rng.random_range(0..ACTION_SPACE as u32)
     } else {
         let agent_est = agent.forward(&obs.unsqueeze(0)?)?;
         agent_est.squeeze(0)?.argmax(0)?.to_scalar()?
