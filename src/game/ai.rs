@@ -1,11 +1,16 @@
 use std::cmp::Ordering;
 
 use candle_core::{Device, Result, Tensor};
-use candle_nn::VarMap;
+use candle_nn::{Sequential, VarMap};
 use sdl3::render::FPoint;
 
 use crate::game::{GameContext, GameState};
 pub mod dqn;
+pub mod ppo;
+
+// Environment
+const STATE_VECTOR_LEN: usize = 35 + 35 + 3;
+const ACTION_SPACE: usize = 9 * 8;
 
 // REWARDS
 const ROUND_WIN_SCORE: f32 = 25.0;
@@ -131,11 +136,31 @@ pub fn serialize_observation(
     Tensor::from_iter(state_iter, device)
 }
 
+pub fn load_model(filepath: &str, device: &Device) -> Result<(VarMap, Sequential)> {
+    let mut var_map = VarMap::new();
+    var_map.load(filepath)?;
+    let agent = dqn::make_model(&var_map, device)?;
+    Ok((var_map, agent))
+}
+
 fn save_model(var_map: &VarMap, filename: &str) -> Result<()> {
     if let Some(parent) = std::path::Path::new(filename).parent() {
         std::fs::create_dir_all(parent)?;
     }
     var_map.save(filename)?;
     println!("Model weights saved successfully to {}", filename);
+    Ok(())
+}
+
+fn copy_var_map(source: &VarMap, destination: &mut VarMap) -> Result<()> {
+    destination.set(
+        source
+            .data()
+            .try_lock()
+            .expect("Failed to lock source varmap")
+            .iter()
+            .map(|(name, tensor)| (name, tensor.detach())),
+    )?;
+
     Ok(())
 }

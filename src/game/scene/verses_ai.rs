@@ -3,7 +3,7 @@ use candle_nn::VarMap;
 
 use crate::game::{
     GameContext, GameState, PlayerInputs,
-    ai::{dqn, serialize_observation},
+    ai::{dqn, load_model, serialize_observation},
     scene::{
         Scene, Scenes,
         gameplay::{GameplayScene, GameplayScenes},
@@ -85,15 +85,14 @@ impl Scene for VersesAi {
 
 impl VersesAi {
     pub fn new(model_path: &str) -> Self {
-        let mut var_map = VarMap::new();
-        var_map.load(model_path).expect("Failed to load agent");
-        let agent = dqn::make_model(&var_map, &Device::Cpu).expect("Failed to make agent");
+        let device = Device::Cpu;
+        let (_var_map, ai_agent) = load_model(model_path, &device).expect("Failed to load model");
 
         Self {
             scene: GameplayScenes::new_round_start((0, 0)),
-            _var_map: var_map,
-            ai_agent: agent,
-            device: Device::Cpu,
+            _var_map,
+            ai_agent,
+            device,
             rng: rand::rng(),
         }
     }

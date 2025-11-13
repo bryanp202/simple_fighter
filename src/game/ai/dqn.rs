@@ -8,7 +8,10 @@ use rand::{Rng, distr::Uniform};
 
 use crate::game::{
     GameContext, GameState, PlayerInputs,
-    ai::{Action, Actions, Reward, save_model, serialize_observation, step_reward},
+    ai::{
+        ACTION_SPACE, Action, Actions, Reward, STATE_VECTOR_LEN, copy_var_map, save_model,
+        serialize_observation, step_reward,
+    },
     input::{ButtonFlag, Direction, InputHistory, Inputs},
     scene::gameplay::{GameplayScene, during_round::DuringRound},
 };
@@ -17,9 +20,7 @@ const AGENT1_OUTPUT_PATH: &str = "./resources/scenes/dqn_agent1_weights_NEW.safe
 const AGENT2_OUTPUT_PATH: &str = "./resources/scenes/dqn_agent2_weights_NEW.safetensors";
 const SAVE_INTERVAL: usize = 5000;
 
-const STATE_VECTOR_LEN: usize = 35 + 35 + 3;
 const HIDDEN_COUNT: usize = 256;
-const ACTION_SPACE: usize = 9 * 8;
 const LEARNING_RATE: f64 = 0.0001;
 const EPISODES: usize = 25_000;
 const BATCH_SIZE: usize = 256;
@@ -174,8 +175,8 @@ pub fn train(
         step += 1;
 
         if step % TARGET_UPDATE_INTERVAL == 0 {
-            copy_target_agent(&var_map1, &mut target_var_map1)?;
-            copy_target_agent(&var_map2, &mut target_var_map2)?;
+            copy_var_map(&var_map1, &mut target_var_map1)?;
+            copy_var_map(&var_map2, &mut target_var_map2)?;
         }
 
         if replay_memory.len() >= REPLAY_SIZE && replay_memory.count() >= BATCH_SIZE {
@@ -336,19 +337,6 @@ fn train_single_agent(
     let y = (y * GAMMA * non_final_mask + rewards)?;
     let loss = candle_nn::loss::mse(&x, &y)?;
     optimizer.backward_step(&loss)?;
-    Ok(())
-}
-
-fn copy_target_agent(source: &VarMap, destination: &mut VarMap) -> Result<()> {
-    destination.set(
-        source
-            .data()
-            .try_lock()
-            .expect("Failed to lock source varmap")
-            .iter()
-            .map(|(name, tensor)| (name, tensor.detach())),
-    )?;
-
     Ok(())
 }
 

@@ -3,7 +3,7 @@ use candle_nn::VarMap;
 
 use crate::game::{
     GameContext, GameState, PlayerInputs,
-    ai::{dqn, serialize_observation},
+    ai::{dqn, load_model, serialize_observation},
     scene::{
         Scene, Scenes,
         gameplay::{GameplayScene, GameplayScenes},
@@ -97,24 +97,19 @@ impl Scene for SpectateAi {
 
 impl SpectateAi {
     pub fn new(left_agent_path: &str, right_agent_path: &str) -> Self {
-        let mut var_map1 = VarMap::new();
-        let mut var_map2 = VarMap::new();
-        var_map1
-            .load(left_agent_path)
-            .expect("Failed to load agent");
-        var_map2
-            .load(right_agent_path)
-            .expect("Failed to load agent");
-        let agent1 = dqn::make_model(&var_map1, &Device::Cpu).expect("Failed to make agent");
-        let agent2 = dqn::make_model(&var_map2, &Device::Cpu).expect("Failed to make agent");
+        let device = Device::Cpu;
+        let (_var_map1, ai_agent1) =
+            load_model(left_agent_path, &device).expect("Failed to load model");
+        let (_var_map2, ai_agent2) =
+            load_model(right_agent_path, &device).expect("Failed to load model");
 
         Self {
             scene: GameplayScenes::new_round_start((0, 0)),
-            _var_map1: var_map1,
-            _var_map2: var_map2,
-            ai_agent1: agent1,
-            ai_agent2: agent2,
-            device: Device::Cpu,
+            _var_map1,
+            _var_map2,
+            ai_agent1,
+            ai_agent2,
+            device,
             rng: rand::rng(),
         }
     }
