@@ -4,7 +4,11 @@ use candle_core::{Device, Result, Tensor};
 use candle_nn::{Sequential, VarMap};
 use sdl3::render::FPoint;
 
-use crate::game::{GameContext, GameState};
+use crate::game::{
+    GameContext, GameState,
+    input::{ButtonFlag, Direction},
+    scene::gameplay::{GameplayScene, during_round::DuringRound},
+};
 pub mod dqn;
 pub mod ppo;
 
@@ -24,8 +28,8 @@ struct Actions {
     agent2: Action,
 }
 
-#[derive(Clone, Copy, Debug)]
-struct Reward {
+#[derive(Clone, Copy, Debug, Default)]
+struct DuelFloat {
     agent1: f32,
     agent2: f32,
 }
@@ -50,7 +54,7 @@ fn step_reward(
     old_score: (u32, u32),
     new_score: (u32, u32),
     timer: f32,
-) -> Reward {
+) -> DuelFloat {
     let (round_rwd1, round_rwd2) = match new_score.0.cmp(&new_score.1) {
         Ordering::Less => {
             // Player 2 wins
@@ -111,7 +115,49 @@ fn step_reward(
         - passive_penalty2
         - corner_penalty2;
 
-    Reward { agent1, agent2 }
+    DuelFloat { agent1, agent2 }
+}
+
+// Returns (is_terminal, Rewards as DuelFloat)
+fn env_step(
+    context: &GameContext,
+    state: &mut GameState,
+    scene: &mut DuringRound,
+    agent1_last_hit: &mut usize,
+    agent2_last_hit: &mut usize,
+) -> (bool, DuelFloat) {
+    let old_score = scene.score();
+    let agent1_start_hp = state.player1.hp_per(&context.player1);
+    let agent1_combo_start = state.player1.combo_scaling();
+    let agent2_start_hp = state.player2.hp_per(&context.player2);
+    let agent2_combo_start = state.player2.combo_scaling();
+    // Step
+    let terminal = scene.update(context, state).is_some();
+    let new_score = scene.score();
+    let current_frame = scene.current_frame();
+    let agent1_end_hp = state.player1.hp_per(&context.player1);
+    let agent2_end_hp = state.player2.hp_per(&context.player2);
+    let timer = scene.timer();
+    let rewards = step_reward(
+        current_frame,
+        agent1_start_hp,
+        agent1_end_hp,
+        agent1_combo_start,
+        state.player1.combo_scaling(),
+        agent1_last_hit,
+        state.player1.pos(),
+        agent2_start_hp,
+        agent2_end_hp,
+        agent2_combo_start,
+        state.player2.combo_scaling(),
+        agent2_last_hit,
+        state.player2.pos(),
+        old_score,
+        new_score,
+        timer,
+    );
+
+    (terminal, rewards)
 }
 
 pub fn serialize_observation(
@@ -141,6 +187,25 @@ pub fn load_model(filepath: &str, device: &Device) -> Result<(VarMap, Sequential
     var_map.load(filepath)?;
     let agent = dqn::make_model(&var_map, device)?;
     Ok((var_map, agent))
+}
+
+pub fn map_ai_action(ai_action: u32) -> (Direction, ButtonFlag) {
+    // Numpad notation -1
+    let dir = match ai_action % 9 {
+        0 => Direction::DownLeft,
+        1 => Direction::Down,
+        2 => Direction::DownRight,
+        3 => Direction::Left,
+        4 => Direction::Neutral,
+        5 => Direction::Right,
+        6 => Direction::UpLeft,
+        7 => Direction::Up,
+        8 => Direction::UpRight,
+        _ => panic!("Math broke"),
+    };
+    let buttons = ButtonFlag::from_bits_retain(ai_action as u8 / 9);
+
+    (dir, buttons)
 }
 
 fn save_model(var_map: &VarMap, filename: &str) -> Result<()> {

@@ -3,15 +3,13 @@ use candle_nn::VarMap;
 
 use crate::game::{
     GameContext, GameState, PlayerInputs,
-    ai::{dqn, load_model, serialize_observation},
+    ai::{load_model, ppo, serialize_observation},
     scene::{
         Scene, Scenes,
         gameplay::{GameplayScene, GameplayScenes},
         main_menu::MainMenu,
     },
 };
-
-const GAMEPLAY_EPSILON: f64 = 0.05;
 
 pub struct VersesAi {
     scene: GameplayScenes,
@@ -42,15 +40,9 @@ impl Scene for VersesAi {
 
         let observation = serialize_observation(&self.device, timer, context, state)
             .expect("Model failed to observe environment");
-        dqn::take_agent_turn(
-            &mut self.rng,
-            &self.ai_agent,
-            &mut inputs.player2,
-            &mut state.player2_inputs,
-            &observation,
-            GAMEPLAY_EPSILON,
-        )
-        .expect("Failed to take agent's turn");
+        let action = ppo::get_agent_action(&self.ai_agent, &observation, &mut self.rng)
+            .expect("Failed to get agent action");
+        ppo::take_agent_turn(&mut inputs.player2, &mut state.player2_inputs, action);
 
         Ok(())
     }

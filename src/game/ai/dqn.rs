@@ -9,11 +9,11 @@ use rand::{Rng, distr::Uniform};
 use crate::game::{
     GameContext, GameState, PlayerInputs,
     ai::{
-        ACTION_SPACE, Action, Actions, Reward, STATE_VECTOR_LEN, copy_var_map, save_model,
-        serialize_observation, step_reward,
+        ACTION_SPACE, Action, Actions, DuelFloat, STATE_VECTOR_LEN, copy_var_map, env_step,
+        map_ai_action, save_model, serialize_observation,
     },
-    input::{ButtonFlag, Direction, InputHistory, Inputs},
-    scene::gameplay::{GameplayScene, during_round::DuringRound},
+    input::{InputHistory, Inputs},
+    scene::gameplay::during_round::DuringRound,
 };
 
 const AGENT1_OUTPUT_PATH: &str = "./resources/scenes/dqn_agent1_weights_NEW.safetensors";
@@ -33,7 +33,7 @@ const END_E: f64 = 0.05;
 const EPSILON_RANGE: usize = EPISODES;
 const EPISODE_PRINT_STEP: usize = EPISODES / 1_000;
 
-type GameMemory = (Tensor, Actions, Reward, bool, Tensor); // Init state, actions, reward, terminal_inverse, next state
+type GameMemory = (Tensor, Actions, DuelFloat, bool, Tensor); // Init state, actions, reward, terminal_inverse, next state
 struct ReplayMemory {
     memory: VecDeque<GameMemory>,
     count: usize,
@@ -73,6 +73,7 @@ impl ReplayMemory {
     }
 }
 
+#[allow(dead_code)]
 pub fn train(
     context: &GameContext,
     inputs: &mut PlayerInputs,
@@ -98,10 +99,7 @@ pub fn train(
 
     let mut episode = 0;
     let mut step = 0;
-    let mut accumulate_rewards = Reward {
-        agent1: 0.0,
-        agent2: 0.0,
-    };
+    let mut accumulate_rewards = DuelFloat::default();
     let mut scene = DuringRound::new((0, 0));
     let mut observation = serialize_observation(&device, scene.timer(), context, state)?;
     let mut agent1_last_hit = 0;
@@ -126,35 +124,12 @@ pub fn train(
             epsilon,
         )?;
 
-        let old_score = scene.score();
-        let agent1_start_hp = state.player1.hp_per(&context.player1);
-        let agent1_combo_start = state.player1.combo_scaling();
-        let agent2_start_hp = state.player2.hp_per(&context.player2);
-        let agent2_combo_start = state.player2.combo_scaling();
-        // Step
-        let terminal = scene.update(context, state).is_some();
-        let new_score = scene.score();
-        let current_frame = scene.current_frame();
-        let agent1_end_hp = state.player1.hp_per(&context.player1);
-        let agent2_end_hp = state.player2.hp_per(&context.player2);
-        let timer = scene.timer();
-        let rewards = step_reward(
-            current_frame,
-            agent1_start_hp,
-            agent1_end_hp,
-            agent1_combo_start,
-            state.player1.combo_scaling(),
+        let (terminal, rewards) = env_step(
+            context,
+            state,
+            &mut scene,
             &mut agent1_last_hit,
-            state.player1.pos(),
-            agent2_start_hp,
-            agent2_end_hp,
-            agent2_combo_start,
-            state.player2.combo_scaling(),
             &mut agent2_last_hit,
-            state.player2.pos(),
-            old_score,
-            new_score,
-            timer,
         );
 
         let start_state = observation;
@@ -210,10 +185,7 @@ pub fn train(
             }
 
             // Reset Stuff
-            accumulate_rewards = Reward {
-                agent1: 0.0,
-                agent2: 0.0,
-            };
+            accumulate_rewards = DuelFloat::default();
             agent1_last_hit = 0;
             agent2_last_hit = 0;
             scene = DuringRound::new((0, 0));
@@ -354,25 +326,6 @@ fn get_ai_action(
     };
 
     Ok(ai_action)
-}
-
-fn map_ai_action(ai_action: u32) -> (Direction, ButtonFlag) {
-    // Numpad notation -1
-    let dir = match ai_action % 9 {
-        0 => Direction::DownLeft,
-        1 => Direction::Down,
-        2 => Direction::DownRight,
-        3 => Direction::Left,
-        4 => Direction::Neutral,
-        5 => Direction::Right,
-        6 => Direction::UpLeft,
-        7 => Direction::Up,
-        8 => Direction::UpRight,
-        _ => panic!("Math broke"),
-    };
-    let buttons = ButtonFlag::from_bits_retain(ai_action as u8 / 9);
-
-    (dir, buttons)
 }
 
 pub fn make_model(var_map: &VarMap, device: &Device) -> Result<Sequential> {

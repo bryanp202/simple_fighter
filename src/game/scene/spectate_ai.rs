@@ -3,15 +3,13 @@ use candle_nn::VarMap;
 
 use crate::game::{
     GameContext, GameState, PlayerInputs,
-    ai::{dqn, load_model, serialize_observation},
+    ai::{load_model, ppo, serialize_observation},
     scene::{
         Scene, Scenes,
         gameplay::{GameplayScene, GameplayScenes},
         main_menu::MainMenu,
     },
 };
-
-const GAMEPLAY_EPSILON: f64 = 0.05;
 
 pub struct SpectateAi {
     scene: GameplayScenes,
@@ -44,25 +42,13 @@ impl Scene for SpectateAi {
             .expect("Model failed to observe environment");
 
         // Agent1
-        dqn::take_agent_turn(
-            &mut self.rng,
-            &self.ai_agent1,
-            &mut inputs.player1,
-            &mut state.player1_inputs,
-            &observation,
-            GAMEPLAY_EPSILON,
-        )
-        .expect("Failed to take agent's turn");
+        let action = ppo::get_agent_action(&self.ai_agent1, &observation, &mut self.rng)
+            .expect("Failed to get agent action");
+        ppo::take_agent_turn(&mut inputs.player1, &mut state.player1_inputs, action);
         // Agent2
-        dqn::take_agent_turn(
-            &mut self.rng,
-            &self.ai_agent2,
-            &mut inputs.player2,
-            &mut state.player2_inputs,
-            &observation,
-            GAMEPLAY_EPSILON,
-        )
-        .expect("Failed to take agent's turn");
+        let action = ppo::get_agent_action(&self.ai_agent2, &observation, &mut self.rng)
+            .expect("Failed to get agent action");
+        ppo::take_agent_turn(&mut inputs.player2, &mut state.player2_inputs, action);
 
         Ok(())
     }
