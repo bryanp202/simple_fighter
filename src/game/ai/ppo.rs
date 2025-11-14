@@ -11,20 +11,21 @@ use crate::game::{
 
 const AGENT1_OUTPUT_PATH: &str = "./resources/scenes/ppo_agent1_weights_NEW.safetensors";
 const AGENT2_OUTPUT_PATH: &str = "./resources/scenes/ppo_agent2_weights_NEW.safetensors";
-const SAVE_INTERVAL: usize = 1_000;
+const SAVE_INTERVAL: usize = 500;
 
+const OPPONENT_FREEZE_EPOCHS: usize = 20;
 const EPOCHS: usize = 10_000;
 const STEPS_PER_EPOCH: usize = 6_000;
 const HIDDEN_COUNT: usize = 256;
-const LEARNING_RATE_ACTOR: f64 = 0.0001;
-const LEARNING_RATE_CRITIC: f64 = 0.0003;
+const LEARNING_RATE_ACTOR: f64 = 0.0003;
+const LEARNING_RATE_CRITIC: f64 = 0.0005;
 const GAMMA: f32 = 0.99;
 const K_EPOCHS: usize = 20;
 const EPS_CLIP: f32 = 0.2;
 const GAE_LAMBDA: f32 = 0.95;
 const TARGET_KL: f32 = 0.01;
 
-const EPOCH_PRINT_STEP: usize = EPOCHS / 10_000;
+const EPOCH_PRINT_STEP: usize = EPOCHS / 100;
 
 #[derive(Default)]
 struct RolloutBuffer {
@@ -388,7 +389,8 @@ pub fn train(
             }
         }
 
-        update_agents(&mut agent1, &mut agent2, &mut buffer, &device)?;
+        // Update only one agent at a time
+        update_agent(&mut agent1, &mut agent2, &mut buffer, epoch, &device)?;
         first_episode = true;
 
         env.reset();
@@ -415,17 +417,22 @@ fn take_agent_turns(
     Ok((action1, action2))
 }
 
-fn update_agents(
+fn update_agent(
     agent1: &mut PPOAgent,
     agent2: &mut PPOAgent,
     buffer: &mut RolloutBuffer,
+    epoch: usize,
     device: &Device,
 ) -> Result<()> {
     let obs_batch = buffer.get_obs()?;
-    let data = buffer.get_agent1(device)?;
-    update_single_agent(agent1, &obs_batch, data)?;
-    let data = buffer.get_agent2(device)?;
-    update_single_agent(agent2, &obs_batch, data)?;
+
+    let (agent, data) = if epoch % (OPPONENT_FREEZE_EPOCHS * 2) < OPPONENT_FREEZE_EPOCHS {
+        (agent1, buffer.get_agent1(device)?)
+    } else {
+        (agent2, buffer.get_agent2(device)?)
+    };
+    
+    update_single_agent(agent, &obs_batch, data)?;
 
     buffer.reset();
 

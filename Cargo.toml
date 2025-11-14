@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-default = ["debug"]
+default = ["debug", "train_agents"]
 debug = []
 train_agents = []
 
