@@ -1,13 +1,13 @@
 use candle_core::{Device, Result, Tensor};
 use candle_nn::{Sequential, VarMap};
+use rand::rngs::ThreadRng;
 
 use crate::game::{
-    GameContext, GameState,
-    input::{ButtonFlag, Direction, InputHistory, Inputs},
+    GameContext, GameState, PlayerInputs, input::{ButtonFlag, Direction, InputHistory, Inputs}
 };
-pub mod dqn;
+mod dqn;
 mod env;
-pub mod ppo;
+mod ppo;
 
 // Environment
 const STATE_VECTOR_LEN: usize = 35 + 35 + 3;
@@ -24,6 +24,16 @@ struct Actions {
 struct DuelFloat {
     agent1: f32,
     agent2: f32,
+}
+
+/// Interface used for current AI implementation
+pub fn get_agent_action(agent: &Sequential, obs: &Tensor, rng: &mut ThreadRng) -> Result<u32> {
+    ppo::get_agent_action(agent, obs, rng)
+}
+
+/// Interface used for training
+pub fn train(context: &GameContext, inputs: &mut PlayerInputs, state: &mut GameState) -> Result<()> {
+    ppo::train(context, inputs, state)
 }
 
 pub fn serialize_observation(
