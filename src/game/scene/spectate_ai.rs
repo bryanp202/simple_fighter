@@ -33,22 +33,20 @@ impl Scene for SpectateAi {
         inputs: &mut crate::game::PlayerInputs,
         state: &mut GameState,
     ) -> std::io::Result<()> {
-        let timer = match &self.scene {
-            GameplayScenes::DuringRound(during_round) => during_round.timer(),
-            _ => 1.0,
-        };
-
-        let observation = serialize_observation(&self.device, timer, context, state)
+        if let GameplayScenes::DuringRound(during_round) = &self.scene {
+            let timer = during_round.timer();
+            let observation = serialize_observation(&self.device, timer, context, state)
             .expect("Model failed to observe environment");
 
-        // Agent1
-        let action = ppo::get_agent_action(&self.ai_agent1, &observation, &mut self.rng)
-            .expect("Failed to get agent action");
-        ppo::take_agent_turn(&mut inputs.player1, &mut state.player1_inputs, action);
-        // Agent2
-        let action = ppo::get_agent_action(&self.ai_agent2, &observation, &mut self.rng)
-            .expect("Failed to get agent action");
-        ppo::take_agent_turn(&mut inputs.player2, &mut state.player2_inputs, action);
+            // Agent1
+            let action = ppo::get_agent_action(&self.ai_agent1, &observation, &mut self.rng)
+                .expect("Failed to get agent action");
+            ppo::take_agent_turn(&mut inputs.player1, &mut state.player1_inputs, action);
+            // Agent2
+            let action = ppo::get_agent_action(&self.ai_agent2, &observation, &mut self.rng)
+                .expect("Failed to get agent action");
+            ppo::take_agent_turn(&mut inputs.player2, &mut state.player2_inputs, action);
+        }
 
         Ok(())
     }

@@ -48,9 +48,9 @@ impl Scene for MainMenu {
                 &context.left_agent_filepath,
                 &context.right_agent_filepath,
             )));
-            //return Some(Scenes::VersesAi(VersesAi::new(
+            // return Some(Scenes::VersesAi(VersesAi::new(
             //    &context.right_agent_filepath,
-            //)));
+            // )));
         }
 
         self.l_button_pressed = self.l_button_pressed || ButtonFlag::L.intersects(just_pressed);

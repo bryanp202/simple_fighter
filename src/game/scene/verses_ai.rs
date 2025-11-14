@@ -33,16 +33,15 @@ impl Scene for VersesAi {
     ) -> std::io::Result<()> {
         inputs.update_player1();
 
-        let timer = match &self.scene {
-            GameplayScenes::DuringRound(during_round) => during_round.timer(),
-            _ => 0.0,
-        };
-
-        let observation = serialize_observation(&self.device, timer, context, state)
+        if let GameplayScenes::DuringRound(during_round) = &self.scene {
+            let timer = during_round.timer();
+            let observation = serialize_observation(&self.device, timer, context, state)
             .expect("Model failed to observe environment");
-        let action = ppo::get_agent_action(&self.ai_agent, &observation, &mut self.rng)
-            .expect("Failed to get agent action");
-        ppo::take_agent_turn(&mut inputs.player2, &mut state.player2_inputs, action);
+
+            let action = ppo::get_agent_action(&self.ai_agent, &observation, &mut self.rng)
+                .expect("Failed to get agent action");
+            ppo::take_agent_turn(&mut inputs.player2, &mut state.player2_inputs, action);
+        }
 
         Ok(())
     }

@@ -204,7 +204,7 @@ impl State {
         data[7] = self.gravity_mult;
         data[8] = self.combo_scaling;
         // Integers
-        data[9] = (self.current_frame as f32).ln() / 30.0f32.ln();
+        data[9] = ((self.current_frame + 1) as f32).ln() / 30.0f32.ln();
         data[10] = self.stun as f32 / 60.0;
         // bools / enums
         data[11] = (self.side == Side::Left) as usize as f32;

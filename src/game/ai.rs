@@ -88,11 +88,11 @@ fn step_reward(
     if agent1_start_hp != agent1_end_hp {
         *agent2_last_hit_time = current_frame;
     }
-    let passive_penalty1 = (current_frame - *agent1_last_hit_time) as f32 / 100_000.0;
-    let passive_penalty2 = (current_frame - *agent2_last_hit_time) as f32 / 100_000.0;
+    let passive_penalty1 = (current_frame - *agent1_last_hit_time) as f32 / 10_000.0;
+    let passive_penalty2 = (current_frame - *agent2_last_hit_time) as f32 / 10_000.0;
 
-    let corner_penalty1 = ((agent1_pos.x.abs() > 400.0) as u8) as f32 / 100.0;
-    let corner_penalty2 = ((agent2_pos.x.abs() > 400.0) as u8) as f32 / 100.0;
+    let corner_penalty1 = ((agent1_pos.x.abs() > 400.0) as u8) as f32 / 80.0;
+    let corner_penalty2 = ((agent2_pos.x.abs() > 400.0) as u8) as f32 / 80.0;
 
     let dmg_rwd1 = (agent2_start_hp - agent2_end_hp) * 10.0;
     let dmg_rwd2 = (agent1_start_hp - agent1_end_hp) * 10.0;
@@ -100,7 +100,7 @@ fn step_reward(
     let combo_rwd1 = (agent1_start_combo - agent1_end_combo).max(0.0) * 10.0;
     let combo_rwd2 = (agent2_start_combo - agent2_end_combo).max(0.0) * 10.0;
 
-    let distance_reward = 1.0 / (agent1_pos.x - agent2_pos.x).abs().max(80.0);
+    let distance_reward = 1.0 / (agent1_pos.x - agent2_pos.x).abs().max(70.0);
 
     let (hp_rwd1, hp_rwd2) = match agent1_end_hp.total_cmp(&agent2_end_hp) {
         Ordering::Less => (0.0, 0.0005),
@@ -110,10 +110,12 @@ fn step_reward(
 
     let agent1 = distance_reward + round_rwd1 + dmg_rwd1 + hp_rwd1 + combo_rwd1
         - passive_penalty1
-        - corner_penalty1;
+        - corner_penalty1
+        - dmg_rwd2;
     let agent2 = distance_reward + round_rwd2 + dmg_rwd2 + hp_rwd2 + combo_rwd2
         - passive_penalty2
-        - corner_penalty2;
+        - corner_penalty2
+        - dmg_rwd1;
 
     DuelFloat { agent1, agent2 }
 }
