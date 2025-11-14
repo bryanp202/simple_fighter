@@ -24,10 +24,6 @@ impl DuringRound {
         }
     }
 
-    pub fn current_frame(&self) -> usize {
-        self.time
-    }
-
     pub fn timer(&self) -> f32 {
         self.time as f32 / (ROUND_LEN * FRAME_RATE) as f32
     }

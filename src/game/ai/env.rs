@@ -104,7 +104,7 @@ impl<'a> Environment<'a> {
         old_combo: (f32, f32),
         old_score: (u32, u32),
     ) -> DuelFloat {
-        let timer = self.scene.timer();
+        //let timer = self.scene.timer();
         let new_score = self.scene.score();
         let new_combo = (
             self.state.player1.combo_scaling(),
@@ -119,8 +119,12 @@ impl<'a> Environment<'a> {
         let (round_rwd1, round_rwd2) = match new_score.0.cmp(&new_score.1) {
             Ordering::Less => {
                 // Player 2 wins
-                if new_hp.0 <= 0.0 { // Gets a higher score for winning with more hp
-                    (ROUND_LOSE_SCORE, ROUND_WIN_SCORE * (1.0 + new_hp.0 - new_hp.1) / 2.0)
+                if new_hp.0 <= 0.0 {
+                    // Gets a higher score for winning with more hp
+                    (
+                        ROUND_LOSE_SCORE,
+                        ROUND_WIN_SCORE * (1.0 + new_hp.0 - new_hp.1) / 2.0,
+                    )
                 } else {
                     (ROUND_LOSE_SCORE * 10.0, ROUND_WIN_SCORE / 100.0)
                 }
@@ -135,16 +139,20 @@ impl<'a> Environment<'a> {
             }
             Ordering::Greater => {
                 // Player 1 wins
-                if new_hp.1 <= 0.0 { // Gets a higher score for winning with more hp
-                    (ROUND_WIN_SCORE * (1.0 + new_hp.1 - new_hp.0) / 2.0, ROUND_LOSE_SCORE)
+                if new_hp.1 <= 0.0 {
+                    // Gets a higher score for winning with more hp
+                    (
+                        ROUND_WIN_SCORE * (1.0 + new_hp.1 - new_hp.0) / 2.0,
+                        ROUND_LOSE_SCORE,
+                    )
                 } else {
                     (ROUND_WIN_SCORE / 100.0, ROUND_LOSE_SCORE * 10.0)
                 }
             }
         };
 
-        let dmg_rwd1 = (old_hp.1 - old_hp.1) * 10.0;
-        let dmg_rwd2 = (old_hp.0 - old_hp.0) * 10.0;
+        let dmg_rwd1 = (old_hp.1 - new_hp.1) * 10.0;
+        let dmg_rwd2 = (old_hp.0 - new_hp.0) * 10.0;
 
         let combo_rwd1 = (old_combo.1 - new_combo.1).max(0.0) * 10.0;
         let combo_rwd2 = (old_combo.0 - new_combo.0).max(0.0) * 10.0;

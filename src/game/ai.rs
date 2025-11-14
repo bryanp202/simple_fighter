@@ -1,9 +1,13 @@
+use std::time::Instant;
+
 use candle_core::{Device, Result, Tensor};
 use candle_nn::{Sequential, VarMap};
 use rand::rngs::ThreadRng;
 
 use crate::game::{
-    GameContext, GameState, PlayerInputs, input::{ButtonFlag, Direction, InputHistory, Inputs}
+    GameContext, GameState, PlayerInputs,
+    ai::env::Environment,
+    input::{ButtonFlag, Direction, InputHistory, Inputs},
 };
 mod dqn;
 mod env;
@@ -32,8 +36,15 @@ pub fn get_agent_action(agent: &Sequential, obs: &Tensor, rng: &mut ThreadRng) -
 }
 
 /// Interface used for training
-pub fn train(context: &GameContext, inputs: &mut PlayerInputs, state: &mut GameState) -> Result<()> {
-    ppo::train(context, inputs, state)
+pub fn train(
+    context: &GameContext,
+    inputs: &mut PlayerInputs,
+    state: &mut GameState,
+) -> Result<()> {
+    let env = Environment::new(context, inputs, state);
+    let device = Device::cuda_if_available(0).unwrap_or(Device::Cpu);
+    let start = Instant::now();
+    ppo::train(env, device, start)
 }
 
 pub fn serialize_observation(
@@ -65,7 +76,19 @@ pub fn load_model(filepath: &str, device: &Device) -> Result<(VarMap, Sequential
     Ok((var_map, agent))
 }
 
-pub fn map_ai_action(ai_action: u32) -> (Direction, ButtonFlag) {
+pub fn take_agent_turn(inputs_history: &mut InputHistory, inputs: &mut Inputs, action: u32) {
+    let (dir, buttons) = map_ai_action(action);
+
+    inputs_history.skip();
+    inputs_history.append_input(0, dir, buttons);
+
+    inputs.update(
+        inputs_history.held_buttons(),
+        inputs_history.parse_history(),
+    );
+}
+
+fn map_ai_action(ai_action: u32) -> (Direction, ButtonFlag) {
     // Numpad notation -1
     let dir = match ai_action % 9 {
         0 => Direction::DownLeft,
@@ -82,18 +105,6 @@ pub fn map_ai_action(ai_action: u32) -> (Direction, ButtonFlag) {
     let buttons = ButtonFlag::from_bits_retain(ai_action as u8 / 9);
 
     (dir, buttons)
-}
-
-pub fn take_agent_turn(inputs_history: &mut InputHistory, inputs: &mut Inputs, action: u32) {
-    let (dir, buttons) = map_ai_action(action);
-
-    inputs_history.skip();
-    inputs_history.append_input(0, dir, buttons);
-
-    inputs.update(
-        inputs_history.held_buttons(),
-        inputs_history.parse_history(),
-    );
 }
 
 fn save_model(var_map: &VarMap, filename: &str) -> Result<()> {

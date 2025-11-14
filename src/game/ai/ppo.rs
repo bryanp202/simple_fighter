@@ -1,13 +1,12 @@
+use std::time::Instant;
+
 use candle_core::{D, DType, Device, IndexOp, Result, Tensor};
 use candle_nn::{
     Activation, AdamW, Module, Optimizer, Sequential, VarBuilder, VarMap, linear, ops::softmax, seq,
 };
 use rand::{Rng, distr::weighted::WeightedIndex, rngs::ThreadRng};
 
-use crate::game::{
-    GameContext, GameState, PlayerInputs,
-    ai::{ACTION_SPACE, DuelFloat, STATE_VECTOR_LEN, env::Environment, save_model},
-};
+use crate::game::ai::{ACTION_SPACE, DuelFloat, STATE_VECTOR_LEN, env::Environment, save_model};
 
 const AGENT1_OUTPUT_PATH: &str = "./resources/scenes/ppo_agent1_weights_NEW.safetensors";
 const AGENT2_OUTPUT_PATH: &str = "./resources/scenes/ppo_agent2_weights_NEW.safetensors";
@@ -161,7 +160,7 @@ impl RolloutBuffer {
 }
 
 fn compute_gae(
-    adv_vec: &mut Vec<f32>,
+    adv_vec: &mut [f32],
     idx: usize,
     rewards: &[f32],
     state_values: &[f32],
@@ -179,7 +178,7 @@ fn compute_gae(
     }
 }
 
-fn compute_return(ret_vec: &mut Vec<f32>, idx: usize, rewards: &[f32], bootstrap: f32) {
+fn compute_return(ret_vec: &mut [f32], idx: usize, rewards: &[f32], bootstrap: f32) {
     let len = rewards.len();
 
     let mut last_return = bootstrap;
@@ -335,20 +334,13 @@ impl PPOAgent {
 }
 
 #[allow(dead_code)]
-pub fn train(
-    context: &GameContext,
-    inputs: &mut PlayerInputs,
-    state: &mut GameState,
-) -> Result<()> {
-    let start = std::time::Instant::now();
-    let device = Device::cuda_if_available(0).unwrap_or(Device::Cpu);
+pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result<()> {
     let mut agent1 = PPOAgent::new(&device)?;
     let mut agent2 = PPOAgent::new(&device)?;
 
     let mut rng = rand::rng();
     let mut buffer = RolloutBuffer::new();
 
-    let mut env = Environment::new(context, inputs, state);
     let mut first_episode = true;
 
     for epoch in 1..EPOCHS + 1 {
@@ -431,7 +423,7 @@ fn update_agent(
     } else {
         (agent2, buffer.get_agent2(device)?)
     };
-    
+
     update_single_agent(agent, &obs_batch, data)?;
 
     buffer.reset();
@@ -448,7 +440,7 @@ fn update_single_agent(
     let actions = actions.unsqueeze(1)?;
 
     for _ in 0..K_EPOCHS {
-        let (loss_pi, kl) = agent.compute_loss_pi(&obs_batch, &actions, &adv, &logp_old)?;
+        let (loss_pi, kl) = agent.compute_loss_pi(obs_batch, &actions, &adv, &logp_old)?;
         if kl > 1.5 * TARGET_KL {
             break;
         }
@@ -457,7 +449,7 @@ fn update_single_agent(
     }
 
     for _ in 0..K_EPOCHS {
-        let loss_v = agent.compute_loss_v(&obs_batch, &ret)?;
+        let loss_v = agent.compute_loss_v(obs_batch, &ret)?;
         agent.critic_optimizer.backward_step(&loss_v)?;
     }
 

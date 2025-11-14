@@ -6,12 +6,8 @@ use candle_nn::{
 };
 use rand::{Rng, distr::Uniform};
 
-use crate::game::{
-    GameContext, GameState, PlayerInputs,
-    ai::{
-        ACTION_SPACE, Actions, DuelFloat, STATE_VECTOR_LEN, copy_var_map, env::Environment,
-        save_model,
-    },
+use crate::game::ai::{
+    ACTION_SPACE, Actions, DuelFloat, STATE_VECTOR_LEN, copy_var_map, env::Environment, save_model,
 };
 
 const AGENT1_OUTPUT_PATH: &str = "./resources/scenes/dqn_agent1_weights_NEW.safetensors";
@@ -72,14 +68,7 @@ impl ReplayMemory {
 }
 
 #[allow(dead_code)]
-pub fn train(
-    context: &GameContext,
-    inputs: &mut PlayerInputs,
-    state: &mut GameState,
-) -> Result<()> {
-    let start = Instant::now();
-
-    let device = Device::Cpu;
+pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result<()> {
     let mut rng = rand::rng();
 
     let var_map1 = VarMap::new();
@@ -99,7 +88,6 @@ pub fn train(
 
     let mut episode = 0;
     let mut step = 0;
-    let mut env = Environment::new(context, inputs, state);
     let mut observation = env.obs(&device)?;
 
     while episode < EPISODES {
@@ -242,9 +230,9 @@ fn train_single_agent(
     non_final_mask: &Tensor,
     optimizer: &mut AdamW,
 ) -> Result<()> {
-    let estimated_rewards = agent.forward(&states)?;
-    let x = estimated_rewards.gather(&actions, 1)?;
-    let expected_rewards = target_agent.forward(&next_states)?.detach();
+    let estimated_rewards = agent.forward(states)?;
+    let x = estimated_rewards.gather(actions, 1)?;
+    let expected_rewards = target_agent.forward(next_states)?.detach();
     let y = expected_rewards.max_keepdim(1)?;
     let y = (y * GAMMA * non_final_mask + rewards)?;
     let loss = candle_nn::loss::mse(&x, &y)?;
