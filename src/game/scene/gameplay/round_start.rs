@@ -18,8 +18,7 @@ pub struct RoundStart {
 
 impl GameplayScene for RoundStart {
     fn enter(&mut self, context: &GameContext, state: &mut GameState) {
-        state.player1.reset(&context.player1);
-        state.player2.reset(&context.player2);
+        state.reset(context);
     }
 
     fn update(

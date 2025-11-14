@@ -6,12 +6,7 @@ use rand::{Rng, distr::weighted::WeightedIndex, rngs::ThreadRng};
 
 use crate::game::{
     GameContext, GameState, PlayerInputs,
-    ai::{
-        ACTION_SPACE, DuelFloat, STATE_VECTOR_LEN, env_step, map_ai_action, save_model,
-        serialize_observation,
-    },
-    input::{InputHistory, Inputs},
-    scene::gameplay::during_round::DuringRound,
+    ai::{ACTION_SPACE, DuelFloat, STATE_VECTOR_LEN, env::Environment, save_model},
 };
 
 const AGENT1_OUTPUT_PATH: &str = "./resources/scenes/ppo_agent1_weights_NEW.safetensors";
@@ -349,45 +344,26 @@ pub fn train(
     let mut agent1 = PPOAgent::new(&device)?;
     let mut agent2 = PPOAgent::new(&device)?;
 
-    let mut scene = DuringRound::new((0, 0));
     let mut rng = rand::rng();
     let mut buffer = RolloutBuffer::new();
 
-    let mut agent1_last_hit = 0;
-    let mut agent2_last_hit = 0;
-    let mut accumulate_rewards = DuelFloat::default();
+    let mut env = Environment::new(context, inputs, state);
     let mut first_episode = true;
 
     for epoch in 1..EPOCHS + 1 {
         for step in 0..STEPS_PER_EPOCH {
-            let observation = serialize_observation(&device, scene.timer(), context, state)?;
-            take_agent_turns(
-                inputs,
-                state,
-                &agent1,
-                &agent2,
-                &mut buffer,
-                &observation,
-                &mut rng,
-            )?;
+            let observation = env.obs(&device)?;
+            let actions = take_agent_turns(&agent1, &agent2, &mut buffer, &observation, &mut rng)?;
 
             // Update environment
-            let (terminal, rewards) = env_step(
-                context,
-                state,
-                &mut scene,
-                &mut agent1_last_hit,
-                &mut agent2_last_hit,
-            );
+            let (terminal, rewards) = env.step(actions);
             buffer.push_env(observation, rewards);
-            accumulate_rewards.agent1 += rewards.agent1;
-            accumulate_rewards.agent2 += rewards.agent2;
 
             let epoch_ended = step == STEPS_PER_EPOCH - 1;
 
             if terminal || epoch_ended {
                 let (v1, v2) = if !terminal {
-                    let last_obs = serialize_observation(&device, scene.timer(), context, state)?;
+                    let last_obs = env.obs(&device)?;
                     let (_, _, v1) = agent1.policy.step(&last_obs, &mut rng)?;
                     let (_, _, v2) = agent2.policy.step(&last_obs, &mut rng)?;
                     (v1, v2)
@@ -399,14 +375,8 @@ pub fn train(
 
                 if first_episode && epoch % EPOCH_PRINT_STEP == 0 {
                     first_episode = false;
-                    println!("___________________________");
-                    println!("EPOCH: {epoch}, TIME: {:?}", start.elapsed());
-                    println!("Accumulate game sum: {accumulate_rewards:?}");
-                    println!("Round timer: {}", 1.0 - scene.timer());
-                    println!("Agent1: {:?}", state.player1);
-                    println!("~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-                    println!("Agent2: {:?}", state.player2);
-                    println!("___________________________\n");
+
+                    env.display(epoch, start.elapsed());
                 }
 
                 if epoch_ended && epoch % SAVE_INTERVAL == 0 {
@@ -414,21 +384,14 @@ pub fn train(
                     agent2.save(AGENT2_OUTPUT_PATH)?;
                 }
 
-                // Reset Stuff
-                accumulate_rewards = DuelFloat::default();
-                agent1_last_hit = 0;
-                agent2_last_hit = 0;
-                scene = DuringRound::new((0, 0));
-                state.reset(context);
-                inputs.reset_player1();
-                inputs.reset_player2();
-                state.player1_inputs.reset();
-                state.player2_inputs.reset();
+                env.reset();
             }
         }
 
         update_agents(&mut agent1, &mut agent2, &mut buffer, &device)?;
         first_episode = true;
+
+        env.reset();
     }
 
     println!("Completed in {:?} secs", start.elapsed());
@@ -438,31 +401,18 @@ pub fn train(
 }
 
 fn take_agent_turns(
-    inputs_history: &mut PlayerInputs,
-    state: &mut GameState,
     agent1: &PPOAgent,
     agent2: &PPOAgent,
     buffer: &mut RolloutBuffer,
     observation: &Tensor,
     rng: &mut ThreadRng,
-) -> Result<()> {
+) -> Result<(u32, u32)> {
     let (action1, logprob, state_val) = agent1.policy.step(observation, rng)?;
     buffer.push_agent1(action1, logprob, state_val);
     let (action2, logprob, state_val) = agent2.policy.step(observation, rng)?;
     buffer.push_agent2(action2, logprob, state_val);
 
-    take_agent_turn(
-        &mut inputs_history.player1,
-        &mut state.player1_inputs,
-        action1,
-    );
-    take_agent_turn(
-        &mut inputs_history.player2,
-        &mut state.player2_inputs,
-        action2,
-    );
-
-    Ok(())
+    Ok((action1, action2))
 }
 
 fn update_agents(
@@ -508,20 +458,8 @@ fn update_single_agent(
 }
 
 pub fn get_agent_action(agent: &Sequential, obs: &Tensor, rng: &mut ThreadRng) -> Result<u32> {
-    let estimates = agent.forward(&obs.unsqueeze(0)?)?;
-    let action_probs = softmax(&estimates.squeeze(0)?, 0)?;
+    let estimates = agent.forward(&obs.unsqueeze(0)?)?.detach();
+    let action_probs = softmax(&estimates, D::Minus1)?.squeeze(0)?.detach();
     let weights = action_probs.to_vec1::<f32>()?;
     Ok(rng.sample(WeightedIndex::new(weights).unwrap()) as u32)
-}
-
-pub fn take_agent_turn(inputs_history: &mut InputHistory, inputs: &mut Inputs, action: u32) {
-    let (dir, buttons) = map_ai_action(action);
-
-    inputs_history.skip();
-    inputs_history.append_input(0, dir, buttons);
-
-    inputs.update(
-        inputs_history.held_buttons(),
-        inputs_history.parse_history(),
-    );
 }

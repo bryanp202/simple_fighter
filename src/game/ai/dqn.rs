@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, time::Instant};
 
 use candle_core::{DType, Device, Result, Tensor};
 use candle_nn::{
@@ -9,11 +9,9 @@ use rand::{Rng, distr::Uniform};
 use crate::game::{
     GameContext, GameState, PlayerInputs,
     ai::{
-        ACTION_SPACE, Action, Actions, DuelFloat, STATE_VECTOR_LEN, copy_var_map, env_step,
-        map_ai_action, save_model, serialize_observation,
+        ACTION_SPACE, Actions, DuelFloat, STATE_VECTOR_LEN, copy_var_map, env::Environment,
+        save_model,
     },
-    input::{InputHistory, Inputs},
-    scene::gameplay::during_round::DuringRound,
 };
 
 const AGENT1_OUTPUT_PATH: &str = "./resources/scenes/dqn_agent1_weights_NEW.safetensors";
@@ -79,6 +77,8 @@ pub fn train(
     inputs: &mut PlayerInputs,
     state: &mut GameState,
 ) -> Result<()> {
+    let start = Instant::now();
+
     let device = Device::Cpu;
     let mut rng = rand::rng();
 
@@ -99,54 +99,29 @@ pub fn train(
 
     let mut episode = 0;
     let mut step = 0;
-    let mut accumulate_rewards = DuelFloat::default();
-    let mut scene = DuringRound::new((0, 0));
-    let mut observation = serialize_observation(&device, scene.timer(), context, state)?;
-    let mut agent1_last_hit = 0;
-    let mut agent2_last_hit = 0;
+    let mut env = Environment::new(context, inputs, state);
+    let mut observation = env.obs(&device)?;
 
     while episode < EPISODES {
         let epsilon = get_epsilon(episode);
-        let agent1_action = take_agent_turn(
-            &mut rng,
-            &agent1,
-            &mut inputs.player1,
-            &mut state.player1_inputs,
-            &observation,
-            epsilon,
-        )?;
-        let agent2_action = take_agent_turn(
-            &mut rng,
-            &agent2,
-            &mut inputs.player2,
-            &mut state.player2_inputs,
-            &observation,
-            epsilon,
-        )?;
+        let action1 = get_ai_action(&mut rng, &agent1, &observation, epsilon)?;
+        let action2 = get_ai_action(&mut rng, &agent1, &observation, epsilon)?;
 
-        let (terminal, rewards) = env_step(
-            context,
-            state,
-            &mut scene,
-            &mut agent1_last_hit,
-            &mut agent2_last_hit,
-        );
+        let (terminal, rewards) = env.step((action1, action2));
 
         let start_state = observation;
-        observation = serialize_observation(&device, scene.timer(), context, state)?;
+        observation = env.obs(&device)?;
         let new_memory = (
             start_state,
             Actions {
-                agent1: agent1_action,
-                agent2: agent2_action,
+                agent1: action1,
+                agent2: action2,
             },
             rewards,
             !terminal,
             observation.clone(),
         );
         replay_memory.append(new_memory);
-        accumulate_rewards.agent1 += rewards.agent1;
-        accumulate_rewards.agent2 += rewards.agent2;
         step += 1;
 
         if step % TARGET_UPDATE_INTERVAL == 0 {
@@ -174,24 +149,11 @@ pub fn train(
             episode += 1;
 
             if episode % EPISODE_PRINT_STEP == 0 {
-                println!("___________________________");
-                println!("EPISODE: {episode}");
-                println!("Accumulate game sum: {accumulate_rewards:?}");
-                println!("Round timer: {}", 1.0 - scene.timer());
-                println!("Agent1: {:?}", state.player1);
-                println!("---------------------------");
-                println!("Agent2: {:?}", state.player2);
-                println!("___________________________\n");
+                env.display(episode, start.elapsed());
             }
 
             // Reset Stuff
-            accumulate_rewards = DuelFloat::default();
-            agent1_last_hit = 0;
-            agent2_last_hit = 0;
-            scene = DuringRound::new((0, 0));
-            state.reset(context);
-            inputs.reset_player1();
-            inputs.reset_player2();
+            env.reset();
 
             if episode % SAVE_INTERVAL == 0 {
                 save_model(&var_map1, AGENT1_OUTPUT_PATH)?;
@@ -210,28 +172,6 @@ pub fn train(
 
 fn get_epsilon(episode: usize) -> f64 {
     START_E - (START_E - END_E) * (episode as f64 / EPSILON_RANGE as f64).min(1.0)
-}
-
-pub fn take_agent_turn(
-    rng: &mut rand::rngs::ThreadRng,
-    agent: &candle_nn::Sequential,
-    inputs_history: &mut InputHistory,
-    inputs: &mut Inputs,
-    obs: &Tensor,
-    epsilon: f64,
-) -> Result<Action> {
-    let agent_action = get_ai_action(rng, agent, obs, epsilon)?;
-    let (dir, buttons) = map_ai_action(agent_action);
-
-    inputs_history.skip();
-    inputs_history.append_input(0, dir, buttons);
-
-    inputs.update(
-        inputs_history.held_buttons(),
-        inputs_history.parse_history(),
-    );
-
-    Ok(agent_action)
 }
 
 fn train_agents(
