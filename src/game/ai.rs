@@ -134,8 +134,8 @@ fn observation_with_inv(
         context,
         state,
         timer,
-        player1_state.clone(),
-        player2_state.clone(),
+        player1_state,
+        player2_state,
         device,
     )?;
     let agent2 =

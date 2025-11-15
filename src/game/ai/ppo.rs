@@ -245,7 +245,7 @@ impl PPOCritic {
     fn update(&mut self, obs_batch: &Tensor, ret_batch: &Tensor) -> Result<()> {
         let ret_batch = ret_batch.detach();
         for _ in 0..K_EPOCHS {
-            let val = self.critic.forward(&obs_batch)?.squeeze(D::Minus1)?;
+            let val = self.critic.forward(obs_batch)?.squeeze(D::Minus1)?;
             let loss_v = (val - &ret_batch)?.sqr()?.mean_all()?;
             self.optimizer.backward_step(&loss_v)?;
         }
