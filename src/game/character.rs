@@ -190,8 +190,8 @@ impl State {
         }
     }
 
-    pub fn serialize(&self, context: &Context, stage: &Stage) -> [f32; 35] {
-        let mut data = [0.0; 35];
+    pub fn serialize(&self, context: &Context, stage: &Stage) -> [f32; 37] {
+        let mut data = [0.0; 37];
 
         // Normal floats
         data[0] = self.hp / context.max_hp;
@@ -299,6 +299,10 @@ impl State {
         *self = State::new(context.max_hp, context.start_pos, context.start_side);
     }
 
+    pub fn reset_to(&mut self, context: &Context, pos: FPoint, side: Side) {
+        *self = State::new(context.max_hp, pos, side)
+    }
+
     pub fn advance_frame(&mut self) {
         self.current_frame += 1;
     }
@@ -354,15 +358,7 @@ impl State {
             self.set_block_stun_state(context, hit.block_stun());
             hit.dmg() * CHIP_DMG_PERCENTAGE
         } else {
-            // Check if combo_scaling needs to reset
-            if self.current_state != context.ground_hit_state
-                && self.current_state != context.launch_hit_state
-            {
-                self.combo_scaling = 1.0;
-            } else {
-                self.combo_scaling =
-                    (self.combo_scaling - COMBO_SCALE_PER_HIT).max(MIN_COMBO_SCALING);
-            }
+            self.combo_scaling = (self.combo_scaling - COMBO_SCALE_PER_HIT).max(MIN_COMBO_SCALING);
             self.set_hit_state(context, hit.hit_stun());
             hit.dmg() * self.combo_scaling
         };
@@ -404,6 +400,7 @@ impl State {
             } => {
                 if self.current_frame >= end_frame {
                     self.enter_state(context, transition_state);
+                    self.combo_scaling = 1.0;
                 }
             }
             EndBehavior::OnGroundedToStateY { .. } => {}

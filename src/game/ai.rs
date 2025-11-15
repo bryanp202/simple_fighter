@@ -14,7 +14,9 @@ mod env;
 mod ppo;
 
 // Environment
-const STATE_VECTOR_LEN: usize = 35 + 35 + 3;
+type PlayerSerial = [f32; PLAYER_STATE_LEN];
+const PLAYER_STATE_LEN: usize = 37;
+const STATE_VECTOR_LEN: usize = PLAYER_STATE_LEN * 2 + 3;
 const ACTION_SPACE: usize = 9 * 8;
 
 type Action = u32;
@@ -48,25 +50,15 @@ pub fn train(
 }
 
 pub fn serialize_observation(
-    device: &Device,
-    timer: f32,
     context: &GameContext,
     state: &GameState,
+    timer: f32,
+    device: &Device,
 ) -> Result<Tensor> {
-    let global_inputs = [
-        timer,
-        (state.player1.pos().x - state.player2.pos().x).abs() / context.stage.width(),
-        (state.player1.pos().y - state.player2.pos().y).abs() / context.stage.width(),
-    ];
-    let agent1_state = state.player1.serialize(&context.player1, &context.stage);
-    let agent2_state = state.player2.serialize(&context.player2, &context.stage);
+    let player1_state: PlayerSerial = state.player1.serialize(&context.player1, &context.stage);
+    let player2_state: PlayerSerial = state.player2.serialize(&context.player2, &context.stage);
 
-    let state_iter = global_inputs
-        .into_iter()
-        .chain(agent1_state)
-        .chain(agent2_state);
-
-    Tensor::from_iter(state_iter, device)
+    _serialize_observation(context, state, timer, player1_state, player2_state, device)
 }
 
 pub fn load_model(filepath: &str, device: &Device) -> Result<(VarMap, Sequential)> {
@@ -127,4 +119,48 @@ fn copy_var_map(source: &VarMap, destination: &mut VarMap) -> Result<()> {
     )?;
 
     Ok(())
+}
+
+fn observation_with_inv(
+    context: &GameContext,
+    state: &GameState,
+    timer: f32,
+    device: &Device,
+) -> Result<(Tensor, Tensor)> {
+    let player1_state: PlayerSerial = state.player1.serialize(&context.player1, &context.stage);
+    let player2_state: PlayerSerial = state.player2.serialize(&context.player2, &context.stage);
+
+    let agent1 = _serialize_observation(
+        context,
+        state,
+        timer,
+        player1_state.clone(),
+        player2_state.clone(),
+        device,
+    )?;
+    let agent2 =
+        _serialize_observation(context, state, timer, player2_state, player1_state, device)?;
+
+    Ok((agent1, agent2))
+}
+
+fn _serialize_observation(
+    context: &GameContext,
+    state: &GameState,
+    timer: f32,
+    player1_state: PlayerSerial,
+    player2_state: PlayerSerial,
+    device: &Device,
+) -> Result<Tensor> {
+    let global_inputs = [
+        timer,
+        (state.player1.pos().x - state.player2.pos().x).abs() / context.stage.width(),
+        (state.player1.pos().y - state.player2.pos().y).abs() / context.stage.height(),
+    ];
+    let state_iter = global_inputs
+        .into_iter()
+        .chain(player1_state)
+        .chain(player2_state);
+
+    Tensor::from_iter(state_iter, device)
 }

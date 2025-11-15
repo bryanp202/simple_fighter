@@ -1,16 +1,20 @@
+use sdl3::{pixels::Color, render::FRect};
+
 use crate::game::{
     GameContext, GameState, PlayerInputs,
-    input::ButtonFlag,
+    input::{ButtonFlag, Direction},
     scene::{
         Scene, Scenes, local_play::LocalPlay, matching::Matching, spectate_ai::SpectateAi,
         verses_ai::VersesAi,
     },
 };
 
+const MAIN_MENU_OPTIONS: i32 = 4;
+
 pub struct MainMenu {
     l_button_pressed: bool,
-    m_button_pressed: bool,
-    h_button_pressed: bool,
+    last_dir: Direction,
+    scroll_pos: i32,
 }
 
 impl Scene for MainMenu {
@@ -38,24 +42,22 @@ impl Scene for MainMenu {
         let held = state.player1_inputs.active_buttons();
 
         if self.l_button_pressed && !ButtonFlag::L.intersects(held) {
-            return Some(Scenes::LocalPlay(LocalPlay::new()));
-        }
-        if self.m_button_pressed && !ButtonFlag::M.intersects(held) {
-            return Some(Scenes::Matching(Matching::new(&context.matchmaking_server)));
-        }
-        if self.h_button_pressed && !ButtonFlag::H.intersects(held) {
-            return Some(Scenes::SpectateAi(SpectateAi::new(
-                &context.left_agent_filepath,
-                &context.right_agent_filepath,
-            )));
-            // return Some(Scenes::VersesAi(VersesAi::new(
-            //    &context.right_agent_filepath,
-            // )));
+            return Some(self.select_scene(context));
         }
 
+        let held_dir = state.player1_inputs.dir();
+
+        if held_dir != self.last_dir {
+            let scroll_dif = match state.player1_inputs.dir() {
+                Direction::Down => 1,
+                Direction::Up => -1,
+                _ => 0,
+            };
+            self.scroll_pos = (MAIN_MENU_OPTIONS + self.scroll_pos + scroll_dif) % MAIN_MENU_OPTIONS;
+            self.last_dir = held_dir;
+        }
+        
         self.l_button_pressed = self.l_button_pressed || ButtonFlag::L.intersects(just_pressed);
-        self.m_button_pressed = self.m_button_pressed || ButtonFlag::M.intersects(just_pressed);
-        self.h_button_pressed = self.h_button_pressed || ButtonFlag::H.intersects(just_pressed);
 
         None
     }
@@ -67,7 +69,22 @@ impl Scene for MainMenu {
         context: &GameContext,
         _state: &GameState,
     ) -> Result<(), sdl3::Error> {
-        canvas.copy(&global_textures[context.main_menu_texture], None, None)
+        canvas.copy(&global_textures[context.main_menu_texture], None, None)?;
+        let (w, h) = canvas.window().size();
+        let w = w as f32;
+        let h = h as f32;
+
+        let rect_w = w / 30.0;
+        let rect_h = h / 16.875;
+        let x = w * 3.0 / 10.0;
+        let y_start = h * 5.0 / 12.0;
+        let y = y_start + (self.scroll_pos * 2) as f32 * rect_h;
+        
+        let rect = FRect::new(x, y, rect_w, rect_h);
+        canvas.set_draw_color(Color::BLACK);
+        canvas.fill_rect(rect)?;
+
+        Ok(())
     }
 
     fn exit(&mut self, _context: &GameContext, _inputs: &mut PlayerInputs, _state: &mut GameState) {
@@ -78,8 +95,18 @@ impl MainMenu {
     pub fn new() -> Self {
         Self {
             l_button_pressed: false,
-            m_button_pressed: false,
-            h_button_pressed: false,
+            last_dir: Direction::Neutral,
+            scroll_pos: 0,
+        }
+    }
+
+    fn select_scene(&self, context: &GameContext) -> Scenes {
+        match self.scroll_pos {
+            0 => Scenes::LocalPlay(LocalPlay::new()),
+            1 => Scenes::VersesAi(VersesAi::new(&context.left_agent_filepath)),
+            2 => Scenes::SpectateAi(SpectateAi::new(&context.left_agent_filepath, &context.right_agent_filepath)),
+            3 => Scenes::Matching(Matching::new(&context.matchmaking_server)),
+            _ => panic!("Unreachable menu pos"),
         }
     }
 }

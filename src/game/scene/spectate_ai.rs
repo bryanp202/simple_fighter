@@ -35,7 +35,7 @@ impl Scene for SpectateAi {
     ) -> std::io::Result<()> {
         if let GameplayScenes::DuringRound(during_round) = &self.scene {
             let timer = during_round.timer();
-            let observation = serialize_observation(&self.device, timer, context, state)
+            let observation = serialize_observation(context, state, timer, &self.device)
                 .expect("Model failed to observe environment");
 
             // Agent1

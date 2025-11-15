@@ -19,7 +19,7 @@
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "jump_forward", "jump_back", "jump", "crotching", "back_walk", "forward_walk"],
+      "cancel_options": ["spin_attack", "pierce_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "jump_forward", "jump_back", "jump", "crotching", "back_walk", "forward_walk"],
 
       "animation": {
         "texture_path": "./resources/character1/Idle.png",
@@ -217,7 +217,7 @@
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "back_walk", "forward_walk", "neutral"],
+      "cancel_options": ["spin_attack", "pierce_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "back_walk", "forward_walk", "neutral"],
 
       "animation": {
         "texture_path": "./resources/character1/Idle.png",
@@ -242,7 +242,7 @@
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "jump_forward", "crotching", "back_walk", "neutral"],
+      "cancel_options": ["spin_attack", "pierce_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "jump_forward", "crotching", "back_walk", "neutral"],
 
       "animation": {
         "texture_path": "./resources/character1/Run.png",
@@ -267,7 +267,7 @@
       "end_behavior": {"type": "Endless"},
       
       "cancel_window": {"start": 0, "end": null},
-      "cancel_options": ["spin_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "jump_back", "crotching", "forward_walk", "neutral"],
+      "cancel_options": ["spin_attack", "pierce_attack", "medium_attack", "light_attack", "forward_dash", "back_dash", "jump_back", "crotching", "forward_walk", "neutral"],
 
       "animation": {
         "texture_path": "./resources/character1/BackRun.png",
@@ -438,7 +438,7 @@
       "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
 
       "start_behavior": {"type" : "SetVel", "x": 0, "y": 0},
-      "flags": [{"type": "CancelOnWhiff"}, {"type": "LockSide"}],
+      "flags": [{"type": "LockSide"}],
       "end_behavior": {"type": "OnFrameXToStateY", "x": 6, "y": "neutral"},
       
       "cancel_window": {"start": null, "end": null},
@@ -495,8 +495,8 @@
       "flags": [{"type": "LockSide"}],
       "end_behavior": { "type" : "OnFrameXToStateY", "x" : 17, "y" : "neutral"},
       
-      "cancel_window": {"start": 7, "end": 10},
-      "cancel_options": ["medium_attack", "light_attack"],
+      "cancel_window": {"start": 7, "end": 12},
+      "cancel_options": ["pierce_attack", "medium_attack", "light_attack"],
 
       "animation": {
         "texture_path": "./resources/character1/Attack1.png",
@@ -595,7 +595,7 @@
       "end_behavior": { "type" : "OnFrameXToStateY", "x" : 40, "y" : "neutral"},
       
       "cancel_window": {"start": 10, "end": 26},
-      "cancel_options": ["spin_attack", "forward_dash", "jump_forward", "jump_back", "jump"],
+      "cancel_options": ["spin_attack", "pierce_attack", "forward_dash", "jump_forward", "jump_back", "jump"],
 
       "animation": {
         "texture_path": "./resources/character1/Attack2.png",
@@ -694,6 +694,70 @@
         "layout": {"type": "Vert"},
         "frames": 20,
         "w": 400,
+        "h": 200
+      }
+    },
+
+    {
+      "name": "pierce_attack",
+      "input": {"Motion": {"motion": {"type" : "QcBack"}, "button": {"type" : "H"}}},
+      "hit_boxes": [
+        {"frame": 0, "boxes": []},
+        {"frame": 6, "boxes":
+          [
+            {
+              "rect": {"x": 0, "y": 0, "w": 60, "h": 60},
+              "dmg": 60,
+              "block_stun": 18,
+              "hit_stun": null,
+              "cancel_window": 10,
+              "block_type": {"type": "Mid"}
+            }
+          ]
+        }
+      ],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect": {"x": 0, "y": 0, "w": 80, "h": 80}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
+
+      "start_behavior": {"type" : "SetVel", "x": 12, "y": 0},
+      "flags": [{"type": "LockSide"}],
+      "end_behavior": { "type" : "OnFrameXToStateY", "x" : 12, "y" : "pierce_recovery"},
+      
+      "cancel_window": {"start": 10, "end": 14},
+      "cancel_options": [],
+
+      "animation": {
+        "texture_path": "./resources/character1/Idle.png",
+        "layout": {"type": "Horz"},
+        "frames": 1,
+        "w": 200,
+        "h": 200
+      }
+    },
+
+    {
+      "name": "pierce_recovery",
+      "input": {"Direction": {"dir": {"type" : "Any"}, "button": {"type" : "None"}}},
+      "hit_boxes": [],
+      "hurt_boxes": [
+        {"frame": 0, "boxes": [{"rect" : {"x": 0, "y": 0, "w": 100, "h": 100}}]}
+      ],
+      "collision_box": {"rect": {"x": 0, "y": 0, "w": 40, "h": 40}},
+
+      "start_behavior": {"type" : "SetVel", "x": 0, "y": 0},
+      "flags": [{"type": "LockSide"}],
+      "end_behavior": {"type": "OnFrameXToStateY", "x": 20, "y": "neutral"},
+      
+      "cancel_window": {"start": null, "end": null},
+      "cancel_options": [],
+
+      "animation": {
+        "texture_path": "./resources/character1/Idle.png",
+        "layout": {"type": "Horz"},
+        "frames": 1,
+        "w": 200,
         "h": 200
       }
     }

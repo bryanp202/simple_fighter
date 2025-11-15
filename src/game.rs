@@ -13,11 +13,7 @@ mod stage;
 use std::time::{Duration, Instant};
 
 use sdl3::{
-    EventPump,
-    event::{Event, WindowEvent},
-    pixels::Color,
-    render::{Canvas, Texture, TextureCreator},
-    video::{Window, WindowContext},
+    EventPump, event::{Event, WindowEvent}, keyboard::Keycode, pixels::Color, render::{Canvas, Texture, TextureCreator}, video::{Window, WindowContext}
 };
 
 use crate::game::{
@@ -213,6 +209,11 @@ impl<'a> Game<'a> {
         for event in self.events.poll_iter() {
             match event {
                 Event::Quit { .. } => self.context.should_quit = true,
+                Event::KeyUp { keycode: Some(Keycode::Escape), repeat: false, .. } => {
+                    self.scene.exit(&self.context, &mut self.inputs, &mut self.state);
+                    self.scene = Scenes::new();
+                    self.scene.enter(&self.context, &mut self.inputs, &mut self.state);
+                }
                 Event::Window {
                     win_event: WindowEvent::Resized(x, y),
                     ..

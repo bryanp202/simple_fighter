@@ -1,11 +1,12 @@
 use std::{cmp::Ordering, time::Duration};
 
 use candle_core::{Device, Result, Tensor};
+use rand::{Rng, rngs::ThreadRng};
 use sdl3::render::FPoint;
 
 use crate::game::{
-    GameContext, GameState, PlayerInputs,
-    ai::{DuelFloat, serialize_observation, take_agent_turn},
+    GameContext, GameState, PlayerInputs, Side,
+    ai::{DuelFloat, observation_with_inv, serialize_observation, take_agent_turn},
     scene::gameplay::{GameplayScene, during_round::DuringRound},
 };
 
@@ -20,7 +21,7 @@ pub struct Environment<'a> {
 
 // REWARDS
 const ROUND_WIN_SCORE: f32 = 25.0;
-const ROUND_LOSE_SCORE: f32 = -1.5;
+const ROUND_LOSE_SCORE: f32 = -12.5;
 const ROUND_TIE_SCORE: f32 = -50.0;
 
 impl<'a> Environment<'a> {
@@ -46,6 +47,35 @@ impl<'a> Environment<'a> {
         self.inputs.reset_player2();
     }
 
+    pub fn reset_rng(&mut self, rng: &mut ThreadRng) {
+        self.accumulate_rewards = DuelFloat::default();
+        let timer = rng.random_range(0.0..0.4);
+        self.scene = DuringRound::new_with_timer((0, 0), timer);
+
+        self.inputs.reset_player1();
+        self.inputs.reset_player2();
+
+        self.state.player1_inputs.reset();
+        self.state.player2_inputs.reset();
+
+        let stage_bounds = self.context.stage.width() - 200.0;
+        let pos_x1 = rng.random_range(-stage_bounds..stage_bounds);
+        let pos_x2 = pos_x1 + rng.random_range(60.0..140.0);
+
+        let ((x1, x2), (side1, side2)) = if rng.random_bool(0.5) {
+            ((pos_x1, pos_x2), (Side::Left, Side::Right))
+        } else {
+            ((pos_x2, pos_x1), (Side::Right, Side::Left))
+        };
+
+        self.state
+            .player1
+            .reset_to(&self.context.player1, FPoint::new(x1, 0.0), side1);
+        self.state
+            .player2
+            .reset_to(&self.context.player1, FPoint::new(x2, 0.0), side2);
+    }
+
     pub fn display(&self, epoch: usize, elapsed: Duration) {
         println!("___________________________");
         println!("EPOCH: {epoch}, TIME: {elapsed:?}");
@@ -59,7 +89,15 @@ impl<'a> Environment<'a> {
 
     pub fn obs(&self, device: &Device) -> Result<Tensor> {
         let timer = self.scene.timer();
-        serialize_observation(device, timer, self.context, self.state)
+        serialize_observation(self.context, self.state, timer, device)
+    }
+
+    /// Returns the state obs tensor with (player1 first in vec, player2 first in vec)
+    ///
+    /// Used so that the critic can have a common reference point to evaluate states in AC algorithms
+    pub fn obs_with_inv(&self, device: &Device) -> Result<(Tensor, Tensor)> {
+        let timer = self.scene.timer();
+        observation_with_inv(self.context, self.state, timer, device)
     }
 
     pub fn step(&mut self, actions: (u32, u32)) -> (bool, DuelFloat) {
@@ -104,7 +142,7 @@ impl<'a> Environment<'a> {
         old_combo: (f32, f32),
         old_score: (u32, u32),
     ) -> DuelFloat {
-        //let timer = self.scene.timer();
+        let timer = 1.0 - self.scene.timer();
         let new_score = self.scene.score();
         let new_combo = (
             self.state.player1.combo_scaling(),
@@ -123,10 +161,10 @@ impl<'a> Environment<'a> {
                     // Gets a higher score for winning with more hp
                     (
                         ROUND_LOSE_SCORE,
-                        ROUND_WIN_SCORE * (1.0 + new_hp.0 - new_hp.1) / 2.0,
+                        ROUND_WIN_SCORE * (1.0 + new_hp.1 - new_hp.0 + timer) / 3.0,
                     )
                 } else {
-                    (ROUND_LOSE_SCORE * 10.0, ROUND_WIN_SCORE / 100.0)
+                    (ROUND_LOSE_SCORE * 2.0, ROUND_WIN_SCORE / 4.0)
                 }
             }
             Ordering::Equal => {
@@ -134,7 +172,7 @@ impl<'a> Environment<'a> {
                 if new_score.0 > old_score.0 {
                     (ROUND_TIE_SCORE, ROUND_TIE_SCORE)
                 } else {
-                    (0.0, 0.0)
+                    (-0.002, -0.002)
                 }
             }
             Ordering::Greater => {
@@ -142,11 +180,11 @@ impl<'a> Environment<'a> {
                 if new_hp.1 <= 0.0 {
                     // Gets a higher score for winning with more hp
                     (
-                        ROUND_WIN_SCORE * (1.0 + new_hp.1 - new_hp.0) / 2.0,
+                        ROUND_WIN_SCORE * (1.0 + new_hp.0 - new_hp.1 + timer) / 3.0,
                         ROUND_LOSE_SCORE,
                     )
                 } else {
-                    (ROUND_WIN_SCORE / 100.0, ROUND_LOSE_SCORE * 10.0)
+                    (ROUND_WIN_SCORE / 4.0, ROUND_LOSE_SCORE * 2.0)
                 }
             }
         };
@@ -158,10 +196,12 @@ impl<'a> Environment<'a> {
         let combo_rwd2 = (old_combo.0 - new_combo.0).max(0.0) * 10.0;
 
         // If agent made an action to get closer then reward it
-        let approached_1 = (old_pos.1.x - new_pos.0.x).abs() < (old_pos.1.x - old_pos.0.x).abs();
-        let approach_rwd1 = approached_1 as u8 as f32 * 0.1;
-        let approached_2 = (old_pos.0.x - new_pos.1.x).abs() < (old_pos.0.x - old_pos.1.x).abs();
-        let approach_rwd2 = approached_2 as u8 as f32 * 0.1;
+        let approached_1 =
+            (old_pos.1.x - new_pos.0.x).abs().max(60.0) < (old_pos.1.x - old_pos.0.x).abs();
+        let approach_rwd1 = approached_1 as u8 as f32 * 0.02;
+        let approached_2 =
+            (old_pos.0.x - new_pos.1.x).abs().max(60.0) < (old_pos.0.x - old_pos.1.x).abs();
+        let approach_rwd2 = approached_2 as u8 as f32 * 0.02;
 
         let dmg_penalty1 = dmg_rwd2 * 0.8;
         let dmg_penalty2 = dmg_rwd1 * 0.8;

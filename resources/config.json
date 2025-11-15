@@ -1,7 +1,7 @@
 {
     "ai": {
-        "left_agent_path": "./resources/scenes/ppo_agent1_weights_NEW.safetensors",
-        "right_agent_path": "./resources/scenes/ppo_agent2_weights_NEW.safetensors"
+        "left_agent_path": "./resources/scenes/agent_left.safetensors",
+        "right_agent_path": "./resources/scenes/agent_right.safetensors"
     },
 
     "scene_data": {
@@ -12,7 +12,7 @@
         },
 
         "gameplay": {
-            "matchmaking_server": "3.17.61.99:8000",
+            "matchmaking_server": "18.222.143.162:8000",
 
             "round_start_animation": {
                 "texture_path": "./resources/scenes/round_start_text.png",
