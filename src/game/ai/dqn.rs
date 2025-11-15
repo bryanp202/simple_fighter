@@ -10,8 +10,8 @@ use crate::game::ai::{
     ACTION_SPACE, Actions, DuelFloat, STATE_VECTOR_LEN, copy_var_map, env::Environment, save_model,
 };
 
-const AGENT1_OUTPUT_PATH: &str = "./resources/scenes/dqn_agent1_weights_NEW.safetensors";
-const AGENT2_OUTPUT_PATH: &str = "./resources/scenes/dqn_agent2_weights_NEW.safetensors";
+const AGENT1_OUTPUT_PATH: &str = "./ai/dqn_agent1_weights_NEW.safetensors";
+const AGENT2_OUTPUT_PATH: &str = "./ai/dqn_agent2_weights_NEW.safetensors";
 const SAVE_INTERVAL: usize = 5000;
 
 const HIDDEN_COUNT: usize = 256;

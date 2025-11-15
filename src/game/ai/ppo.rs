@@ -8,8 +8,8 @@ use rand::{Rng, distr::weighted::WeightedIndex, rngs::ThreadRng};
 
 use crate::game::ai::{ACTION_SPACE, DuelFloat, STATE_VECTOR_LEN, env::Environment, save_model};
 
-const AGENT1_OUTPUT_PATH: &str = "./resources/scenes/ppo_agent1_weights_NEW.safetensors";
-const AGENT2_OUTPUT_PATH: &str = "./resources/scenes/ppo_agent2_weights_NEW.safetensors";
+const AGENT1_OUTPUT_PATH: &str = "./ai/ppo_agent1_weights_NEW.safetensors";
+const AGENT2_OUTPUT_PATH: &str = "./ai/ppo_agent2_weights_NEW.safetensors";
 const SAVE_INTERVAL: usize = 500;
 
 const OPPONENT_FREEZE_EPOCHS: usize = 25;
