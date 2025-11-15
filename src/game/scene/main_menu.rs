@@ -53,10 +53,11 @@ impl Scene for MainMenu {
                 Direction::Up => -1,
                 _ => 0,
             };
-            self.scroll_pos = (MAIN_MENU_OPTIONS + self.scroll_pos + scroll_dif) % MAIN_MENU_OPTIONS;
+            self.scroll_pos =
+                (MAIN_MENU_OPTIONS + self.scroll_pos + scroll_dif) % MAIN_MENU_OPTIONS;
             self.last_dir = held_dir;
         }
-        
+
         self.l_button_pressed = self.l_button_pressed || ButtonFlag::L.intersects(just_pressed);
 
         None
@@ -79,7 +80,7 @@ impl Scene for MainMenu {
         let x = w * 3.0 / 10.0;
         let y_start = h * 5.0 / 12.0;
         let y = y_start + (self.scroll_pos * 2) as f32 * rect_h;
-        
+
         let rect = FRect::new(x, y, rect_w, rect_h);
         canvas.set_draw_color(Color::BLACK);
         canvas.fill_rect(rect)?;
@@ -104,7 +105,10 @@ impl MainMenu {
         match self.scroll_pos {
             0 => Scenes::LocalPlay(LocalPlay::new()),
             1 => Scenes::VersesAi(VersesAi::new(&context.left_agent_filepath)),
-            2 => Scenes::SpectateAi(SpectateAi::new(&context.left_agent_filepath, &context.right_agent_filepath)),
+            2 => Scenes::SpectateAi(SpectateAi::new(
+                &context.left_agent_filepath,
+                &context.right_agent_filepath,
+            )),
             3 => Scenes::Matching(Matching::new(&context.matchmaking_server)),
             _ => panic!("Unreachable menu pos"),
         }
