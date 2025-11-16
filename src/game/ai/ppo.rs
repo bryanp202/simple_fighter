@@ -25,7 +25,7 @@ const TARGET_KL: f32 = 0.01;
 const MAX_POOL_SIZE: usize = 16;
 const WINRATE_THRESH: f32 = 0.55;
 const MIN_ROUNDS_PER_TRAINER: usize = 4;
-const MAX_ROUNDS_PER_TRAINER: usize = 64;
+const MAX_GAMES: usize = 2048;
 const EPOCH_PRINT_STEP: usize = EPOCHS / 100;
 
 struct Trainer {
@@ -36,7 +36,6 @@ struct Trainer {
 struct TrainerPool {
     trainers: VecDeque<Trainer>,
 }
-
 
 impl TrainerPool {
     fn new() -> Self {
@@ -351,11 +350,8 @@ pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result
         let mut games = 0;
 
         let min_games = MIN_ROUNDS_PER_TRAINER * trainer_pool.count();
-        let max_games = MAX_ROUNDS_PER_TRAINER * trainer_pool.count();
 
-        while (wins as f32 / games as f32) < WINRATE_THRESH
-            || games < min_games
-        {
+        while (wins as f32 / games as f32) < WINRATE_THRESH || games < min_games {
             for trainer in trainer_pool.iter() {
                 let (new_wins, new_games) = fight_trainer(
                     epoch,
@@ -374,7 +370,7 @@ pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result
             }
 
             println!("Games: {games}, winrate: {}", wins as f32 / games as f32);
-            if games >= max_games {
+            if games >= MAX_GAMES {
                 println!("WARNING: Abandoning challenger");
                 continue 'challenger_loop;
             }
@@ -557,7 +553,6 @@ pub fn get_agent_action(agent: &Sequential, obs: &Tensor, rng: &mut ThreadRng) -
 
 //     let mut state = GameState { player1_inputs, player2_inputs, player1, player2 };
 //     let mut inputs = PlayerInputs { player1: h1, player2: h2 };
-
 
 //     let mut rng = rand::rng();
 //     let mut env = Environment::new(&context, &mut inputs, &mut state);
