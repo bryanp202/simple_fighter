@@ -6,7 +6,7 @@ use sdl3::render::FPoint;
 
 use crate::game::{
     GameContext, GameState, PlayerInputs, Side,
-    ai::{DuelFloat, serialize_observation, take_agent_turn},
+    ai::{DuelFloat, observation_with_inv, serialize_observation, take_agent_turn},
     scene::gameplay::{GameplayScene, during_round::DuringRound},
 };
 
@@ -47,6 +47,7 @@ impl<'a> Environment<'a> {
         self.inputs.reset_player2();
     }
 
+    #[allow(dead_code)]
     pub fn reset_rng(&mut self, rng: &mut ThreadRng) {
         self.accumulate_rewards = DuelFloat::default();
         let timer = rng.random_range(0.0..0.4);
@@ -92,6 +93,14 @@ impl<'a> Environment<'a> {
         serialize_observation(self.context, self.state, timer, device)
     }
 
+    /// Returns the state obs tensor with (player1 first in vec, player2 first in vec)
+    ///
+    /// Used so that the critic can have a common reference point to evaluate states in AC algorithms
+    pub fn obs_with_inv(&self, device: &Device) -> Result<(Tensor, Tensor)> {
+        let timer = self.scene.timer();
+        observation_with_inv(self.context, self.state, timer, device)
+    }
+
     pub fn step(&mut self, actions: (u32, u32)) -> (bool, DuelFloat) {
         take_agent_turn(
             &mut self.inputs.player1,
@@ -122,6 +131,12 @@ impl<'a> Environment<'a> {
         self.accumulate_rewards.agent2 += rewards.agent2;
 
         (terminal, rewards)
+    }
+
+    /// Returns true if agent1/player1 won
+    pub fn agent1_winner(&self) -> bool {
+        let (agent1, agent2) = self.scene.score();
+        agent1 > agent2
     }
 
     /// Not a zero sum game

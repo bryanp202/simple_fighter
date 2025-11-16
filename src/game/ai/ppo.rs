@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{collections::VecDeque, time::Instant};
 
 use candle_core::{D, DType, Device, IndexOp, Result, Tensor};
 use candle_nn::{
@@ -6,46 +6,74 @@ use candle_nn::{
 };
 use rand::{Rng, distr::weighted::WeightedIndex, rngs::ThreadRng};
 
-use crate::game::ai::{ACTION_SPACE, DuelFloat, STATE_VECTOR_LEN, env::Environment, save_model};
+use crate::game::ai::{ACTION_SPACE, STATE_VECTOR_LEN, env::Environment, save_model};
 
-const AGENT1_OUTPUT_PATH: &str = "./ai/ppo/agent1_weights_NEW.safetensors";
-const AGENT2_OUTPUT_PATH: &str = "./ai/ppo/agent2_weights_NEW.safetensors";
-const SAVE_INTERVAL: usize = 500;
+const AGENT_OUTPUT_PATH: &str = "./ai/ppo/weights_NEW.safetensors";
+const SAVE_INTERVAL: usize = 8;
 
-const EPOCHS: usize = 15_000;
-const STEPS_PER_EPOCH: usize = 6_000;
+const EPOCHS: usize = 256;
+const STEPS_PER_EPOCH: usize = 8_000;
 const HIDDEN_COUNT: usize = 256;
-const LEARNING_RATE_ACTOR: f64 = 0.00001;
-const LEARNING_RATE_CRITIC: f64 = 0.00001;
+const LEARNING_RATE_ACTOR: f64 = 0.00005;
+const LEARNING_RATE_CRITIC: f64 = 0.00005;
 const GAMMA: f32 = 0.996;
 const K_EPOCHS: usize = 20;
 const EPS_CLIP: f32 = 0.2;
 const GAE_LAMBDA: f32 = 0.97;
 const TARGET_KL: f32 = 0.01;
 
-const EPOCH_PRINT_STEP: usize = EPOCHS / 1_000;
+const MAX_POOL_SIZE: usize = 16;
+const WINRATE_THRESH: f32 = 0.55;
+const MIN_ROUNDS_PER_TRAINER: usize = 4;
+const MAX_ROUNDS_PER_TRAINER: usize = 64;
+const EPOCH_PRINT_STEP: usize = EPOCHS / 100;
 
-#[derive(Default)]
+struct Trainer {
+    policy: Sequential,
+    var_map: VarMap,
+}
+
+struct TrainerPool {
+    trainers: VecDeque<Trainer>,
+}
+
+
+impl TrainerPool {
+    fn new() -> Self {
+        Self {
+            trainers: VecDeque::new(),
+        }
+    }
+
+    fn push(&mut self, trainer: Trainer) {
+        if self.trainers.len() == MAX_POOL_SIZE {
+            self.trainers.pop_back();
+        }
+        self.trainers.push_front(trainer);
+    }
+
+    fn iter(&self) -> impl Iterator<Item = &Trainer> {
+        self.trainers.iter()
+    }
+
+    fn count(&self) -> usize {
+        self.trainers.len()
+    }
+
+    fn get_best(&self) -> &Trainer {
+        self.trainers.front().unwrap()
+    }
+}
+
 struct RolloutBuffer {
-    states: Vec<Tensor>,
+    obs: Vec<Tensor>,
 
-    actions_1: Vec<u32>,
-    actions_2: Vec<u32>,
-
-    logprobs_1: Vec<f32>,
-    logprobs_2: Vec<f32>,
-
-    rewards_1: Vec<f32>,
-    rewards_2: Vec<f32>,
-
-    state_values_1: Vec<f32>,
-    state_values_2: Vec<f32>,
-
-    advantage_1: Vec<f32>,
-    advantage_2: Vec<f32>,
-
-    return_1: Vec<f32>,
-    return_2: Vec<f32>,
+    actions: Vec<u32>,
+    logprobs: Vec<f32>,
+    rewards: Vec<f32>,
+    state_values: Vec<f32>,
+    advantage: Vec<f32>,
+    ret: Vec<f32>,
 
     path_start_idx: usize,
     ptr: usize,
@@ -60,120 +88,78 @@ fn normalized_adv(adv: Tensor) -> Result<Tensor> {
 impl RolloutBuffer {
     fn new() -> Self {
         Self {
-            states: Vec::with_capacity(STEPS_PER_EPOCH),
-            actions_1: Vec::with_capacity(STEPS_PER_EPOCH),
-            actions_2: Vec::with_capacity(STEPS_PER_EPOCH),
-            logprobs_1: Vec::with_capacity(STEPS_PER_EPOCH),
-            logprobs_2: Vec::with_capacity(STEPS_PER_EPOCH),
-            rewards_1: Vec::with_capacity(STEPS_PER_EPOCH),
-            rewards_2: Vec::with_capacity(STEPS_PER_EPOCH),
-            state_values_1: Vec::with_capacity(STEPS_PER_EPOCH),
-            state_values_2: Vec::with_capacity(STEPS_PER_EPOCH),
-            advantage_1: vec![0.0; STEPS_PER_EPOCH],
-            advantage_2: vec![0.0; STEPS_PER_EPOCH],
-            return_1: vec![0.0; STEPS_PER_EPOCH],
-            return_2: vec![0.0; STEPS_PER_EPOCH],
+            obs: Vec::with_capacity(STEPS_PER_EPOCH),
+            actions: Vec::with_capacity(STEPS_PER_EPOCH),
+            logprobs: Vec::with_capacity(STEPS_PER_EPOCH),
+            rewards: Vec::with_capacity(STEPS_PER_EPOCH),
+            state_values: Vec::with_capacity(STEPS_PER_EPOCH),
+            advantage: vec![0.0; STEPS_PER_EPOCH],
+            ret: vec![0.0; STEPS_PER_EPOCH],
             path_start_idx: 0,
             ptr: 0,
         }
     }
 
-    fn finish_path(&mut self, value1: f32, value2: f32) {
+    fn finish_path(&mut self, value1: f32) {
         let path_range = self.path_start_idx..self.ptr;
         let idx = self.path_start_idx;
 
         // Agent1
-        let rews = &self.rewards_1[path_range.clone()];
-        let vals = &self.state_values_1[path_range.clone()];
-        compute_gae(&mut self.advantage_1, idx, rews, vals, value1);
-        compute_return(&mut self.return_1, idx, rews, value1);
-
-        // Agent2
-        let rews = &self.rewards_2[path_range.clone()];
-        let vals = &self.state_values_2[path_range];
-        compute_gae(&mut self.advantage_2, idx, rews, vals, value2);
-        compute_return(&mut self.return_2, idx, rews, value2);
+        let rews = &self.rewards[path_range.clone()];
+        let vals = &self.state_values[path_range.clone()];
+        compute_gae(&mut self.advantage[path_range], rews, vals, value1);
+        compute_return(&mut self.ret, idx, rews, value1);
 
         self.path_start_idx = self.ptr;
     }
 
-    fn get_obs(&self) -> Result<Tensor> {
-        Tensor::stack(&self.states.clone(), 0)
-    }
+    /// Returns (obs, action, return, logprob, norm_adv)
+    fn get(&self, device: &Device) -> Result<(Tensor, Tensor, Tensor, Tensor, Tensor)> {
+        let obs = Tensor::stack(&self.obs, 0)?;
 
-    /// Returns (action, return, logprob, norm_adv)
-    fn get_agent1(&self, device: &Device) -> Result<(Tensor, Tensor, Tensor, Tensor)> {
-        let act = Tensor::from_iter(self.actions_1.clone(), device)?;
-        let ret = Tensor::from_iter(self.return_1.clone(), device)?;
-        let logprob = Tensor::from_iter(self.logprobs_1.clone(), device)?;
-        let adv = Tensor::from_iter(self.advantage_1.clone(), device)?;
+        let act = Tensor::from_slice(&self.actions, STEPS_PER_EPOCH, device)?;
+        let ret = Tensor::from_slice(&self.ret, STEPS_PER_EPOCH, device)?;
+        let logprob = Tensor::from_slice(&self.logprobs, STEPS_PER_EPOCH, device)?;
+        let adv = Tensor::from_slice(&self.advantage, STEPS_PER_EPOCH, device)?;
         let norm_adv = normalized_adv(adv)?;
 
-        Ok((act, ret, logprob, norm_adv))
-    }
-
-    /// Returns (action, return, logprob, norm_adv)
-    fn get_agent2(&self, device: &Device) -> Result<(Tensor, Tensor, Tensor, Tensor)> {
-        let act = Tensor::from_iter(self.actions_2.clone(), device)?;
-        let ret = Tensor::from_iter(self.return_2.clone(), device)?;
-        let logprob = Tensor::from_iter(self.logprobs_2.clone(), device)?;
-        let adv = Tensor::from_iter(self.advantage_2.clone(), device)?;
-        let norm_adv = normalized_adv(adv)?;
-
-        Ok((act, ret, logprob, norm_adv))
+        Ok((obs, act, ret, logprob, norm_adv))
     }
 
     fn reset(&mut self) {
-        self.states.clear();
-        self.actions_1.clear();
-        self.actions_2.clear();
-        self.logprobs_1.clear();
-        self.logprobs_2.clear();
-        self.rewards_1.clear();
-        self.rewards_2.clear();
-        self.state_values_1.clear();
-        self.state_values_2.clear();
+        self.obs.clear();
+        self.actions.clear();
+        self.logprobs.clear();
+        self.rewards.clear();
+        self.state_values.clear();
         self.ptr = 0;
         self.path_start_idx = 0;
     }
 
-    fn push_env(&mut self, state: Tensor, rewards: DuelFloat) {
-        self.states.push(state);
-        self.rewards_1.push(rewards.agent1);
-        self.rewards_2.push(rewards.agent2);
+    fn push_agent(&mut self, action: u32, logprob: f32, state_val: f32) {
+        self.actions.push(action);
+        self.logprobs.push(logprob);
+        self.state_values.push(state_val);
+    }
+
+    fn push_env(&mut self, obs: Tensor, reward: f32) {
+        self.obs.push(obs);
+        self.rewards.push(reward);
 
         self.ptr += 1;
     }
-
-    fn push_agent1(&mut self, action: u32, logprob: f32, state_val: f32) {
-        self.actions_1.push(action);
-        self.logprobs_1.push(logprob);
-        self.state_values_1.push(state_val);
-    }
-
-    fn push_agent2(&mut self, action: u32, logprob: f32, state_val: f32) {
-        self.actions_2.push(action);
-        self.logprobs_2.push(logprob);
-        self.state_values_2.push(state_val);
-    }
 }
 
-fn compute_gae(
-    adv_vec: &mut [f32],
-    idx: usize,
-    rewards: &[f32],
-    state_values: &[f32],
-    bootstrap: f32,
-) {
+fn compute_gae(adv_vec: &mut [f32], rewards: &[f32], state_values: &[f32], bootstrap: f32) {
     let len = rewards.len();
 
     let mut last_advantage = rewards[len - 1] + GAMMA * bootstrap - state_values[len - 1];
-    adv_vec[idx + len - 1] = last_advantage;
+    adv_vec[len - 1] = last_advantage;
 
     for t in (0..len - 1).rev() {
         let delta = rewards[t] + GAMMA * state_values[t + 1] - state_values[t];
         last_advantage = delta + GAMMA * GAE_LAMBDA * last_advantage;
-        adv_vec[idx + t] = last_advantage;
+        adv_vec[t] = last_advantage;
     }
 }
 
@@ -258,6 +244,17 @@ impl ActorCritic {
         Ok((action as u32, logp_a, state_val))
     }
 
+    #[allow(dead_code)]
+    /// Step, but only the action
+    fn act(&self, obs: &Tensor, rng: &mut rand::rngs::ThreadRng) -> Result<u32> {
+        let estimates = self.actor.forward(&obs.unsqueeze(0)?)?.detach();
+        let action_probs = softmax(&estimates, D::Minus1)?.squeeze(0)?.detach();
+        let weights = action_probs.to_vec1::<f32>()?;
+        let action = rng.sample(WeightedIndex::new(weights).unwrap());
+
+        Ok(action as u32)
+    }
+
     /// Prob distributions for each state, logp for each action
     /// Unscreeze actions before calling this
     fn pi(&self, obs_batch: &Tensor, actions: &Tensor) -> Result<(Tensor, Tensor)> {
@@ -283,6 +280,9 @@ struct PPOAgent {
     actor_optimizer: AdamW,
     critic_optimizer: AdamW,
 }
+
+unsafe impl Sync for PPOAgent {}
+unsafe impl Send for PPOAgent {}
 
 impl PPOAgent {
     fn new(device: &Device) -> Result<Self> {
@@ -334,119 +334,158 @@ impl PPOAgent {
 
 #[allow(dead_code)]
 pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result<()> {
-    let mut agent1 = PPOAgent::new(&device)?;
-    let mut agent2 = PPOAgent::new(&device)?;
+    let mut trainer_pool = TrainerPool::new();
+    let first_trainer = PPOAgent::new(&device)?;
+    let first_trainer = Trainer {
+        policy: first_trainer.policy.actor,
+        var_map: first_trainer.actor_map,
+    };
+    trainer_pool.push(first_trainer);
 
     let mut rng = rand::rng();
     let mut buffer = RolloutBuffer::new();
 
-    let mut first_episode = true;
+    'challenger_loop: for epoch in 1..EPOCHS + 1 {
+        let mut challenger = PPOAgent::new(&device)?;
+        let mut wins = 0;
+        let mut games = 0;
 
-    for epoch in 1..EPOCHS + 1 {
-        for step in 0..STEPS_PER_EPOCH {
-            let observation = env.obs(&device)?;
-            let actions = take_agent_turns(&agent1, &agent2, &mut buffer, &observation, &mut rng)?;
+        let min_games = MIN_ROUNDS_PER_TRAINER * trainer_pool.count();
+        let max_games = MAX_ROUNDS_PER_TRAINER * trainer_pool.count();
 
-            // Update environment
-            let (terminal, rewards) = env.step(actions);
-            buffer.push_env(observation, rewards);
+        while (wins as f32 / games as f32) < WINRATE_THRESH
+            || games < min_games
+        {
+            for trainer in trainer_pool.iter() {
+                let (new_wins, new_games) = fight_trainer(
+                    epoch,
+                    &start,
+                    &mut env,
+                    &challenger,
+                    &trainer,
+                    &mut buffer,
+                    &device,
+                    &mut rng,
+                )?;
+                update_challenger(&mut challenger, &mut buffer, &device)?;
 
-            let epoch_ended = step == STEPS_PER_EPOCH - 1;
+                wins += new_wins;
+                games += new_games;
+            }
 
-            if terminal || epoch_ended {
-                let (v1, v2) = if !terminal {
-                    let last_obs = env.obs(&device)?;
-                    let (_, _, v1) = agent1.policy.step(&last_obs, &mut rng)?;
-                    let (_, _, v2) = agent2.policy.step(&last_obs, &mut rng)?;
-                    (v1, v2)
-                } else {
-                    (0.0, 0.0)
-                };
-
-                buffer.finish_path(v1, v2);
-
-                if first_episode && epoch % EPOCH_PRINT_STEP == 0 {
-                    first_episode = false;
-
-                    env.display(epoch, start.elapsed());
-                }
-
-                if epoch_ended && epoch % SAVE_INTERVAL == 0 {
-                    agent1.save(AGENT1_OUTPUT_PATH)?;
-                    agent2.save(AGENT2_OUTPUT_PATH)?;
-                }
-
-                env.reset();
+            println!("Games: {games}, winrate: {}", wins as f32 / games as f32);
+            if games >= max_games {
+                println!("WARNING: Abandoning challenger");
+                continue 'challenger_loop;
             }
         }
 
-        update_agents(&mut agent1, &mut agent2, &mut buffer, &device)?;
-        first_episode = true;
+        if epoch % SAVE_INTERVAL == 0 {
+            challenger.save(AGENT_OUTPUT_PATH)?;
+        }
 
-        env.reset();
+        let new_trainer = Trainer {
+            policy: challenger.policy.actor,
+            var_map: challenger.actor_map,
+        };
+        trainer_pool.push(new_trainer);
     }
 
     println!("Completed in {:?} secs", start.elapsed());
-    agent1.save(AGENT1_OUTPUT_PATH)?;
-    agent2.save(AGENT2_OUTPUT_PATH)?;
+    let best_trainer = trainer_pool.get_best();
+    save_model(&best_trainer.var_map, AGENT_OUTPUT_PATH)?;
     Ok(())
 }
 
-fn take_agent_turns(
-    agent1: &PPOAgent,
-    agent2: &PPOAgent,
+/// Returns (wins, games)
+fn fight_trainer(
+    epoch: usize,
+    start: &Instant,
+    env: &mut Environment,
+    challenger: &PPOAgent,
+    trainer: &Trainer,
     buffer: &mut RolloutBuffer,
-    observation: &Tensor,
+    device: &Device,
+    rng: &mut ThreadRng,
+) -> Result<(usize, usize)> {
+    let mut wins = 0;
+    let mut games = 0;
+
+    for step in 0..STEPS_PER_EPOCH {
+        let (obs, obs_inv) = env.obs_with_inv(&device)?;
+        let actions = take_agent_turns(&challenger, trainer, buffer, &obs, &obs_inv, rng)?;
+
+        // Update environment
+        let (terminal, rewards) = env.step(actions);
+        buffer.push_env(obs, rewards.agent1);
+
+        let epoch_ended = step == STEPS_PER_EPOCH - 1;
+
+        if terminal || epoch_ended {
+            let v1 = if !terminal {
+                let last_obs = env.obs(&device)?;
+                let (_, _, v1) = challenger.policy.step(&last_obs, rng)?;
+                v1
+            } else {
+                0.0
+            };
+
+            if env.agent1_winner() {
+                wins += 1;
+            }
+            if terminal {
+                games += 1;
+                if epoch % EPOCH_PRINT_STEP == 0 {
+                    env.display(epoch, start.elapsed());
+                }
+            }
+
+            buffer.finish_path(v1);
+            env.reset();
+        }
+    }
+
+    Ok((wins, games))
+}
+
+fn take_agent_turns(
+    challenger: &PPOAgent,
+    trainer: &Trainer,
+    buffer: &mut RolloutBuffer,
+    obs: &Tensor,
+    obs_inv: &Tensor,
     rng: &mut ThreadRng,
 ) -> Result<(u32, u32)> {
-    let (action1, logprob, state_val) = agent1.policy.step(observation, rng)?;
-    buffer.push_agent1(action1, logprob, state_val);
-    let (action2, logprob, state_val) = agent2.policy.step(observation, rng)?;
-    buffer.push_agent2(action2, logprob, state_val);
+    let (action1, logprob, state_val) = challenger.policy.step(&obs, rng)?;
+    buffer.push_agent(action1, logprob, state_val);
+    let action2 = get_agent_action(&trainer.policy, &obs_inv, rng)?;
 
     Ok((action1, action2))
 }
 
-fn update_agents(
-    agent1: &mut PPOAgent,
-    agent2: &mut PPOAgent,
+fn update_challenger(
+    challenger: &mut PPOAgent,
     buffer: &mut RolloutBuffer,
     device: &Device,
 ) -> Result<()> {
-    let obs_batch = buffer.get_obs()?;
-
-    let data = buffer.get_agent1(device)?;
-    update_single_agent(agent1, &obs_batch, data)?;
-
-    let data = buffer.get_agent2(device)?;
-    update_single_agent(agent2, &obs_batch, data)?;
-
-    buffer.reset();
-
-    Ok(())
-}
-
-fn update_single_agent(
-    agent: &mut PPOAgent,
-    obs_batch: &Tensor,
-    data: (Tensor, Tensor, Tensor, Tensor),
-) -> Result<()> {
-    let (actions, ret, logp_old, adv) = data;
+    let (obs_batch, actions, ret, logp_old, adv) = buffer.get(device)?;
     let actions = actions.unsqueeze(1)?;
 
     for _ in 0..K_EPOCHS {
-        let (loss_pi, kl) = agent.compute_loss_pi(obs_batch, &actions, &adv, &logp_old)?;
+        let (loss_pi, kl) = challenger.compute_loss_pi(&obs_batch, &actions, &adv, &logp_old)?;
         if kl > 1.5 * TARGET_KL {
             break;
         }
 
-        agent.actor_optimizer.backward_step(&loss_pi)?;
+        challenger.actor_optimizer.backward_step(&loss_pi)?;
     }
 
     for _ in 0..K_EPOCHS {
-        let loss_v = agent.compute_loss_v(obs_batch, &ret)?;
-        agent.critic_optimizer.backward_step(&loss_v)?;
+        let loss_v = challenger.compute_loss_v(&obs_batch, &ret)?;
+        challenger.critic_optimizer.backward_step(&loss_v)?;
     }
+
+    buffer.reset();
 
     Ok(())
 }
@@ -457,3 +496,85 @@ pub fn get_agent_action(agent: &Sequential, obs: &Tensor, rng: &mut ThreadRng) -
     let weights = action_probs.to_vec1::<f32>()?;
     Ok(rng.sample(WeightedIndex::new(weights).unwrap()) as u32)
 }
+
+//----------------//
+/* Multithreading */
+//----------------//
+
+// struct SimulatorPool {
+//     /// (Wins, games, training data)
+//     receivers: Vec<mpsc::Receiver<(usize, usize, Box<RolloutBuffer>)>>,
+//     /// (Challenger, Trainer)
+//     senders: Vec<mpsc::Sender<(Arc<VarMap>, Arc<VarMap>)>>,
+//     barrier: Arc<Barrier>,
+// }
+
+// impl SimulatorPool {
+//     fn new(context: Arc<GameContext>, device: Arc<Device>) -> Self {
+//         let barrier = Arc::new(Barrier::new(MAX_POOL_SIZE + 1));
+//         let mut receivers = Vec::with_capacity(MAX_POOL_SIZE);
+//         let mut senders = Vec::with_capacity(MAX_POOL_SIZE);
+
+//         for _ in 0..MAX_POOL_SIZE {
+//             let (local_tx, thread_rx) = mpsc::channel();
+//             let (thread_tx, local_rx) = mpsc::channel();
+//             let barrier = barrier.clone();
+//             let context = context.clone();
+//             let device = device.clone();
+
+//             receivers.push(local_rx);
+//             senders.push(local_tx);
+
+//             thread::spawn(move || simulator_thread(context, thread_rx, thread_tx, barrier, device));
+
+//         }
+
+//         Self {
+//             receivers,
+//             senders,
+//             barrier,
+//         }
+//     }
+
+//     fn train_challenger(&self, challenger: Arc<RwLock<PPOAgent>>, trainers: &mut TrainerPool) {
+//         for tx in &self.senders {
+
+//         }
+//     }
+// }
+
+// fn simulator_thread(
+//     context: Arc<GameContext>,
+//     receiver: mpsc::Receiver<(Arc<VarMap>, Arc<VarMap>)>,
+//     sender: mpsc::Sender<(usize, usize, Box<RolloutBuffer>)>,
+//     barrier: Arc<Barrier>,
+//     device: Arc<Device>,
+// ) {
+//     let (h1, player1_inputs) = input::new_inputs(PLAYER1_BUTTONS, PLAYER1_DIRECTIONS);
+//     let (h2, player2_inputs) = input::new_inputs(PLAYER2_BUTTONS, PLAYER2_DIRECTIONS);
+//     let player1 = character::State::new(0.0, FPoint::new(0.0, 0.0), Side::Left);
+//     let player2 = character::State::new(0.0, FPoint::new(0.0, 0.0), Side::Left);
+
+//     let mut state = GameState { player1_inputs, player2_inputs, player1, player2 };
+//     let mut inputs = PlayerInputs { player1: h1, player2: h2 };
+
+
+//     let mut rng = rand::rng();
+//     let mut env = Environment::new(&context, &mut inputs, &mut state);
+
+//     loop {
+//         let Ok((actor, critic, trainer)) = receiver.recv() else {
+//             return;
+//         };
+
+//         let challenger = ActorCritic::from_var_maps(challenger);
+//         let trainer = ActorCritic::from_var_map(&trainer);
+//         let mut buffer = Box::new(RolloutBuffer::new());
+
+//         let (wins, games) = fight_trainer(&mut env, &challenger, trainer, &mut buffer, &device, &mut rng).unwrap();
+
+//         sender.send((wins, games, buffer)).unwrap();
+
+//         barrier.wait();
+//     }
+// }

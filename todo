@@ -23,4 +23,5 @@
 [ ] Gameplay balance
 [ ] Better animations
 
-[ ] Penalty on lack of recent damage
+[ ] Workers run the simulations of challenger vs trainers matches using a RWLock on the PPOAgent
+    - They return a Boxed ReplayBuffer, and that is used to update the PPOAgent
