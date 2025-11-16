@@ -12,7 +12,7 @@ const AGENT1_OUTPUT_PATH: &str = "./ai/ppo_agent1_weights_NEW.safetensors";
 const AGENT2_OUTPUT_PATH: &str = "./ai/ppo_agent2_weights_NEW.safetensors";
 const SAVE_INTERVAL: usize = 500;
 
-const OPPONENT_FREEZE_EPOCHS: usize = 25;
+const OPPONENT_FREEZE_EPOCHS: usize = 50;
 const EPOCHS: usize = 10_000;
 const STEPS_PER_EPOCH: usize = 6_000;
 const HIDDEN_COUNT: usize = 256;
