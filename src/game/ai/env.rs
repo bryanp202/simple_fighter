@@ -6,7 +6,7 @@ use sdl3::render::FPoint;
 
 use crate::game::{
     GameContext, GameState, PlayerInputs, Side,
-    ai::{DuelFloat, observation_with_inv, serialize_observation, take_agent_turn},
+    ai::{DuelFloat, serialize_observation, take_agent_turn},
     scene::gameplay::{GameplayScene, during_round::DuringRound},
 };
 
@@ -90,14 +90,6 @@ impl<'a> Environment<'a> {
     pub fn obs(&self, device: &Device) -> Result<Tensor> {
         let timer = self.scene.timer();
         serialize_observation(self.context, self.state, timer, device)
-    }
-
-    /// Returns the state obs tensor with (player1 first in vec, player2 first in vec)
-    ///
-    /// Used so that the critic can have a common reference point to evaluate states in AC algorithms
-    pub fn obs_with_inv(&self, device: &Device) -> Result<(Tensor, Tensor)> {
-        let timer = self.scene.timer();
-        observation_with_inv(self.context, self.state, timer, device)
     }
 
     pub fn step(&mut self, actions: (u32, u32)) -> (bool, DuelFloat) {

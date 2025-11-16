@@ -121,29 +121,6 @@ fn copy_var_map(source: &VarMap, destination: &mut VarMap) -> Result<()> {
     Ok(())
 }
 
-fn observation_with_inv(
-    context: &GameContext,
-    state: &GameState,
-    timer: f32,
-    device: &Device,
-) -> Result<(Tensor, Tensor)> {
-    let player1_state: PlayerSerial = state.player1.serialize(&context.player1, &context.stage);
-    let player2_state: PlayerSerial = state.player2.serialize(&context.player2, &context.stage);
-
-    let agent1 = _serialize_observation(
-        context,
-        state,
-        timer,
-        player1_state,
-        player2_state,
-        device,
-    )?;
-    let agent2 =
-        _serialize_observation(context, state, timer, player2_state, player1_state, device)?;
-
-    Ok((agent1, agent2))
-}
-
 fn _serialize_observation(
     context: &GameContext,
     state: &GameState,
