@@ -352,6 +352,11 @@ pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result
         let min_games = MIN_ROUNDS_PER_TRAINER * trainer_pool.count();
 
         while (wins as f32 / games as f32) < WINRATE_THRESH || games < min_games {
+            if games >= MAX_GAMES {
+                println!("WARNING: Abandoning challenger");
+                continue 'challenger_loop;
+            }
+
             for trainer in trainer_pool.iter() {
                 let (new_wins, new_games) = fight_trainer(
                     epoch,
@@ -370,10 +375,6 @@ pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result
             }
 
             println!("Games: {games}, winrate: {}", wins as f32 / games as f32);
-            if games >= MAX_GAMES {
-                println!("WARNING: Abandoning challenger");
-                continue 'challenger_loop;
-            }
         }
 
         if epoch % SAVE_INTERVAL == 0 {
