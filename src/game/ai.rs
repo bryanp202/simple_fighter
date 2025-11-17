@@ -9,6 +9,8 @@ use crate::game::{
     ai::env::Environment,
     input::{ButtonFlag, Direction, InputHistory, Inputs},
 };
+
+mod training;
 mod dqn;
 mod env;
 mod ppo;
@@ -46,7 +48,7 @@ pub fn train(
     let env = Environment::new(context, inputs, state);
     let device = Device::cuda_if_available(0).unwrap_or(Device::Cpu);
     let start = Instant::now();
-    ppo::train(env, device, start)
+    training::trainer_pool(env, device, start)
 }
 
 pub fn load_model(filepath: &str, device: &Device) -> Result<(VarMap, Sequential)> {
