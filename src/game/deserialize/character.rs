@@ -24,14 +24,6 @@ pub fn deserialize<'a>(
     let character_json: CharacterJson =
         serde_json::from_str(&src).map_err(|err| format!("Failed to parse: '{config}': {err}"))?;
 
-    let mut animation_data = Vec::new();
-    for mov in &character_json.moves {
-        let new_animation = mov
-            .animation
-            .make_animation(texture_creator, global_textures)?;
-        animation_data.push(new_animation);
-    }
-
     let move_names_to_pos: HashMap<_, _> = character_json
         .moves
         .iter()
@@ -39,18 +31,10 @@ pub fn deserialize<'a>(
         .map(|(i, mov)| (mov.name.as_str(), i))
         .collect();
 
+    let mut state_data = Vec::new();
+
     let mut hit_box_data = Vec::new();
     let mut hurt_box_data = Vec::new();
-    let mut collision_box_data = Vec::new();
-
-    let mut inputs = Vec::new();
-    let mut hit_boxes_start = Vec::new();
-    let mut hurt_boxes_start = Vec::new();
-    let mut start_behaviors = Vec::new();
-    let mut flags = Vec::new();
-    let mut end_behaviors = Vec::new();
-    let mut cancel_options = Vec::new();
-    let mut cancel_windows = Vec::new();
 
     let mut run_length_hit_boxes = Vec::new();
     let mut run_length_hurt_boxes = Vec::new();
@@ -60,32 +44,29 @@ pub fn deserialize<'a>(
     let mut hurt_box_offset = 0usize;
     let mut cancel_options_offset = 0usize;
     for mov in &character_json.moves {
-        append_hit_box_data(
+        let hit_boxes_start = append_hit_box_data(
             mov,
             &mut hit_box_data,
             &mut run_length_hit_boxes,
-            &mut hit_boxes_start,
             &mut hit_box_offset,
         )?;
-        append_hurt_box_data(
+        let hurt_boxes_start = append_hurt_box_data(
             mov,
             &mut hurt_box_data,
             &mut run_length_hurt_boxes,
-            &mut hurt_boxes_start,
             &mut hurt_box_offset,
         )?;
-        append_cancel_options_data(
+        let cancel_options = append_cancel_options_data(
             mov,
             &move_names_to_pos,
-            &mut cancel_options,
             &mut run_length_cancel_options,
             &mut cancel_options_offset,
         )?;
-        inputs.push(mov.input.to_move_input());
-        collision_box_data.push(mov.collision_box.to_collision_box());
-        start_behaviors.push(mov.start_behavior.to_start_behavior());
+        let input = mov.input.to_move_input();
+        let collision = mov.collision_box.to_collision_box();
+        let start_behaviors = mov.start_behavior.to_start_behavior();
 
-        let conv_end_beh = mov
+        let end_behaviors = mov
             .end_behavior
             .to_end_behavior(&move_names_to_pos)
             .map_err(|missing_move| {
@@ -94,15 +75,18 @@ pub fn deserialize<'a>(
                     mov.name, missing_move
                 )
             })?;
-        end_behaviors.push(conv_end_beh);
 
-        let conv_flags = mov.flags.iter().fold(StateFlags::NONE, |flags, next| {
+        let flags = mov.flags.iter().fold(StateFlags::NONE, |flags, next| {
             flags.union(next.to_state_json())
         });
-        flags.push(conv_flags);
 
-        let conv_cancel_range = mov.cancel_window.to_range();
-        cancel_windows.push(conv_cancel_range);
+        let cancel_window = mov.cancel_window.to_range();
+
+        let animation = mov
+            .animation
+            .make_animation(texture_creator, global_textures)?;
+
+        state_data.push(StateData::new(input, cancel_window, cancel_options, hit_boxes_start, hurt_boxes_start, start_behaviors, flags, end_behaviors, collision, animation));
     }
 
     let Some(&block_stun_state) = move_names_to_pos.get(character_json.block_stun_state.as_str())
@@ -138,23 +122,12 @@ pub fn deserialize<'a>(
         block_stun_state,
         ground_hit_state,
         launch_hit_state,
-        StateData::new(
-            inputs,
-            cancel_windows,
-            cancel_options,
-            hit_boxes_start,
-            hurt_boxes_start,
-            start_behaviors,
-            flags,
-            end_behaviors,
-            run_length_hit_boxes,
-            run_length_hurt_boxes,
-            run_length_cancel_options,
-            hit_box_data,
-            hurt_box_data,
-            collision_box_data,
-            animation_data,
-        ),
+        run_length_hit_boxes,
+        run_length_hurt_boxes,
+        run_length_cancel_options,
+        hit_box_data,
+        hurt_box_data,
+        state_data,
     );
     let state = character::State::new(character_json.hp as f32, start_pos, start_side);
 
@@ -165,10 +138,9 @@ fn append_hit_box_data(
     mov: &MoveJson,
     hit_box_data: &mut Vec<HitBox>,
     run_length_hit_boxes: &mut Vec<(usize, Range<usize>)>,
-    hit_boxes_start: &mut Vec<usize>,
     offset: &mut usize,
-) -> Result<(), String> {
-    hit_boxes_start.push(run_length_hit_boxes.len());
+) -> Result<usize, String> {
+    let hit_boxes_start = run_length_hit_boxes.len();
 
     for pair in mov.hit_boxes.windows(2) {
         let first = &pair[0];
@@ -191,17 +163,16 @@ fn append_hit_box_data(
         run_length_hit_boxes.push((usize::MAX, range));
     }
 
-    Ok(())
+    Ok(hit_boxes_start)
 }
 
 fn append_hurt_box_data(
     mov: &MoveJson,
     hurt_box_data: &mut Vec<HurtBox>,
     run_length_hurt_boxes: &mut Vec<(usize, Range<usize>)>,
-    hurt_boxes_start: &mut Vec<usize>,
     offset: &mut usize,
-) -> Result<(), String> {
-    hurt_boxes_start.push(run_length_hurt_boxes.len());
+) -> Result<usize, String> {
+    let hurt_boxes_start = run_length_hurt_boxes.len();
 
     for pair in mov.hurt_boxes.windows(2) {
         let first = &pair[0];
@@ -224,19 +195,17 @@ fn append_hurt_box_data(
         run_length_hurt_boxes.push((usize::MAX, range));
     }
 
-    Ok(())
+    Ok(hurt_boxes_start)
 }
 
 fn append_cancel_options_data(
     mov: &MoveJson,
     map: &HashMap<&str, usize>,
-    cancel_options: &mut Vec<Range<usize>>,
     run_length_cancel_options: &mut Vec<usize>,
     offset: &mut usize,
-) -> Result<(), String> {
+) -> Result<Range<usize>, String> {
     let range = *offset..*offset + mov.cancel_options.len();
     *offset += mov.cancel_options.len();
-    cancel_options.push(range);
 
     for cancel_option in &mov.cancel_options {
         let index = map
@@ -244,7 +213,7 @@ fn append_cancel_options_data(
             .ok_or_else(|| format!("Could not find a move named: {cancel_option}"))?;
         run_length_cancel_options.push(*index);
     }
-    Ok(())
+    Ok(range)
 }
 
 fn get_running_length_duration(

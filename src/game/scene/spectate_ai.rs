@@ -3,7 +3,7 @@ use candle_nn::VarMap;
 
 use crate::game::{
     GameContext, GameState, PlayerInputs,
-    ai::{get_agent_action, load_model, serialize_observation, take_agent_turn},
+    ai::{get_agent_action, load_model, observation_with_inv, take_agent_turn},
     scene::{
         Scene, Scenes,
         gameplay::{GameplayScene, GameplayScenes},
@@ -35,15 +35,15 @@ impl Scene for SpectateAi {
     ) -> std::io::Result<()> {
         if let GameplayScenes::DuringRound(during_round) = &self.scene {
             let timer = during_round.timer();
-            let observation = serialize_observation(context, state, timer, &self.device)
+            let (obs, obs_inv) = observation_with_inv(context, state, timer, &self.device)
                 .expect("Model failed to observe environment");
 
             // Agent1
-            let action = get_agent_action(&self.ai_agent1, &observation, &mut self.rng)
+            let action = get_agent_action(&self.ai_agent1, &obs, &mut self.rng)
                 .expect("Failed to get agent action");
             take_agent_turn(&mut inputs.player1, &mut state.player1_inputs, action);
             // Agent2
-            let action = get_agent_action(&self.ai_agent2, &observation, &mut self.rng)
+            let action = get_agent_action(&self.ai_agent2, &obs_inv, &mut self.rng)
                 .expect("Failed to get agent action");
             take_agent_turn(&mut inputs.player2, &mut state.player2_inputs, action);
         }

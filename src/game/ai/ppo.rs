@@ -6,12 +6,16 @@ use candle_nn::{
 };
 use rand::{Rng, distr::weighted::WeightedIndex, rngs::ThreadRng};
 
-use crate::game::ai::{ACTION_SPACE, STATE_VECTOR_LEN, env::Environment, save_model};
+use crate::game::{
+    Side,
+    ai::{ACTION_SPACE, STATE_VECTOR_LEN, env::Environment, save_model},
+};
 
-const AGENT_OUTPUT_PATH: &str = "./ai/ppo/weights_NEW.safetensors";
-const SAVE_INTERVAL: usize = 8;
+const BEST_AGENT_OUTPUT_PATH: &str = "./ai/ppo/best_NEW.safetensors";
+const RUNNER_UP_OUTPUT_PATH: &str = "./ai/ppo/runner_up_NEW.safetensors";
+const SAVE_INTERVAL: usize = 1;
 
-const EPOCHS: usize = 256;
+const EPOCHS: usize = 32;
 const STEPS_PER_EPOCH: usize = 8_000;
 const HIDDEN_COUNT: usize = 256;
 const LEARNING_RATE_ACTOR: f64 = 0.00005;
@@ -23,10 +27,11 @@ const GAE_LAMBDA: f32 = 0.97;
 const TARGET_KL: f32 = 0.01;
 
 const MAX_POOL_SIZE: usize = 16;
-const WINRATE_THRESH: f32 = 0.55;
-const MIN_ROUNDS_PER_TRAINER: usize = 4;
+const WINRATE_THRESH: f32 = 0.60;
+const WINRATE_WINDOW: usize = 32;
+const MIN_ROUNDS_PER_TRAINER: usize = 8;
 const MAX_GAMES: usize = 2048;
-const EPOCH_PRINT_STEP: usize = EPOCHS / 100;
+const EPOCH_PRINT_STEP: usize = 0;
 
 struct Trainer {
     policy: Sequential,
@@ -59,8 +64,11 @@ impl TrainerPool {
         self.trainers.len()
     }
 
-    fn get_best(&self) -> &Trainer {
-        self.trainers.front().unwrap()
+    fn get_best(&self) -> (&Trainer, &Trainer) {
+        (
+            self.trainers.get(0).unwrap(),
+            self.trainers.get(1).unwrap()
+        )
     }
 }
 
@@ -343,42 +351,58 @@ pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result
 
     let mut rng = rand::rng();
     let mut buffer = RolloutBuffer::new();
+    let mut game_history = GameHistory::new();
 
     'challenger_loop: for epoch in 1..EPOCHS + 1 {
         let mut challenger = PPOAgent::new(&device)?;
-        let mut wins = 0;
-        let mut games = 0;
 
         let min_games = MIN_ROUNDS_PER_TRAINER * trainer_pool.count();
 
-        while (wins as f32 / games as f32) < WINRATE_THRESH || games < min_games {
-            if games >= MAX_GAMES {
-                println!("WARNING: Abandoning challenger");
-                continue 'challenger_loop;
+        while game_history.total_games() < min_games || game_history.win_rate() < WINRATE_THRESH {
+            if game_history.total_games() >= MAX_GAMES {
+                if trainer_pool.count() < MAX_POOL_SIZE {
+                    println!("WARNING: Adding subpar trainer to the pool");
+                    break;
+                } else {
+                    println!("WARNING: Abandoning challenger");
+                    game_history.clear();
+                    continue 'challenger_loop;
+                }
             }
+            let mut wins = 0;
+            let challenger_side = if epoch.is_multiple_of(2) {
+                Side::Left
+            } else {
+                Side::Right
+            };
 
             for trainer in trainer_pool.iter() {
-                let (new_wins, new_games) = fight_trainer(
+                let round_score = fight_trainer(
                     epoch,
                     &start,
+                    challenger_side,
                     &mut env,
                     &challenger,
-                    &trainer,
+                    trainer,
                     &mut buffer,
                     &device,
                     &mut rng,
                 )?;
                 update_challenger(&mut challenger, &mut buffer, &device)?;
-
-                wins += new_wins;
-                games += new_games;
+                wins += round_score;
             }
 
-            println!("Games: {games}, winrate: {}", wins as f32 / games as f32);
+            game_history.push(wins, trainer_pool.count());
+            println!(
+                "Rounds: {}, WindowRounds: {}, winrate: {}",
+                game_history.total_games(),
+                game_history.window_games(),
+                game_history.win_rate()
+            );
         }
 
-        if epoch % SAVE_INTERVAL == 0 {
-            challenger.save(AGENT_OUTPUT_PATH)?;
+        if epoch.is_multiple_of(SAVE_INTERVAL) {
+            challenger.save(BEST_AGENT_OUTPUT_PATH)?;
         }
 
         let new_trainer = Trainer {
@@ -386,11 +410,13 @@ pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result
             var_map: challenger.actor_map,
         };
         trainer_pool.push(new_trainer);
+        game_history.clear();
     }
 
     println!("Completed in {:?} secs", start.elapsed());
-    let best_trainer = trainer_pool.get_best();
-    save_model(&best_trainer.var_map, AGENT_OUTPUT_PATH)?;
+    let (best, runner_up) = trainer_pool.get_best();
+    save_model(&best.var_map, BEST_AGENT_OUTPUT_PATH)?;
+    save_model(&runner_up.var_map, RUNNER_UP_OUTPUT_PATH)?;
     Ok(())
 }
 
@@ -398,51 +424,55 @@ pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result
 fn fight_trainer(
     epoch: usize,
     start: &Instant,
+    challenger_side: Side,
     env: &mut Environment,
     challenger: &PPOAgent,
     trainer: &Trainer,
     buffer: &mut RolloutBuffer,
     device: &Device,
     rng: &mut ThreadRng,
-) -> Result<(usize, usize)> {
+) -> Result<usize> {
     let mut wins = 0;
-    let mut games = 0;
+    let mut loses = 0;
 
     for step in 0..STEPS_PER_EPOCH {
-        let (obs, obs_inv) = env.obs_with_inv(&device)?;
-        let actions = take_agent_turns(&challenger, trainer, buffer, &obs, &obs_inv, rng)?;
+        let (obs, obs_inv) = env.obs_with_inv(device)?;
+        let actions = take_agent_turns(challenger, trainer, buffer, &obs, &obs_inv, rng)?;
 
         // Update environment
         let (terminal, rewards) = env.step(actions);
         buffer.push_env(obs, rewards.agent1);
 
         let epoch_ended = step == STEPS_PER_EPOCH - 1;
-
         if terminal || epoch_ended {
             let v1 = if !terminal {
-                let last_obs = env.obs(&device)?;
+                let last_obs = env.obs(device)?;
                 let (_, _, v1) = challenger.policy.step(&last_obs, rng)?;
                 v1
             } else {
                 0.0
             };
 
-            if env.agent1_winner() {
-                wins += 1;
-            }
             if terminal {
-                games += 1;
-                if epoch % EPOCH_PRINT_STEP == 0 {
+                if env.agent1_winner() {
+                    wins += 1;
+                } else {
+                    loses += 1;
+                }                
+
+                if epoch.is_multiple_of(EPOCH_PRINT_STEP) {
                     env.display(epoch, start.elapsed());
                 }
             }
 
             buffer.finish_path(v1);
-            env.reset();
+            env.reset_on_side(challenger_side);
         }
     }
 
-    Ok((wins, games))
+    // Check if more wins than loses
+    let more_wins = wins > loses;
+    Ok(more_wins as usize)
 }
 
 fn take_agent_turns(
@@ -453,9 +483,9 @@ fn take_agent_turns(
     obs_inv: &Tensor,
     rng: &mut ThreadRng,
 ) -> Result<(u32, u32)> {
-    let (action1, logprob, state_val) = challenger.policy.step(&obs, rng)?;
+    let (action1, logprob, state_val) = challenger.policy.step(obs, rng)?;
     buffer.push_agent(action1, logprob, state_val);
-    let action2 = get_agent_action(&trainer.policy, &obs_inv, rng)?;
+    let action2 = get_agent_action(&trainer.policy, obs_inv, rng)?;
 
     Ok((action1, action2))
 }
@@ -492,6 +522,55 @@ pub fn get_agent_action(agent: &Sequential, obs: &Tensor, rng: &mut ThreadRng) -
     let action_probs = softmax(&estimates, D::Minus1)?.squeeze(0)?.detach();
     let weights = action_probs.to_vec1::<f32>()?;
     Ok(rng.sample(WeightedIndex::new(weights).unwrap()) as u32)
+}
+
+struct GameHistory {
+    history: VecDeque<(usize, usize)>,
+    wins: usize,
+    window_games: usize,
+    total_games: usize,
+}
+
+impl GameHistory {
+    fn new() -> Self {
+        Self {
+            history: VecDeque::with_capacity(WINRATE_WINDOW),
+            wins: 0,
+            window_games: 0,
+            total_games: 0,
+        }
+    }
+
+    fn push(&mut self, wins: usize, games: usize) {
+        if self.history.len() > WINRATE_WINDOW {
+            let (wins, games) = self.history.pop_back().unwrap();
+            self.wins -= wins;
+            self.window_games -= games;
+        }
+        self.history.push_front((wins, games));
+        self.wins += wins;
+        self.window_games += games;
+        self.total_games += games;
+    }
+
+    fn total_games(&self) -> usize {
+        self.total_games
+    }
+
+    fn window_games(&self) -> usize {
+        self.window_games
+    }
+
+    fn win_rate(&self) -> f32 {
+        self.wins as f32 / self.window_games as f32
+    }
+
+    fn clear(&mut self) {
+        self.window_games = 0;
+        self.wins = 0;
+        self.total_games = 0;
+        self.history.clear();
+    }
 }
 
 //----------------//

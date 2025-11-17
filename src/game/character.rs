@@ -26,66 +26,50 @@ const MIN_COMBO_SCALING: f32 = 0.1;
 
 pub struct StateData {
     // Input
-    inputs: Vec<MoveInput>,
+    input: MoveInput,
     // Animation data: The state number points to the animation in the character
     // Cancel data
-    cancel_windows: Vec<Range<usize>>,
-    cancel_options: Vec<Range<usize>>,
+    cancel_window: Range<usize>,
+    cancel_options: Range<usize>,
     // Boxes
-    hit_boxes_start: Vec<usize>,
-    hurt_boxes_start: Vec<usize>,
+    hit_boxes_start: usize,
+    hurt_boxes_start: usize,
     // Behavior
-    start_behaviors: Vec<StartBehavior>,
-    flags: Vec<StateFlags>,
-    end_behaviors: Vec<EndBehavior>,
+    start_behaviors: StartBehavior,
+    flags: StateFlags,
+    end_behaviors: EndBehavior,
 
-    // Run length stuff
-    run_length_hit_boxes: Vec<(usize, Range<usize>)>, // Frames active, global hitboxes index range
-    run_length_hurt_boxes: Vec<(usize, Range<usize>)>, // Frames active, global hurtboxes index range
-    run_length_cancel_options: Vec<StateIndex>,
+    // Physics
+    collision: CollisionBox,
 
-    hit_box_data: Vec<HitBox>,
-    hurt_box_data: Vec<HurtBox>,
-    collision_box_data: Vec<CollisionBox>,
-
-    // Render Data
-    animation_data: Vec<Animation>,
+    // Render
+    animation: Animation,
 }
 
 impl StateData {
     pub fn new(
-        inputs: Vec<MoveInput>,
-        cancel_windows: Vec<Range<usize>>,
-        cancel_options: Vec<Range<usize>>,
-        hit_boxes_start: Vec<usize>,
-        hurt_boxes_start: Vec<usize>,
-        start_behaviors: Vec<StartBehavior>,
-        flags: Vec<StateFlags>,
-        end_behaviors: Vec<EndBehavior>,
-        run_length_hit_boxes: Vec<(usize, Range<usize>)>,
-        run_length_hurt_boxes: Vec<(usize, Range<usize>)>,
-        run_length_cancel_options: Vec<StateIndex>,
-        hit_box_data: Vec<HitBox>,
-        hurt_box_data: Vec<HurtBox>,
-        collision_box_data: Vec<CollisionBox>,
-        animation_data: Vec<Animation>,
+        input: MoveInput,
+        cancel_window: Range<usize>,
+        cancel_options: Range<usize>,
+        hit_boxes_start: usize,
+        hurt_boxes_start: usize,
+        start_behaviors: StartBehavior,
+        flags: StateFlags,
+        end_behaviors: EndBehavior,
+        collision: CollisionBox,
+        animation: Animation,
     ) -> Self {
         Self {
-            inputs,
-            cancel_windows,
+            input,
+            cancel_window,
             cancel_options,
             hit_boxes_start,
             hurt_boxes_start,
             start_behaviors,
             flags,
             end_behaviors,
-            run_length_hit_boxes,
-            run_length_hurt_boxes,
-            run_length_cancel_options,
-            hit_box_data,
-            hurt_box_data,
-            collision_box_data,
-            animation_data,
+            collision,
+            animation,
         }
     }
 }
@@ -103,7 +87,15 @@ pub struct Context {
     launch_hit_state: StateIndex,
 
     // Moves/states
-    states: StateData,
+    states: Vec<StateData>,
+
+    // Run length stuff
+    run_length_hit_boxes: Vec<(usize, Range<usize>)>, // Frames active, global hitboxes index range
+    run_length_hurt_boxes: Vec<(usize, Range<usize>)>, // Frames active, global hurtboxes index range
+    run_length_cancel_options: Vec<StateIndex>,
+
+    hit_box_data: Vec<HitBox>,
+    hurt_box_data: Vec<HurtBox>,
 }
 
 impl Context {
@@ -115,7 +107,12 @@ impl Context {
         block_stun_state: StateIndex,
         ground_hit_state: StateIndex,
         launch_hit_state: StateIndex,
-        states: StateData,
+        run_length_hit_boxes: Vec<(usize, Range<usize>)>,
+        run_length_hurt_boxes: Vec<(usize, Range<usize>)>,
+        run_length_cancel_options: Vec<StateIndex>,
+        hit_box_data: Vec<HitBox>,
+        hurt_box_data: Vec<HurtBox>,
+        states: Vec<StateData>,
     ) -> Self {
         Self {
             name,
@@ -125,19 +122,25 @@ impl Context {
             block_stun_state,
             ground_hit_state,
             launch_hit_state,
+
             states,
+            run_length_hit_boxes,
+            run_length_hurt_boxes,
+            run_length_cancel_options,
+            hit_box_data,
+            hurt_box_data,
         }
     }
 }
 
 impl Context {
     fn active_hit_boxes(&self, current_state: StateIndex, mut current_frame: usize) -> &[HitBox] {
-        let mut run_start = self.states.hit_boxes_start[current_state];
+        let mut run_start = self.states[current_state].hit_boxes_start;
 
         loop {
-            let (frames, range) = &self.states.run_length_hit_boxes[run_start];
+            let (frames, range) = &self.run_length_hit_boxes[run_start];
             if current_frame < *frames {
-                return &self.states.hit_box_data[range.clone()];
+                return &self.hit_box_data[range.clone()];
             }
             current_frame -= frames;
             run_start += 1;
@@ -145,16 +148,20 @@ impl Context {
     }
 
     fn active_hurt_boxes(&self, current_state: StateIndex, mut current_frame: usize) -> &[HurtBox] {
-        let mut run_start = self.states.hurt_boxes_start[current_state];
+        let mut run_start = self.states[current_state].hurt_boxes_start;
 
         loop {
-            let (frames, range) = &self.states.run_length_hurt_boxes[run_start];
+            let (frames, range) = &self.run_length_hurt_boxes[run_start];
             if current_frame < *frames {
-                return &self.states.hurt_box_data[range.clone()];
+                return &self.hurt_box_data[range.clone()];
             }
             current_frame -= frames;
             run_start += 1;
         }
+    }
+
+    pub fn start_pos(&self) -> FPoint {
+        self.start_pos
     }
 }
 
@@ -247,7 +254,7 @@ impl State {
 
         self.friction_vel = friction_system(self.friction_vel);
 
-        if context.states.flags[self.current_state].contains(StateFlags::Airborne) {
+        if context.states[self.current_state].flags.contains(StateFlags::Airborne) {
             let (new_pos, new_vel, grounded) =
                 gravity_system(self.pos, self.vel, self.gravity_mult);
             self.pos = new_pos;
@@ -266,7 +273,7 @@ impl State {
         global_textures: &[Texture],
         context: &Context,
     ) -> Result<(), sdl3::Error> {
-        let animation = &context.states.animation_data[self.current_state];
+        let animation = &context.states[self.current_state].animation;
         camera.render_animation_on_side(
             canvas,
             global_textures,
@@ -325,18 +332,18 @@ impl State {
     }
 
     pub fn set_side(&mut self, context: &Context, new_side: Side) {
-        if !context.states.flags[self.current_state].contains(StateFlags::LockSide) {
+        if !context.states[self.current_state].flags.contains(StateFlags::LockSide) {
             self.side = new_side;
         }
     }
 
     pub fn get_collision_box<'a>(&self, context: &'a Context) -> &'a CollisionBox {
-        &context.states.collision_box_data[self.current_state]
+        &context.states[self.current_state].collision
     }
 
     pub fn get_hit_boxes<'a>(&self, context: &'a Context) -> &'a [HitBox] {
         if self.hit_connected {
-            &context.states.hit_box_data[0..0]
+            &context.hit_box_data[0..0]
         } else {
             context.active_hit_boxes(self.current_state, self.current_frame)
         }
@@ -352,7 +359,7 @@ impl State {
             BlockType::Mid => StateFlags::LowBlock | StateFlags::HighBlock,
             BlockType::High => StateFlags::HighBlock,
         };
-        let blocking = context.states.flags[self.current_state].intersects(blocking_flag);
+        let blocking = context.states[self.current_state].flags.intersects(blocking_flag);
 
         let dmg = if blocking {
             self.set_block_stun_state(context, hit.block_stun());
@@ -368,7 +375,7 @@ impl State {
     }
 
     pub fn successful_hit(&mut self, context: &Context, _hit: &HitBox, _blocked: bool) {
-        if !context.states.flags[self.current_state].contains(StateFlags::Airborne) {
+        if !context.states[self.current_state].flags.contains(StateFlags::Airborne) {
             self.friction_vel.x += HIT_PUSH_BACK;
         }
         self.hit_connected = true;
@@ -385,7 +392,7 @@ impl State {
     }
 
     fn check_state_end(&mut self, context: &Context) {
-        match context.states.end_behaviors[self.current_state] {
+        match context.states[self.current_state].end_behaviors {
             EndBehavior::Endless => {}
             EndBehavior::OnStunEndToStateY {
                 y: transition_state,
@@ -416,10 +423,10 @@ impl State {
             return;
         }
 
-        let cancel_options_range = context.states.cancel_options[self.current_state].clone();
-        let cancel_options = &context.states.run_length_cancel_options[cancel_options_range];
+        let cancel_options_range = context.states[self.current_state].cancel_options.clone();
+        let cancel_options = &context.run_length_cancel_options[cancel_options_range];
         for i in cancel_options {
-            let cancel_option = &context.states.inputs[*i];
+            let cancel_option = &context.states[*i].input;
             if !cancel_option.dir.matches_or_is_none(dir) {
                 continue;
             }
@@ -437,16 +444,16 @@ impl State {
     }
 
     fn in_cancel_window(&self, context: &Context) -> bool {
-        context.states.cancel_windows[self.current_state].contains(&self.current_frame)
+        context.states[self.current_state].cancel_window.contains(&self.current_frame)
             && (self.hit_connected
-                || context.states.flags[self.current_state].contains(StateFlags::CancelOnWhiff))
+                || context.states[self.current_state].flags.contains(StateFlags::CancelOnWhiff))
     }
 
     fn enter_state(&mut self, context: &Context, new_state: StateIndex) {
         self.current_state = new_state;
         self.current_frame = 0;
         self.hit_connected = false;
-        match context.states.start_behaviors[new_state] {
+        match context.states[new_state].start_behaviors {
             StartBehavior::None => {}
             StartBehavior::SetVel { x, y } => {
                 self.vel = FPoint::new(x, y);
@@ -473,7 +480,7 @@ impl State {
 
     fn ground(&mut self, context: &Context) {
         if let EndBehavior::OnGroundedToStateY { y } =
-            context.states.end_behaviors[self.current_state]
+            context.states[self.current_state].end_behaviors
         {
             self.enter_state(context, y);
             self.gravity_mult = 1.0;

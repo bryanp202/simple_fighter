@@ -1,7 +1,6 @@
 use std::{cmp::Ordering, time::Duration};
 
 use candle_core::{Device, Result, Tensor};
-use rand::{Rng, rngs::ThreadRng};
 use sdl3::render::FPoint;
 
 use crate::game::{
@@ -47,11 +46,9 @@ impl<'a> Environment<'a> {
         self.inputs.reset_player2();
     }
 
-    #[allow(dead_code)]
-    pub fn reset_rng(&mut self, rng: &mut ThreadRng) {
+    pub fn reset_on_side(&mut self, side1: Side) {
         self.accumulate_rewards = DuelFloat::default();
-        let timer = rng.random_range(0.0..0.4);
-        self.scene = DuringRound::new_with_timer((0, 0), timer);
+        self.scene = DuringRound::new((0, 0));
 
         self.inputs.reset_player1();
         self.inputs.reset_player2();
@@ -59,22 +56,25 @@ impl<'a> Environment<'a> {
         self.state.player1_inputs.reset();
         self.state.player2_inputs.reset();
 
-        let stage_bounds = self.context.stage.width() - 200.0;
-        let pos_x1 = rng.random_range(-stage_bounds..stage_bounds);
-        let pos_x2 = pos_x1 + rng.random_range(60.0..140.0);
-
-        let ((x1, x2), (side1, side2)) = if rng.random_bool(0.5) {
-            ((pos_x1, pos_x2), (Side::Left, Side::Right))
-        } else {
-            ((pos_x2, pos_x1), (Side::Right, Side::Left))
+        let (pos1, pos2, side2) = match side1 {
+            Side::Left => (
+                self.context.player1.start_pos(),
+                self.context.player2.start_pos(),
+                Side::Right,
+            ),
+            Side::Right => (
+                self.context.player2.start_pos(),
+                self.context.player1.start_pos(),
+                Side::Left,
+            ),
         };
 
         self.state
             .player1
-            .reset_to(&self.context.player1, FPoint::new(x1, 0.0), side1);
+            .reset_to(&self.context.player1, pos1, side1);
         self.state
             .player2
-            .reset_to(&self.context.player1, FPoint::new(x2, 0.0), side2);
+            .reset_to(&self.context.player1, pos2, side2);
     }
 
     pub fn display(&self, epoch: usize, elapsed: Duration) {

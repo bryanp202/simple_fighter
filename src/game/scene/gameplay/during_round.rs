@@ -24,15 +24,6 @@ impl DuringRound {
         }
     }
 
-    pub fn new_with_timer(score: (u32, u32), timer: f32) -> Self {
-        let time = ((ROUND_LEN * FRAME_RATE) as f32 * timer) as usize;
-        Self {
-            hit_freeze: 0,
-            score,
-            time,
-        }
-    }
-
     pub fn timer(&self) -> f32 {
         self.time as f32 / (ROUND_LEN * FRAME_RATE) as f32
     }
