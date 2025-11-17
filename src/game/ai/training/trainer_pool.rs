@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, time::Instant};
+use std::{collections::VecDeque, io::Write, time::Instant};
 
 use candle_core::{Device, Result, Tensor};
 use candle_nn::{Sequential, VarMap};
@@ -6,19 +6,16 @@ use rand::rngs::ThreadRng;
 
 use crate::game::{Side, ai::{env::Environment, ppo::{PPOAgent, RolloutBuffer, get_agent_action}, save_model}};
 
-const MAX_POOL_SIZE: usize = 16;
+const MAX_POOL_SIZE: usize = 20;
 const WINRATE_THRESH: f32 = 0.60;
 const WINRATE_WINDOW: usize = 32;
-const MIN_ROUNDS_PER_TRAINER: usize = 8;
-const MAX_GAMES: usize = 2048;
-const EPOCH_PRINT_STEP: usize = 0;
+const MIN_ROUNDS_PER_TRAINER: usize = 16;
+const MAX_GAMES: usize = 3000;
 const STEPS_PER_EPOCH: usize = 8_000;
 
 const EPOCHS: usize = 32;
 const BEST_AGENT_OUTPUT_PATH: &str = "./ai/ppo/best_NEW.safetensors";
 const RUNNER_UP_OUTPUT_PATH: &str = "./ai/ppo/runner_up_NEW.safetensors";
-
-const SAVE_INTERVAL: usize = 1;
 
 struct Trainer {
     policy: Sequential,
@@ -32,6 +29,10 @@ impl Trainer {
             policy,
             var_map,
         }
+    }
+
+    fn save(&self, filename: &str) -> Result<()> {
+        save_model(&self.var_map, filename)
     }
 }
 
@@ -130,16 +131,17 @@ pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result
 
     'challenger_loop: for epoch in 1..EPOCHS + 1 {
         let mut challenger = PPOAgent::new(&device)?;
-
         let min_games = MIN_ROUNDS_PER_TRAINER * trainer_pool.count();
+
+        println!("Challenger #{epoch}, Trainers: {}", trainer_pool.count());
 
         while game_history.total_games() < min_games || game_history.win_rate() < WINRATE_THRESH {
             if game_history.total_games() >= MAX_GAMES {
                 if trainer_pool.count() < MAX_POOL_SIZE {
-                    println!("WARNING: Adding subpar trainer to the pool");
+                    print!("\nWARNING: Adding subpar trainer to the pool");
                     break;
                 } else {
-                    println!("WARNING: Abandoning challenger");
+                    println!("\nWARNING: Abandoning challenger");
                     game_history.clear();
                     continue 'challenger_loop;
                 }
@@ -153,8 +155,6 @@ pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result
 
             for trainer in trainer_pool.iter() {
                 let round_score = fight_trainer(
-                    epoch,
-                    &start,
                     challenger_side,
                     &mut env,
                     &challenger,
@@ -169,17 +169,16 @@ pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result
             }
 
             game_history.push(wins, trainer_pool.count());
-            println!(
-                "Rounds: {}, WindowRounds: {}, winrate: {}",
+            print!(
+                "\r\x1b[KRounds: {}, WindowRounds: {}, winrate: {}",
                 game_history.total_games(),
                 game_history.window_games(),
                 game_history.win_rate()
             );
+            std::io::stdout().flush().unwrap();
         }
-
-        if epoch.is_multiple_of(SAVE_INTERVAL) {
-            challenger.save(BEST_AGENT_OUTPUT_PATH)?;
-        }
+        println!();
+        challenger.save(BEST_AGENT_OUTPUT_PATH)?;
 
         let new_trainer = Trainer::from_ppo_aget(challenger);
         trainer_pool.push(new_trainer);
@@ -188,15 +187,13 @@ pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result
 
     println!("Completed in {:?} secs", start.elapsed());
     let (best, runner_up) = trainer_pool.get_best();
-    save_model(&best.var_map, BEST_AGENT_OUTPUT_PATH)?;
-    save_model(&runner_up.var_map, RUNNER_UP_OUTPUT_PATH)?;
+    best.save(BEST_AGENT_OUTPUT_PATH)?;
+    runner_up.save(RUNNER_UP_OUTPUT_PATH)?;
     Ok(())
 }
 
 /// Returns (wins, games)
 fn fight_trainer(
-    epoch: usize,
-    start: &Instant,
     challenger_side: Side,
     env: &mut Environment,
     challenger: &PPOAgent,
@@ -232,10 +229,6 @@ fn fight_trainer(
                 } else {
                     loses += 1;
                 }                
-
-                if epoch.is_multiple_of(EPOCH_PRINT_STEP) {
-                    env.display(epoch, start.elapsed());
-                }
             }
 
             buffer.finish_path(v1);

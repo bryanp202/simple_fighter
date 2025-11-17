@@ -257,7 +257,6 @@ impl PPOAgent {
     }
 
     pub fn save(&self, filename: &str) -> Result<()> {
-        println!("Saved policy to file: {filename}");
         save_model(&self.actor_map, filename)
     }
 
