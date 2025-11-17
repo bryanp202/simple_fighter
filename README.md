@@ -47,6 +47,13 @@ The implementation of the server can be found here:
 - ![Rust UDP Example](https://github.com/bryanp202/tokio-p2p-matching)
 - ![Python TCP Example](https://github.com/bryanp202/p2p-matchmaker)
 
+## Deep Learning AI Agents / ディープラーニングAIエージェント
+Includes two AI agents for inference and supports both "Versus AI" and "Spectate AI" gamemodes.
+The AIs where trained using PPO and a tournement style approach to artificially create a diverse range of playstyles.
+
+二つの推論AIエージェントつきで、「人間対AI」と「AI対AI」という二つのゲームモードをサポートしている。
+PPOを利用した上に、様々なプレイスタイルから学べるように大会系でトレーニングしてある。
+
 ## Fast Iteration Friendly / コンパイラが必要ない
 Because all character moves and states are serialized in a config file, they can be easily changed and customized without requiring
 recompilation.

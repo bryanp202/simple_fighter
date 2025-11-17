@@ -6,7 +6,7 @@ use rand::rngs::ThreadRng;
 
 use crate::game::{Side, ai::{env::Environment, ppo::{PPOAgent, RolloutBuffer, get_agent_action}, save_model}};
 
-const MAX_POOL_SIZE: usize = 20;
+const MAX_POOL_SIZE: usize = 16;
 const WINRATE_THRESH: f32 = 0.60;
 const WINRATE_WINDOW: usize = 32;
 const MIN_ROUNDS_PER_TRAINER: usize = 16;
@@ -48,7 +48,7 @@ impl TrainerPool {
     }
 
     fn push(&mut self, trainer: Trainer) {
-        if self.trainers.len() == MAX_POOL_SIZE {
+        if self.trainers.len() >= MAX_POOL_SIZE {
             self.trainers.pop_back();
         }
         self.trainers.push_front(trainer);
