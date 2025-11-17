@@ -17,7 +17,7 @@ Includes two AI agents for inference and supports both "Versus AI" and "Spectate
 The AIs where trained using PPO and a tournement style approach to artificially create a diverse range of playstyles.
 
 二つの推論AIエージェントつきで、「人間対AI」と「AI対AI」という二つのゲームモードをサポートしている。
-PPOを利用した上に、様々なプレイスタイルから学べるように大会系でトレーニングしてある。
+AIはPPOを利用した上に、様々なプレイスタイルから学べるように大会系でトレーニングしてある。
 
 ## Netcode / ネットコード
 Games synchronize by negotiating a shared frame to start the game on. After that, the only communication is user inputs.
