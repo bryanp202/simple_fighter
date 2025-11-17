@@ -12,6 +12,13 @@ Player data is separated into static "Context" and mutable "State" structures, a
 SDL3に任せたレンダリングを除いて、 フィジックスエンジン・アニメーション・入力パーシングなどが独自実装だ。
 プレイヤーデータが変更する「コンテキスト」とスタティックな「ステート」に分けられて、即座に過去ステートに巻き戻すことができる。
 
+## Deep Learning AI Agents / ディープラーニングAIエージェント
+Includes two AI agents for inference and supports both "Versus AI" and "Spectate AI" gamemodes.
+The AIs where trained using PPO and a tournement style approach to artificially create a diverse range of playstyles.
+
+二つの推論AIエージェントつきで、「人間対AI」と「AI対AI」という二つのゲームモードをサポートしている。
+PPOを利用した上に、様々なプレイスタイルから学べるように大会系でトレーニングしてある。
+
 ## Netcode / ネットコード
 Games synchronize by negotiating a shared frame to start the game on. After that, the only communication is user inputs.
 Local inputs are immediately used, but remote peer inputs are predicted and applied retroactively if the prediction fails.
@@ -46,13 +53,6 @@ The implementation of the server can be found here:
 サーバーの実装はこちら：
 - ![Rust UDP Example](https://github.com/bryanp202/tokio-p2p-matching)
 - ![Python TCP Example](https://github.com/bryanp202/p2p-matchmaker)
-
-## Deep Learning AI Agents / ディープラーニングAIエージェント
-Includes two AI agents for inference and supports both "Versus AI" and "Spectate AI" gamemodes.
-The AIs where trained using PPO and a tournement style approach to artificially create a diverse range of playstyles.
-
-二つの推論AIエージェントつきで、「人間対AI」と「AI対AI」という二つのゲームモードをサポートしている。
-PPOを利用した上に、様々なプレイスタイルから学べるように大会系でトレーニングしてある。
 
 ## Fast Iteration Friendly / コンパイラが必要ない
 Because all character moves and states are serialized in a config file, they can be easily changed and customized without requiring
