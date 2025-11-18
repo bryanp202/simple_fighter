@@ -67,7 +67,10 @@ impl TrainerPool {
     }
 
     fn get_best(&self) -> (&Trainer, &Trainer) {
-        (self.trainers.get(0).unwrap(), self.trainers.get(1).unwrap())
+        (
+            self.trainers.front().unwrap(),
+            self.trainers.get(1).unwrap(),
+        )
     }
 }
 

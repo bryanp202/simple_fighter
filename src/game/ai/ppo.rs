@@ -16,6 +16,32 @@ const GAE_LAMBDA: f32 = 0.97;
 const K_EPOCHS: usize = 20;
 const TARGET_KL: f32 = 0.01;
 
+pub fn make_model(var_map: &VarMap, device: &Device) -> Result<Sequential> {
+    let vb = VarBuilder::from_varmap(var_map, DType::F32, device);
+
+    let agent1 = seq()
+        .add(linear(STATE_VECTOR_LEN, HIDDEN_COUNT, vb.pp("actor_in"))?)
+        .add(Activation::Relu)
+        .add(linear(HIDDEN_COUNT, HIDDEN_COUNT, vb.pp("actor_hidden"))?)
+        .add(Activation::Relu)
+        .add(linear(HIDDEN_COUNT, ACTION_SPACE, vb.pp("actor_out"))?);
+
+    Ok(agent1)
+}
+
+fn make_critic(var_map: &VarMap, device: &Device) -> Result<Sequential> {
+    let vb = VarBuilder::from_varmap(var_map, DType::F32, device);
+
+    let critic = seq()
+        .add(linear(STATE_VECTOR_LEN, HIDDEN_COUNT, vb.pp("critic_in"))?)
+        .add(Activation::Relu)
+        .add(linear(HIDDEN_COUNT, HIDDEN_COUNT, vb.pp("critic_hidden"))?)
+        .add(Activation::Relu)
+        .add(linear(HIDDEN_COUNT, 1, vb.pp("critic_out"))?);
+
+    Ok(critic)
+}
+
 pub struct RolloutBuffer {
     steps_per_epoch: usize,
     obs: Vec<Tensor>,
@@ -138,41 +164,9 @@ impl ActorCritic {
         let actor_map = VarMap::new();
         let critic_map = VarMap::new();
 
-        let actor_vb = VarBuilder::from_varmap(&actor_map, DType::F32, device);
-        let critic_vb = VarBuilder::from_varmap(&critic_map, DType::F32, device);
         let ac = Self {
-            actor: seq()
-                .add(linear(
-                    STATE_VECTOR_LEN,
-                    HIDDEN_COUNT,
-                    actor_vb.pp("actor_in"),
-                )?)
-                .add(Activation::Relu)
-                .add(linear(
-                    HIDDEN_COUNT,
-                    HIDDEN_COUNT,
-                    actor_vb.pp("actor_hidden"),
-                )?)
-                .add(Activation::Relu)
-                .add(linear(
-                    HIDDEN_COUNT,
-                    ACTION_SPACE,
-                    actor_vb.pp("actor_out"),
-                )?),
-            critic: seq()
-                .add(linear(
-                    STATE_VECTOR_LEN,
-                    HIDDEN_COUNT,
-                    critic_vb.pp("critic_in"),
-                )?)
-                .add(Activation::Relu)
-                .add(linear(
-                    HIDDEN_COUNT,
-                    HIDDEN_COUNT,
-                    critic_vb.pp("critic_hidden"),
-                )?)
-                .add(Activation::Relu)
-                .add(linear(HIDDEN_COUNT, 1, critic_vb.pp("critic_out"))?),
+            actor: make_model(&actor_map, device)?,
+            critic: make_critic(&critic_map, device)?,
         };
 
         Ok((ac, actor_map, critic_map))
