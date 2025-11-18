@@ -27,6 +27,19 @@ const END_E: f64 = 0.05;
 const EPSILON_RANGE: usize = EPISODES;
 const EPISODE_PRINT_STEP: usize = EPISODES / 1_000;
 
+pub fn make_model(var_map: &VarMap, device: &Device) -> Result<Sequential> {
+    let vb = VarBuilder::from_varmap(var_map, DType::F32, device);
+
+    let agent1 = seq()
+        .add(linear(STATE_VECTOR_LEN, HIDDEN_COUNT, vb.pp("linear_in"))?)
+        .add(Activation::Relu)
+        .add(linear(HIDDEN_COUNT, HIDDEN_COUNT, vb.pp("hidden"))?)
+        .add(Activation::Relu)
+        .add(linear(HIDDEN_COUNT, ACTION_SPACE, vb.pp("linear_out"))?);
+
+    Ok(agent1)
+}
+
 type GameMemory = (Tensor, Actions, DuelFloat, bool, Tensor); // Init state, actions, reward, terminal_inverse, next state
 struct ReplayMemory {
     memory: VecDeque<GameMemory>,
@@ -67,22 +80,70 @@ impl ReplayMemory {
     }
 }
 
+pub struct DQNAgent {
+    agent: Sequential,
+    target: Sequential,
+    optimizer: AdamW,
+    var_map_agent: VarMap,
+    var_map_target: VarMap,
+}
+
+impl DQNAgent {
+    pub fn new(device: &Device) -> Result<Self> {
+        let var_map_agent = VarMap::new();
+        let var_map_target = VarMap::new();
+
+        let agent = make_model(&var_map_agent, device)?;
+        let target = make_model(&var_map_agent, device)?;
+
+        let optimizer = AdamW::new_lr(var_map_agent.all_vars(), LEARNING_RATE)?;
+
+        Ok(Self {
+            agent,
+            target,
+            optimizer,
+            var_map_agent,
+            var_map_target,
+        })
+    }
+
+    fn act(&self, obs: &Tensor, epsilon: f64, rng: &mut rand::rngs::ThreadRng) -> Result<u32> {
+        get_ai_action(rng, &self.agent, obs, epsilon)
+    }
+
+    fn update(
+        &mut self,
+        states: &Tensor,
+        actions: &Tensor,
+        next_states: &Tensor,
+        non_final_mask: &Tensor,
+        rewards: &Tensor,
+    ) -> Result<()> {
+        let estimated_rewards = self.agent.forward(states)?;
+        let x = estimated_rewards.gather(actions, 1)?;
+        let expected_rewards = self.target.forward(next_states)?.detach();
+        let y = expected_rewards.max_keepdim(1)?;
+        let y = (y * GAMMA * non_final_mask + rewards)?;
+        let loss = candle_nn::loss::mse(&x, &y)?;
+        self.optimizer.backward_step(&loss)?;
+        Ok(())
+    }
+
+    fn update_target(&mut self) -> Result<()> {
+        copy_var_map(&self.var_map_agent, &mut self.var_map_target)
+    }
+
+    fn save(&self, filename: &str) -> Result<()> {
+        save_model(&self.var_map_agent, filename)
+    }
+}
+
 #[allow(dead_code)]
 pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result<()> {
     let mut rng = rand::rng();
 
-    let var_map1 = VarMap::new();
-    let var_map2 = VarMap::new();
-    let agent1 = make_model(&var_map1, &device)?;
-    let agent2 = make_model(&var_map2, &device)?;
-
-    let mut target_var_map1 = VarMap::new();
-    let mut target_var_map2 = VarMap::new();
-    let target_agent1 = make_model(&target_var_map1, &device)?;
-    let target_agent2 = make_model(&target_var_map2, &device)?;
-
-    let mut optimizer1 = AdamW::new_lr(var_map1.all_vars(), LEARNING_RATE)?;
-    let mut optimizer2 = AdamW::new_lr(var_map2.all_vars(), LEARNING_RATE)?;
+    let mut agent1 = DQNAgent::new(&device)?;
+    let mut agent2 = DQNAgent::new(&device)?;
 
     let mut replay_memory = ReplayMemory::new();
 
@@ -92,8 +153,8 @@ pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result
 
     while episode < EPISODES {
         let epsilon = get_epsilon(episode);
-        let action1 = get_ai_action(&mut rng, &agent1, &observation, epsilon)?;
-        let action2 = get_ai_action(&mut rng, &agent1, &observation, epsilon)?;
+        let action1 = agent1.act(&observation, epsilon, &mut rng)?;
+        let action2 = agent2.act(&observation, epsilon, &mut rng)?;
 
         let (terminal, rewards) = env.step((action1, action2));
 
@@ -113,22 +174,12 @@ pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result
         step += 1;
 
         if step % TARGET_UPDATE_INTERVAL == 0 {
-            copy_var_map(&var_map1, &mut target_var_map1)?;
-            copy_var_map(&var_map2, &mut target_var_map2)?;
+            agent1.update_target()?;
+            agent2.update_target()?;
         }
 
         if replay_memory.len() >= REPLAY_SIZE && replay_memory.count() >= BATCH_SIZE {
-            train_agents(
-                &mut rng,
-                &device,
-                &agent1,
-                &target_agent1,
-                &agent2,
-                &target_agent2,
-                &mut optimizer1,
-                &mut optimizer2,
-                &replay_memory,
-            )?;
+            train_agents(&mut rng, &device, &mut agent1, &mut agent2, &replay_memory)?;
 
             replay_memory.reset_count();
         }
@@ -144,15 +195,15 @@ pub fn train(mut env: Environment<'_>, device: Device, start: Instant) -> Result
             env.reset();
 
             if episode % SAVE_INTERVAL == 0 {
-                save_model(&var_map1, AGENT1_OUTPUT_PATH)?;
-                save_model(&var_map2, AGENT2_OUTPUT_PATH)?;
+                agent1.save(AGENT1_OUTPUT_PATH)?;
+                agent2.save(AGENT2_OUTPUT_PATH)?;
                 println!("NOTE: Saved at checkpoint episode: {episode}");
             }
         }
     }
 
-    save_model(&var_map1, AGENT1_OUTPUT_PATH)?;
-    save_model(&var_map2, AGENT2_OUTPUT_PATH)?;
+    agent1.save(AGENT1_OUTPUT_PATH)?;
+    agent2.save(AGENT2_OUTPUT_PATH)?;
     println!("Total steps: {step}");
 
     Ok(())
@@ -165,12 +216,8 @@ fn get_epsilon(episode: usize) -> f64 {
 fn train_agents(
     rng: &mut rand::rngs::ThreadRng,
     device: &Device,
-    agent1: &candle_nn::Sequential,
-    target_agent1: &candle_nn::Sequential,
-    agent2: &candle_nn::Sequential,
-    target_agent2: &candle_nn::Sequential,
-    optimizer1: &mut AdamW,
-    optimizer2: &mut AdamW,
+    agent1: &mut DQNAgent,
+    agent2: &mut DQNAgent,
     memory: &ReplayMemory,
 ) -> Result<()> {
     let batch = rng
@@ -196,47 +243,21 @@ fn train_agents(
     let next_states = batch.iter().map(|e| &e.4).collect::<Vec<_>>();
     let next_states = Tensor::stack(&next_states, 0)?;
 
-    train_single_agent(
-        agent1,
-        target_agent1,
+    agent1.update(
         &states,
         &agent1_actions,
-        &agent1_rewards,
         &next_states,
         &non_final_mask,
-        optimizer1,
+        &agent1_rewards,
     )?;
-    train_single_agent(
-        agent2,
-        target_agent2,
+    agent2.update(
         &states,
         &agent2_actions,
-        &agent2_rewards,
         &next_states,
         &non_final_mask,
-        optimizer2,
+        &agent2_rewards,
     )?;
 
-    Ok(())
-}
-
-fn train_single_agent(
-    agent: &candle_nn::Sequential,
-    target_agent: &candle_nn::Sequential,
-    states: &Tensor,
-    actions: &Tensor,
-    rewards: &Tensor,
-    next_states: &Tensor,
-    non_final_mask: &Tensor,
-    optimizer: &mut AdamW,
-) -> Result<()> {
-    let estimated_rewards = agent.forward(states)?;
-    let x = estimated_rewards.gather(actions, 1)?;
-    let expected_rewards = target_agent.forward(next_states)?.detach();
-    let y = expected_rewards.max_keepdim(1)?;
-    let y = (y * GAMMA * non_final_mask + rewards)?;
-    let loss = candle_nn::loss::mse(&x, &y)?;
-    optimizer.backward_step(&loss)?;
     Ok(())
 }
 
@@ -254,17 +275,4 @@ fn get_ai_action(
     };
 
     Ok(ai_action)
-}
-
-pub fn make_model(var_map: &VarMap, device: &Device) -> Result<Sequential> {
-    let vb = VarBuilder::from_varmap(var_map, DType::F32, device);
-
-    let agent1 = seq()
-        .add(linear(STATE_VECTOR_LEN, HIDDEN_COUNT, vb.pp("linear_in"))?)
-        .add(Activation::Relu)
-        .add(linear(HIDDEN_COUNT, HIDDEN_COUNT, vb.pp("hidden"))?)
-        .add(Activation::Relu)
-        .add(linear(HIDDEN_COUNT, ACTION_SPACE, vb.pp("linear_out"))?);
-
-    Ok(agent1)
 }

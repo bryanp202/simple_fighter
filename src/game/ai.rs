@@ -53,8 +53,8 @@ pub fn train(
 
 pub fn load_model(filepath: &str, device: &Device) -> Result<(VarMap, Sequential)> {
     let mut var_map = VarMap::new();
+    let agent = ppo::make_model(&var_map, device)?;
     var_map.load(filepath)?;
-    let agent = dqn::make_model(&var_map, device)?;
     Ok((var_map, agent))
 }
 
