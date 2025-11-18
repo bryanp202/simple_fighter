@@ -1,12 +1,10 @@
 use candle_core::{D, DType, Device, IndexOp, Result, Tensor};
 use candle_nn::{
-    Activation, AdamW, Module, Optimizer, Sequential, VarBuilder, VarMap, linear, ops::softmax, seq
+    Activation, AdamW, Module, Optimizer, Sequential, VarBuilder, VarMap, linear, ops::softmax, seq,
 };
 use rand::{Rng, distr::weighted::WeightedIndex, rngs::ThreadRng};
 
-use crate::game::{
-    ai::{ACTION_SPACE, STATE_VECTOR_LEN, save_model},
-};
+use crate::game::ai::{ACTION_SPACE, STATE_VECTOR_LEN, save_model};
 
 const HIDDEN_COUNT: usize = 256;
 const LEARNING_RATE_ACTOR: f64 = 0.00005;
@@ -291,11 +289,7 @@ impl PPOAgent {
         self.policy.step(obs, rng)
     }
 
-    pub fn update(
-        &mut self,
-        buffer: &RolloutBuffer,
-        device: &Device,
-    ) -> Result<()> {
+    pub fn update(&mut self, buffer: &RolloutBuffer, device: &Device) -> Result<()> {
         let (obs_batch, actions, ret, logp_old, adv) = buffer.get(device)?;
         let actions = actions.unsqueeze(1)?;
 

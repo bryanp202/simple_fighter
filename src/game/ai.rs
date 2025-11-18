@@ -10,10 +10,10 @@ use crate::game::{
     input::{ButtonFlag, Direction, InputHistory, Inputs},
 };
 
-mod training;
 mod dqn;
 mod env;
 mod ppo;
+mod training;
 
 // Environment
 type PlayerSerial = [f32; PLAYER_STATE_LEN];
@@ -151,8 +151,6 @@ pub fn observation_with_inv(
 
     Ok((agent1, agent2))
 }
-
-
 
 fn _serialize_observation(
     context: &GameContext,

@@ -25,9 +25,6 @@ const COMBO_SCALE_PER_HIT: f32 = 0.1;
 const MIN_COMBO_SCALING: f32 = 0.1;
 
 pub struct StateData {
-    // Input
-    input: MoveInput,
-    // Animation data: The state number points to the animation in the character
     // Cancel data
     cancel_window: Range<usize>,
     cancel_options: Range<usize>,
@@ -48,7 +45,6 @@ pub struct StateData {
 
 impl StateData {
     pub fn new(
-        input: MoveInput,
         cancel_window: Range<usize>,
         cancel_options: Range<usize>,
         hit_boxes_start: usize,
@@ -60,7 +56,6 @@ impl StateData {
         animation: Animation,
     ) -> Self {
         Self {
-            input,
             cancel_window,
             cancel_options,
             hit_boxes_start,
@@ -86,9 +81,6 @@ pub struct Context {
     ground_hit_state: StateIndex,
     launch_hit_state: StateIndex,
 
-    // Moves/states
-    states: Vec<StateData>,
-
     // Run length stuff
     run_length_hit_boxes: Vec<(usize, Range<usize>)>, // Frames active, global hitboxes index range
     run_length_hurt_boxes: Vec<(usize, Range<usize>)>, // Frames active, global hurtboxes index range
@@ -96,6 +88,10 @@ pub struct Context {
 
     hit_box_data: Vec<HitBox>,
     hurt_box_data: Vec<HurtBox>,
+
+    // Moves/states
+    state_inputs: Vec<MoveInput>,
+    states: Vec<StateData>,
 }
 
 impl Context {
@@ -112,6 +108,7 @@ impl Context {
         run_length_cancel_options: Vec<StateIndex>,
         hit_box_data: Vec<HitBox>,
         hurt_box_data: Vec<HurtBox>,
+        state_inputs: Vec<MoveInput>,
         states: Vec<StateData>,
     ) -> Self {
         Self {
@@ -123,12 +120,14 @@ impl Context {
             ground_hit_state,
             launch_hit_state,
 
-            states,
             run_length_hit_boxes,
             run_length_hurt_boxes,
             run_length_cancel_options,
             hit_box_data,
             hurt_box_data,
+
+            state_inputs,
+            states,
         }
     }
 }
@@ -254,7 +253,10 @@ impl State {
 
         self.friction_vel = friction_system(self.friction_vel);
 
-        if context.states[self.current_state].flags.contains(StateFlags::Airborne) {
+        if context.states[self.current_state]
+            .flags
+            .contains(StateFlags::Airborne)
+        {
             let (new_pos, new_vel, grounded) =
                 gravity_system(self.pos, self.vel, self.gravity_mult);
             self.pos = new_pos;
@@ -332,7 +334,10 @@ impl State {
     }
 
     pub fn set_side(&mut self, context: &Context, new_side: Side) {
-        if !context.states[self.current_state].flags.contains(StateFlags::LockSide) {
+        if !context.states[self.current_state]
+            .flags
+            .contains(StateFlags::LockSide)
+        {
             self.side = new_side;
         }
     }
@@ -359,7 +364,9 @@ impl State {
             BlockType::Mid => StateFlags::LowBlock | StateFlags::HighBlock,
             BlockType::High => StateFlags::HighBlock,
         };
-        let blocking = context.states[self.current_state].flags.intersects(blocking_flag);
+        let blocking = context.states[self.current_state]
+            .flags
+            .intersects(blocking_flag);
 
         let dmg = if blocking {
             self.set_block_stun_state(context, hit.block_stun());
@@ -375,7 +382,10 @@ impl State {
     }
 
     pub fn successful_hit(&mut self, context: &Context, _hit: &HitBox, _blocked: bool) {
-        if !context.states[self.current_state].flags.contains(StateFlags::Airborne) {
+        if !context.states[self.current_state]
+            .flags
+            .contains(StateFlags::Airborne)
+        {
             self.friction_vel.x += HIT_PUSH_BACK;
         }
         self.hit_connected = true;
@@ -426,7 +436,7 @@ impl State {
         let cancel_options_range = context.states[self.current_state].cancel_options.clone();
         let cancel_options = &context.run_length_cancel_options[cancel_options_range];
         for i in cancel_options {
-            let cancel_option = &context.states[*i].input;
+            let cancel_option = &context.state_inputs[*i];
             if !cancel_option.dir.matches_or_is_none(dir) {
                 continue;
             }
@@ -444,9 +454,13 @@ impl State {
     }
 
     fn in_cancel_window(&self, context: &Context) -> bool {
-        context.states[self.current_state].cancel_window.contains(&self.current_frame)
+        context.states[self.current_state]
+            .cancel_window
+            .contains(&self.current_frame)
             && (self.hit_connected
-                || context.states[self.current_state].flags.contains(StateFlags::CancelOnWhiff))
+                || context.states[self.current_state]
+                    .flags
+                    .contains(StateFlags::CancelOnWhiff))
     }
 
     fn enter_state(&mut self, context: &Context, new_state: StateIndex) {

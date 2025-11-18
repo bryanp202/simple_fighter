@@ -43,6 +43,8 @@ pub fn deserialize<'a>(
     let mut hit_box_offset = 0usize;
     let mut hurt_box_offset = 0usize;
     let mut cancel_options_offset = 0usize;
+
+    let mut state_inputs = Vec::new();
     for mov in &character_json.moves {
         let hit_boxes_start = append_hit_box_data(
             mov,
@@ -62,7 +64,6 @@ pub fn deserialize<'a>(
             &mut run_length_cancel_options,
             &mut cancel_options_offset,
         )?;
-        let input = mov.input.to_move_input();
         let collision = mov.collision_box.to_collision_box();
         let start_behaviors = mov.start_behavior.to_start_behavior();
 
@@ -86,7 +87,20 @@ pub fn deserialize<'a>(
             .animation
             .make_animation(texture_creator, global_textures)?;
 
-        state_data.push(StateData::new(input, cancel_window, cancel_options, hit_boxes_start, hurt_boxes_start, start_behaviors, flags, end_behaviors, collision, animation));
+        state_data.push(StateData::new(
+            cancel_window,
+            cancel_options,
+            hit_boxes_start,
+            hurt_boxes_start,
+            start_behaviors,
+            flags,
+            end_behaviors,
+            collision,
+            animation,
+        ));
+
+        let input = mov.input.to_move_input();
+        state_inputs.push(input);
     }
 
     let Some(&block_stun_state) = move_names_to_pos.get(character_json.block_stun_state.as_str())
@@ -127,6 +141,7 @@ pub fn deserialize<'a>(
         run_length_cancel_options,
         hit_box_data,
         hurt_box_data,
+        state_inputs,
         state_data,
     );
     let state = character::State::new(character_json.hp as f32, start_pos, start_side);

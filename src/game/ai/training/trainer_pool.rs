@@ -4,7 +4,14 @@ use candle_core::{Device, Result, Tensor};
 use candle_nn::{Sequential, VarMap};
 use rand::rngs::ThreadRng;
 
-use crate::game::{Side, ai::{env::Environment, ppo::{PPOAgent, RolloutBuffer, get_agent_action}, save_model}};
+use crate::game::{
+    Side,
+    ai::{
+        env::Environment,
+        ppo::{PPOAgent, RolloutBuffer, get_agent_action},
+        save_model,
+    },
+};
 
 const MAX_POOL_SIZE: usize = 16;
 const WINRATE_THRESH: f32 = 0.60;
@@ -25,10 +32,7 @@ struct Trainer {
 impl Trainer {
     fn from_ppo_aget(agent: PPOAgent) -> Self {
         let (policy, var_map) = agent.into_policy();
-        Self {
-            policy,
-            var_map,
-        }
+        Self { policy, var_map }
     }
 
     fn save(&self, filename: &str) -> Result<()> {
@@ -63,10 +67,7 @@ impl TrainerPool {
     }
 
     fn get_best(&self) -> (&Trainer, &Trainer) {
-        (
-            self.trainers.get(0).unwrap(),
-            self.trainers.get(1).unwrap()
-        )
+        (self.trainers.get(0).unwrap(), self.trainers.get(1).unwrap())
     }
 }
 
@@ -228,7 +229,7 @@ fn fight_trainer(
                     wins += 1;
                 } else {
                     loses += 1;
-                }                
+                }
             }
 
             buffer.finish_path(v1);
