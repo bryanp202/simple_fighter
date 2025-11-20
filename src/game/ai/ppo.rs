@@ -7,8 +7,8 @@ use rand::{Rng, distr::weighted::WeightedIndex, rngs::ThreadRng};
 use crate::game::ai::{ACTION_SPACE, STATE_VECTOR_LEN, save_model};
 
 const HIDDEN_COUNT: usize = 256;
-const LEARNING_RATE_ACTOR: f64 = 0.00005;
-const LEARNING_RATE_CRITIC: f64 = 0.00005;
+const LEARNING_RATE_ACTOR: f64 = 0.001;
+const LEARNING_RATE_CRITIC: f64 = 0.001;
 const GAMMA: f32 = 0.996;
 const EPS_CLIP: f32 = 0.2;
 const GAE_LAMBDA: f32 = 0.97;

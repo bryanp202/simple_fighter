@@ -1,7 +1,7 @@
 {
     "ai": {
-        "left_agent_path": "./ai/ppo/weights_NEW2.safetensors",
-        "right_agent_path": "./ai/ppo/weights_NEW1.safetensors"
+        "left_agent_path": "./resources/ai/best_v2.safetensors",
+        "right_agent_path": "./resources/ai/best_v2.safetensors"
     },
 
     "scene_data": {

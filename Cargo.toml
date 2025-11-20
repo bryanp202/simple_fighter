@@ -4,14 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-default = ["debug", "train_agents"]
+default = ["debug"]
 debug = []
 train_agents = []
 
 [dependencies]
 bincode = "2.0.1"
 bitflags = "2.9.4"
-candle-core = { version = "0.9.1", features = ["cuda"] } # Use "cuda" if training
+candle-core = { version = "0.9.1", features = [] } # Use "cuda" if training
 candle-nn = "0.9.1"
 image = "0.25.8"
 rand = "0.9.2"
