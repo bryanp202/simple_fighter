@@ -25,3 +25,5 @@
 
 [ ] Workers run the simulations of challenger vs trainers matches using a RWLock on the PPOAgent
     - They return a Boxed ReplayBuffer, and that is used to update the PPOAgent
+[ ] Critic gets the mirrored version of the state. This make it so it behaves the same on both right and left side?
+    Actor also gets this? Divides the number of possible states in two
