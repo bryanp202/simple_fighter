@@ -62,7 +62,7 @@ pub fn deserialize<'a>(
                 .gameplay
                 .round_start_animation
                 .make_animation(texture_creator, &mut global_textures)?,
-            stage: Stage::init(texture_creator, &mut global_textures),
+            stage: Stage::init(texture_creator, &mut global_textures)?,
             timer_animation: game_json
                 .scene_data
                 .gameplay

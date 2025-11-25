@@ -194,7 +194,13 @@ impl<'a> Game<'a> {
             const FRAME_DURATION_NANOS: u128 =
                 std::time::Duration::from_secs(1).as_nanos() / FRAME_RATE as u128;
             while lag >= FRAME_DURATION_NANOS {
-                self.update();
+                if let Err(err) = self.update() {
+                    self.scene = Scenes::reset(&self.context, &mut self.inputs, &mut self.state);
+
+                    if cfg!(feature = "debug") {
+                        println!("[WARNING] Error on scene update: {err}");
+                    }
+                }
                 lag -= FRAME_DURATION_NANOS;
             }
 
@@ -252,11 +258,11 @@ impl<'a> Game<'a> {
         }
     }
 
-    fn update(&mut self) {
+    fn update(&mut self) -> Result<(), String> {
         // Handle inputs
-        self.scene
-            .handle_input(&self.context, &mut self.inputs, &mut self.state)
-            .expect("Failed to handle user inputs");
+        self
+            .scene
+            .handle_input(&self.context, &mut self.inputs, &mut self.state)?;
 
         self.state.player1_inputs.update(
             self.inputs.player1.held_buttons(),
@@ -267,12 +273,14 @@ impl<'a> Game<'a> {
             self.inputs.player2.parse_history(),
         );
 
-        if let Some(mut new_scene) = self.scene.update(&self.context, &mut self.state) {
+        if let Some(mut new_scene) = self.scene.update(&self.context, &mut self.state)? {
             self.scene
                 .exit(&self.context, &mut self.inputs, &mut self.state);
             new_scene.enter(&self.context, &mut self.inputs, &mut self.state);
             self.scene = new_scene;
         }
+
+        Ok(())
     }
 
     fn render(&mut self) {

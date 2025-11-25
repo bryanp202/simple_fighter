@@ -31,18 +31,18 @@ impl Scene for MainMenu {
         _context: &GameContext,
         inputs: &mut crate::game::PlayerInputs,
         _state: &mut GameState,
-    ) -> std::io::Result<()> {
+    ) -> Result<(), String> {
         inputs.update_player1();
         inputs.skip_player2();
         Ok(())
     }
 
-    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<super::Scenes> {
+    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Result<Option<super::Scenes>, String> {
         let just_pressed = state.player1_inputs.just_pressed_buttons();
         let held = state.player1_inputs.active_buttons();
 
         if self.l_button_pressed && !ButtonFlag::L.intersects(held) {
-            return Some(self.select_scene(context));
+            return Ok(Some(self.select_scene(context)?));
         }
 
         let held_dir = state.player1_inputs.dir();
@@ -60,7 +60,7 @@ impl Scene for MainMenu {
 
         self.l_button_pressed = self.l_button_pressed || ButtonFlag::L.intersects(just_pressed);
 
-        None
+        Ok(None)
     }
 
     fn render(
@@ -101,16 +101,18 @@ impl MainMenu {
         }
     }
 
-    fn select_scene(&self, context: &GameContext) -> Scenes {
-        match self.scroll_pos {
+    fn select_scene(&self, context: &GameContext) -> Result<Scenes, String> {
+        let scene = match self.scroll_pos {
             0 => Scenes::LocalPlay(LocalPlay::new()),
-            1 => Scenes::VersesAi(VersesAi::new(&context.left_agent_filepath)),
+            1 => Scenes::VersesAi(VersesAi::new(&context.left_agent_filepath)?),
             2 => Scenes::SpectateAi(SpectateAi::new(
                 &context.left_agent_filepath,
                 &context.right_agent_filepath,
-            )),
-            3 => Scenes::Matching(Matching::new(&context.matchmaking_server)),
-            _ => panic!("Unreachable menu pos"),
-        }
+            )?),
+            3 => Scenes::Matching(Matching::new(&context.matchmaking_server)?),
+            _ => return Err(String::from("Invalid scene selected")),
+        };
+
+        Ok(scene)
     }
 }

@@ -22,13 +22,13 @@ impl Scene for LocalPlay {
         _context: &GameContext,
         inputs: &mut crate::game::PlayerInputs,
         _state: &mut GameState,
-    ) -> std::io::Result<()> {
+    ) -> Result<(), String> {
         inputs.update_player1();
         inputs.update_player2();
         Ok(())
     }
 
-    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<super::Scenes> {
+    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Result<Option<Scenes>, String> {
         if let Some(new_gameplay_scene) = self.scene.update(context, state) {
             self.scene.exit(context, state);
             self.scene = new_gameplay_scene;
@@ -36,8 +36,8 @@ impl Scene for LocalPlay {
         }
 
         match self.scene {
-            GameplayScenes::Exit => Some(Scenes::MainMenu(MainMenu::new())),
-            _ => None,
+            GameplayScenes::Exit => Ok(Some(Scenes::MainMenu(MainMenu::new()))),
+            _ => Ok(None),
         }
     }
 

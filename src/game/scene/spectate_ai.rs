@@ -32,26 +32,26 @@ impl Scene for SpectateAi {
         context: &GameContext,
         inputs: &mut crate::game::PlayerInputs,
         state: &mut GameState,
-    ) -> std::io::Result<()> {
+    ) -> Result<(), String> {
         if let GameplayScenes::DuringRound(during_round) = &self.scene {
             let timer = during_round.timer();
             let (obs, obs_inv) = observation_with_inv(context, state, timer, &self.device)
-                .expect("Model failed to observe environment");
+                .map_err(|err| err.to_string())?;
 
             // Agent1
             let action = get_agent_action(&self.ai_agent1, &obs, &mut self.rng)
-                .expect("Failed to get agent action");
+                .map_err(|err| err.to_string())?;
             take_agent_turn(&mut inputs.player1, &mut state.player1_inputs, action);
             // Agent2
             let action = get_agent_action(&self.ai_agent2, &obs_inv, &mut self.rng)
-                .expect("Failed to get agent action");
+                .map_err(|err| err.to_string())?;
             take_agent_turn(&mut inputs.player2, &mut state.player2_inputs, action);
         }
 
         Ok(())
     }
 
-    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<super::Scenes> {
+    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Result<Option<Scenes>, String> {
         if let Some(new_gameplay_scene) = self.scene.update(context, state) {
             self.scene.exit(context, state);
             self.scene = new_gameplay_scene;
@@ -59,8 +59,8 @@ impl Scene for SpectateAi {
         }
 
         match self.scene {
-            GameplayScenes::Exit => Some(Scenes::MainMenu(MainMenu::new())),
-            _ => None,
+            GameplayScenes::Exit => Ok(Some(Scenes::MainMenu(MainMenu::new()))),
+            _ => Ok(None),
         }
     }
 
@@ -80,14 +80,16 @@ impl Scene for SpectateAi {
 }
 
 impl SpectateAi {
-    pub fn new(left_agent_path: &str, right_agent_path: &str) -> Self {
+    pub fn new(left_agent_path: &str, right_agent_path: &str) -> Result<Self, String> {
         let device = Device::Cpu;
         let (_var_map1, ai_agent1) =
-            load_model(left_agent_path, &device).expect("Failed to load model");
+            load_model(left_agent_path, &device)
+            .map_err(|err| err.to_string())?;
         let (_var_map2, ai_agent2) =
-            load_model(right_agent_path, &device).expect("Failed to load model");
+            load_model(right_agent_path, &device)
+            .map_err(|err| err.to_string())?;
 
-        Self {
+        Ok(Self {
             scene: GameplayScenes::new_round_start((0, 0)),
             _var_map1,
             _var_map2,
@@ -95,6 +97,6 @@ impl SpectateAi {
             ai_agent2,
             device,
             rng: rand::rng(),
-        }
+        })
     }
 }

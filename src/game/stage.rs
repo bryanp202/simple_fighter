@@ -26,19 +26,19 @@ impl Stage {
     pub fn init<'a>(
         texture_creator: &'a TextureCreator<WindowContext>,
         global_textures: &mut Vec<Texture<'a>>,
-    ) -> Stage {
+    ) -> Result<Stage, String> {
         let mut layers = Vec::new();
 
         for layer in STATIC_LAYERS {
-            let texture_index = load_texture(texture_creator, global_textures, layer).unwrap();
+            let texture_index = load_texture(texture_creator, global_textures, layer)?;
             layers.push(texture_index);
         }
 
-        Self {
+        Ok(Self {
             layers,
             width: 420.0,
             height: 600.0,
-        }
+        })
     }
 
     pub fn width(&self) -> f32 {

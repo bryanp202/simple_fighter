@@ -28,8 +28,8 @@ pub trait Scene {
         context: &GameContext,
         inputs: &mut PlayerInputs,
         state: &mut GameState,
-    ) -> std::io::Result<()>;
-    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<Scenes>;
+    ) -> Result<(), String>;
+    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Result<Option<Scenes>, String>;
     fn render(
         &self,
         canvas: &mut Canvas<Window>,
@@ -74,7 +74,7 @@ impl Scene for Scenes {
         context: &GameContext,
         inputs: &mut PlayerInputs,
         state: &mut GameState,
-    ) -> std::io::Result<()> {
+    ) -> Result<(), String> {
         match self {
             Self::MainMenu(main_menu) => main_menu.handle_input(context, inputs, state),
             Self::LocalPlay(local_play) => local_play.handle_input(context, inputs, state),
@@ -87,7 +87,7 @@ impl Scene for Scenes {
         }
     }
 
-    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<Scenes> {
+    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Result<Option<Scenes>, String> {
         match self {
             Self::MainMenu(main_menu) => main_menu.update(context, state),
             Self::LocalPlay(local_play) => local_play.update(context, state),
@@ -144,5 +144,11 @@ impl Scene for Scenes {
 impl Scenes {
     pub fn new() -> Self {
         Self::MainMenu(MainMenu::new())
+    }
+
+    pub fn reset(context: &GameContext, inputs: &mut PlayerInputs, state: &mut GameState) -> Self {
+        let mut scene = Scenes::new();
+        scene.enter(context, inputs, state);
+        scene
     }
 }

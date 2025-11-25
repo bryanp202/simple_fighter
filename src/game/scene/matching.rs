@@ -23,27 +23,27 @@ impl Scene for Matching {
         _context: &GameContext,
         inputs: &mut crate::game::PlayerInputs,
         _state: &mut GameState,
-    ) -> std::io::Result<()> {
+    ) -> Result<(), String> {
         inputs.update_player1();
         inputs.skip_player2();
         Ok(())
     }
 
-    fn update(&mut self, _context: &GameContext, _state: &mut GameState) -> Option<Scenes> {
+    fn update(&mut self, _context: &GameContext, _state: &mut GameState) -> Result<Option<Scenes>, String> {
         if let Some(connection) = self
             .socket
             .update(self.current_frame)
-            .expect("Match socket failed")
+            .map_err(|err| err.to_string())?
         {
             match connection {
-                PeerConnectionType::Hosting(host) => Some(Scenes::Hosting(Hosting::new(host))),
+                PeerConnectionType::Hosting(host) => Ok(Some(Scenes::Hosting(Hosting::new(host)))),
                 PeerConnectionType::Joining(client) => {
-                    Some(Scenes::Connecting(Connecting::new(client)))
+                    Ok(Some(Scenes::Connecting(Connecting::new(client))))
                 }
             }
         } else {
             self.current_frame += 1;
-            None
+            Ok(None)
         }
     }
 
@@ -62,11 +62,11 @@ impl Scene for Matching {
 }
 
 impl Matching {
-    pub fn new(server_addr: &str) -> Self {
-        Self {
+    pub fn new(server_addr: &str) -> Result<Self, String> {
+        Ok(Self {
             socket: MatchingSocket::bind("0.0.0.0:0", server_addr)
-                .expect("Failed to bind matching socket"),
+                .map_err(|err| err.to_string())?,
             current_frame: 0,
-        }
+        })
     }
 }

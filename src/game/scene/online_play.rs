@@ -32,7 +32,7 @@ impl Scene for OnlinePlay {
         context: &GameContext,
         inputs: &mut crate::game::PlayerInputs,
         state: &mut GameState,
-    ) -> std::io::Result<()> {
+    ) -> Result<(), String> {
         let (local_inputs, peer_inputs) = match self.local_side {
             Side::Left => {
                 inputs.update_player1();
@@ -45,18 +45,19 @@ impl Scene for OnlinePlay {
                 (&inputs.player2, &mut inputs.player1)
             }
         };
-        let (rollback, fastforward) =
-            self.connection
-                .update(self.current_frame, local_inputs, peer_inputs)?;
+        let (rollback, fastforward) = self
+            .connection
+            .update(self.current_frame, local_inputs, peer_inputs)
+            .map_err(|err| err.to_string())?;
         self.rollback(context, inputs, state, rollback, fastforward);
         self.fast_forward(context, inputs, state, fastforward);
 
         Ok(())
     }
 
-    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<super::Scenes> {
+    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Result<Option<Scenes>, String> {
         if self.connection.is_aborted() {
-            return Some(Scenes::MainMenu(MainMenu::new()));
+            return Ok(Some(Scenes::MainMenu(MainMenu::new())));
         }
 
         if let Some(new_scene) = self.scene.update(context, state) {
@@ -70,8 +71,8 @@ impl Scene for OnlinePlay {
         self.append_game_snapshot(state);
 
         match self.scene {
-            GameplayScenes::Exit => Some(Scenes::MainMenu(MainMenu::new())),
-            _ => None,
+            GameplayScenes::Exit => Ok(Some(Scenes::MainMenu(MainMenu::new()))),
+            _ => Ok(None),
         }
     }
 

@@ -23,26 +23,26 @@ impl Scene for Hosting {
         _context: &GameContext,
         inputs: &mut crate::game::PlayerInputs,
         _state: &mut GameState,
-    ) -> std::io::Result<()> {
+    ) -> Result<(), String> {
         inputs.update_player1();
         inputs.skip_player2();
         Ok(())
     }
 
-    fn update(&mut self, _context: &GameContext, state: &mut GameState) -> Option<super::Scenes> {
+    fn update(&mut self, _context: &GameContext, state: &mut GameState) -> Result<Option<Scenes>, String> {
         if let Some(connection) = self
             .host
             .update(self.current_frame)
-            .expect("Host listener failed")
+            .map_err(|err| err.to_string())?
         {
-            Some(Scenes::OnlinePlay(OnlinePlay::new(
+            Ok(Some(Scenes::OnlinePlay(OnlinePlay::new(
                 connection,
                 crate::game::Side::Left,
                 state,
-            )))
+            ))))
         } else {
             self.current_frame += 1;
-            None
+            Ok(None)
         }
     }
 

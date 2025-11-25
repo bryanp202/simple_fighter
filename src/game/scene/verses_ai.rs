@@ -30,23 +30,23 @@ impl Scene for VersesAi {
         context: &GameContext,
         inputs: &mut crate::game::PlayerInputs,
         state: &mut GameState,
-    ) -> std::io::Result<()> {
+    ) -> Result<(), String> {
         inputs.update_player1();
 
         if let GameplayScenes::DuringRound(during_round) = &self.scene {
             let timer = during_round.timer();
             let observation = serialize_observation_inv(context, state, timer, &self.device)
-                .expect("Model failed to observe environment");
+                .map_err(|err| err.to_string())?;
 
             let action = get_agent_action(&self.ai_agent, &observation, &mut self.rng)
-                .expect("Failed to get agent action");
+                .map_err(|err| err.to_string())?;
             take_agent_turn(&mut inputs.player2, &mut state.player2_inputs, action);
         }
 
         Ok(())
     }
 
-    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Option<super::Scenes> {
+    fn update(&mut self, context: &GameContext, state: &mut GameState) -> Result<Option<Scenes>, String> {
         if let Some(new_gameplay_scene) = self.scene.update(context, state) {
             self.scene.exit(context, state);
             self.scene = new_gameplay_scene;
@@ -54,8 +54,8 @@ impl Scene for VersesAi {
         }
 
         match self.scene {
-            GameplayScenes::Exit => Some(Scenes::MainMenu(MainMenu::new())),
-            _ => None,
+            GameplayScenes::Exit => Ok(Some(Scenes::MainMenu(MainMenu::new()))),
+            _ => Ok(None),
         }
     }
 
@@ -75,16 +75,17 @@ impl Scene for VersesAi {
 }
 
 impl VersesAi {
-    pub fn new(model_path: &str) -> Self {
+    pub fn new(model_path: &str) -> Result<Self, String> {
         let device = Device::Cpu;
-        let (_var_map, ai_agent) = load_model(model_path, &device).expect("Failed to load model");
+        let (_var_map, ai_agent) = load_model(model_path, &device)
+            .map_err(|err| err.to_string())?;
 
-        Self {
+        Ok(Self {
             scene: GameplayScenes::new_round_start((0, 0)),
             _var_map,
             ai_agent,
             device,
             rng: rand::rng(),
-        }
+        })
     }
 }
