@@ -195,6 +195,7 @@ impl<'a> Game<'a> {
                 std::time::Duration::from_secs(1).as_nanos() / FRAME_RATE as u128;
             while lag >= FRAME_DURATION_NANOS {
                 if let Err(err) = self.update() {
+                    self.scene.exit(&self.context, &mut self.inputs, &mut self.state);
                     self.scene = Scenes::reset(&self.context, &mut self.inputs, &mut self.state);
 
                     if cfg!(feature = "debug") {
@@ -227,9 +228,7 @@ impl<'a> Game<'a> {
                 } => {
                     self.scene
                         .exit(&self.context, &mut self.inputs, &mut self.state);
-                    self.scene = Scenes::new();
-                    self.scene
-                        .enter(&self.context, &mut self.inputs, &mut self.state);
+                    self.scene = Scenes::reset(&self.context, &mut self.inputs, &mut self.state);
                 }
                 Event::Window {
                     win_event: WindowEvent::Resized(x, y),
